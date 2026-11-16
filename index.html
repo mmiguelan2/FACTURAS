@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Facturas sin Retención</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- ============ LOGIN ============ -->
+<section id="vista-login" class="login" hidden>
+  <form id="form-login" class="login-card">
+    <div class="marca"><span class="logo">B</span><div><strong>Facturas sin Retención</strong><small>Cuentas por cobrar · IVA</small></div></div>
+    <label>Código de vendedor o correo<input type="text" id="login-correo" autocomplete="username" placeholder="Ej: 103" required></label>
+    <label>Contraseña<input type="password" id="login-clave" autocomplete="current-password" required></label>
+    <button type="submit" class="btn primario" id="btn-entrar">Entrar</button>
+    <p class="error" id="login-error" hidden></p>
+  </form>
+</section>
+
+<!-- ============ APP ============ -->
+<div id="vista-app" hidden>
+  <header class="barra">
+    <div class="marca"><span class="logo">B</span><div><strong>Facturas sin Retención</strong><small id="ultima-carga">—</small></div></div>
+    <div class="usuario"><span id="usuario-nombre"></span><span class="chip" id="usuario-rol"></span><button class="btn" id="btn-salir">Salir</button></div>
+  </header>
+
+  <nav class="pestanas" id="pestanas">
+    <button data-tab="facturas" class="activa">Facturas</button>
+    <button data-tab="vendedores" class="solo-admin">Por vendedor</button>
+    <button data-tab="noretienen" class="solo-admin">Ya no retienen</button>
+  </nav>
+
+  <main>
+    <section class="kpis">
+      <div class="kpi"><span>Facturas</span><strong id="k-facturas">0</strong></div>
+      <div class="kpi"><span>Monto estimado USD</span><strong id="k-estimado">0</strong></div>
+      <div class="kpi alerta"><span>Vencidas</span><strong id="k-vencidas">0</strong></div>
+      <div class="kpi"><span>Clientes</span><strong id="k-clientes">0</strong></div>
+    </section>
+
+    <section class="filtros">
+      <label class="solo-admin">Vendedor<select id="f-vendedor"><option value="">Todos</option></select></label>
+      <label>Zona<select id="f-zona"><option value="">Todas</option></select></label>
+      <label>Estado<select id="f-estado"><option value="">Todas</option><option value="vencidas">Vencidas</option><option value="sinvencer">Sin vencer</option></select></label>
+      <label class="crece">Buscar<input id="f-buscar" placeholder="Cliente, RIF, código o factura"></label>
+      <label>Monto desde<input id="f-desde" type="number" step="0.01"></label>
+      <label>Monto hasta<input id="f-hasta" type="number" step="0.01"></label>
+      <button class="btn" id="btn-limpiar">Limpiar</button>
+    </section>
+
+    <!-- Facturas -->
+    <section class="tab" id="tab-facturas">
+      <div class="acciones"><span id="conteo"></span><div><button class="btn" id="btn-mensaje">Copiar mensaje</button><button class="btn" id="btn-csv">Descargar CSV</button></div></div>
+      <div class="tabla-wrap"><table id="tabla-facturas"><thead></thead><tbody></tbody></table></div>
+      <div class="paginacion"><button class="btn" id="pag-ant">‹ Anterior</button><span id="pag-info"></span><button class="btn" id="pag-sig">Siguiente ›</button></div>
+    </section>
+
+    <!-- Por vendedor -->
+    <section class="tab" id="tab-vendedores" hidden>
+      <div class="tabla-wrap"><table id="tabla-vendedores"><thead><tr><th>Código</th><th>Vendedor</th><th>Teléfono</th><th class="num">Facturas</th><th class="num">Vencidas</th><th class="num">Estimado USD</th><th></th></tr></thead><tbody></tbody></table></div>
+    </section>
+
+    <!-- Ya no retienen -->
+    <section class="tab" id="tab-noretienen" hidden>
+      <p class="nota">Facturas pendientes de clientes que ya no son agentes de retención. Pida los comprobantes antes de reclasificarlos en el sistema.</p>
+      <div class="tabla-wrap"><table id="tabla-noretienen"><thead></thead><tbody></tbody></table></div>
+    </section>
+  </main>
+</div>
+
+<div id="cargando" class="cargando">Cargando…</div>
+<div id="aviso" class="aviso" hidden></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
