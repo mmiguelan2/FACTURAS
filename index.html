@@ -3,29 +3,87 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Facturas sin Retención</title>
+<title>Facturas sin Retención · Beval</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
 <!-- ============ LOGIN ============ -->
 <section id="vista-login" class="login" hidden>
-  <form id="form-login" class="login-card">
-    <div class="marca"><span class="logo">B</span><div><strong>Facturas sin Retención</strong><small>Cuentas por cobrar · IVA</small></div></div>
-    <label>Código de vendedor o correo<input type="text" id="login-correo" autocomplete="username" placeholder="Ej: 103" required></label>
-    <label>Contraseña<input type="password" id="login-clave" autocomplete="current-password" required></label>
-    <button type="submit" class="btn primario" id="btn-entrar">Entrar</button>
-    <p class="error" id="login-error" hidden></p>
-  </form>
+  <div class="login-wrapper">
+    <div class="login-card">
+      <!-- Logo Beval Oficial -->
+      <div class="login-header">
+        <div class="beval-logo-box">
+          <img src="logo_beval_lime.png" alt="Comercializadora Beval" class="beval-logo">
+        </div>
+        <div class="login-titulos">
+          <h1>Facturas sin Retención</h1>
+          <p>Portal de Cuentas por Cobrar &bull; IVA</p>
+        </div>
+      </div>
+
+      <!-- Formulario de Ingreso -->
+      <form id="form-login" class="login-form">
+        <div class="campo">
+          <label for="login-correo">Código de vendedor o correo</label>
+          <div class="input-contenedor">
+            <svg class="input-icono" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
+            </svg>
+            <input type="text" id="login-correo" autocomplete="username" placeholder="Ej: 103 o usuario@beval.biz" required>
+          </div>
+          <span class="pista">💡 Los asesores comerciales pueden ingresar solo con su código (ej. 103)</span>
+        </div>
+
+        <div class="campo">
+          <label for="login-clave">Contraseña</label>
+          <div class="input-contenedor">
+            <svg class="input-icono" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" />
+            </svg>
+            <input type="password" id="login-clave" autocomplete="current-password" placeholder="••••••••" required>
+          </div>
+        </div>
+
+        <button type="submit" class="btn primario btn-login" id="btn-entrar">
+          <span>Ingresar al Sistema</span>
+          <svg class="btn-flecha" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" />
+          </svg>
+        </button>
+
+        <p class="error" id="login-error" hidden></p>
+      </form>
+
+      <div class="login-footer">
+        <span class="beval-empresa">Comercializadora Beval, C.A.</span>
+        <span class="separador">&bull;</span>
+        <span class="version">Softland ERP Sync</span>
+      </div>
+    </div>
+  </div>
 </section>
 
 <!-- ============ APP ============ -->
 <div id="vista-app" hidden>
   <header class="barra">
-    <div class="marca"><span class="logo">B</span><div><strong>Facturas sin Retención</strong><small id="ultima-carga">—</small></div></div>
-    <div class="usuario"><span id="usuario-nombre"></span><span class="chip" id="usuario-rol"></span><button class="btn" id="btn-salir">Salir</button></div>
+    <div class="marca">
+      <div class="beval-logo-nav">
+        <img src="logo_beval_lime.png" alt="Beval" class="logo-mini">
+      </div>
+      <div>
+        <strong>Facturas sin Retención</strong>
+        <small id="ultima-carga">—</small>
+      </div>
+    </div>
+    <div class="usuario">
+      <span id="usuario-nombre"></span>
+      <span class="chip" id="usuario-rol"></span>
+      <button class="btn" id="btn-salir">Salir</button>
+    </div>
   </header>
 
   <nav class="pestanas" id="pestanas">
