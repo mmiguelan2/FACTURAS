@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Facturas sin Retención · Beval</title>
+<link rel="icon" type="image/x-icon" href="favicon.ico">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
@@ -188,6 +189,9 @@
         </div>
         <h2 id="vh-nombre" class="vendor-hero-nombre">—</h2>
         <div id="vh-sub" class="vendor-hero-sub">—</div>
+        <div class="vh-semaforo-wrap">
+          <span id="vh-semaforo" class="badge-semaforo riesgo">🔴 En riesgo</span>
+        </div>
       </div>
 
       <div class="vendor-hero-metrics">
@@ -211,13 +215,37 @@
 
       <div class="vendor-hero-avance-box">
         <div class="vh-avance-header">
-          <span>Avance & Proyección Cierre</span>
+          <span id="vh-avance-titulo">Avance & Proyección Cierre</span>
           <strong id="vh-avance-txt">0% (Proy. 0%)</strong>
         </div>
         <div class="vh-gauge-wrap">
           <div class="vh-gauge-track">
             <div id="vh-gauge-fill" class="vh-gauge-fill" style="width: 0%"></div>
             <div class="vh-gauge-target-tick" title="Meta esperada"></div>
+          </div>
+        </div>
+
+        <!-- Switch de Cartera: Cartera Completa / Solo Vencido / Solo al Día -->
+        <div class="vh-switch-wrap">
+          <span class="vh-switch-lbl">Ver:</span>
+          <div class="vh-switch-pills" id="vh-switch-cartera">
+            <button type="button" class="vh-pill-btn activa" data-vista="completa">Cartera completa</button>
+            <button type="button" class="vh-pill-btn" data-vista="vencida">Solo vencido</button>
+            <button type="button" class="vh-pill-btn" data-vista="aldia">Solo al día</button>
+          </div>
+        </div>
+
+        <!-- Distribución Porcentual de la Cartera -->
+        <div class="vh-distribucion-wrap">
+          <div class="vh-distribucion-bar">
+            <div id="vh-bar-cobrado" class="vh-dist-seg seg-cobrado" style="width: 0%" title="Cobrado"></div>
+            <div id="vh-bar-aldia" class="vh-dist-seg seg-aldia" style="width: 0%" title="Al día (por vencer)"></div>
+            <div id="vh-bar-vencido" class="vh-dist-seg seg-vencido" style="width: 0%" title="Vencido (mora)"></div>
+          </div>
+          <div class="vh-distribucion-legend">
+            <span class="vh-leg-item"><span class="dot dot-cobrado"></span> Cobrado: <strong id="vh-pct-cobrado">0%</strong></span>
+            <span class="vh-leg-item"><span class="dot dot-aldia"></span> Al día: <strong id="vh-pct-aldia">0%</strong></span>
+            <span class="vh-leg-item"><span class="dot dot-vencido"></span> Vencido: <strong id="vh-pct-vencido">0%</strong></span>
           </div>
         </div>
       </div>
@@ -273,7 +301,16 @@
     <!-- Por vendedor -->
     <section class="tab" id="tab-vendedores" hidden>
       <div class="acciones">
-        <span id="vendedores-conteo"></span>
+        <div class="vendedores-header-info">
+          <span id="vendedores-conteo"></span>
+          <!-- Filtro rápido de Semáforo para el Jefe -->
+          <div class="vendedores-semaforo-filtro" id="filtro-semaforo">
+            <button type="button" class="btn-sem-filtro activa" data-sem="todos">Todos</button>
+            <button type="button" class="btn-sem-filtro sem-riesgo" data-sem="riesgo">🔴 En riesgo (<span id="count-sem-riesgo">0</span>)</button>
+            <button type="button" class="btn-sem-filtro sem-precaucion" data-sem="precaucion">🟡 En precaución (<span id="count-sem-precaucion">0</span>)</button>
+            <button type="button" class="btn-sem-filtro sem-estable" data-sem="estable">🟢 Estable (<span id="count-sem-estable">0</span>)</button>
+          </div>
+        </div>
         <div class="acciones-botones">
           <button class="btn btn-masivo-accion" id="btn-masivo-vendedores">🚀 Mensajería Masiva a Asesores</button>
           <button class="btn" id="btn-reset-ws" title="Reiniciar estados de envío del día">🔄 Reiniciar Estados WhatsApp</button>
@@ -283,14 +320,15 @@
         <table id="tabla-vendedores" class="tabla-fija tabla-vendedores-estilo">
           <thead>
             <tr>
-              <th style="width: 70px;">Zona</th>
-              <th style="width: 250px;">Vendedor</th>
-              <th class="num" style="width: 80px;">Facturas</th>
-              <th class="num" style="width: 80px;">Vencidas</th>
-              <th class="num" style="width: 110px;">Estimado USD</th>
-              <th style="width: 150px;">Avance Cobro</th>
-              <th style="width: 120px; text-align: center;">Estado WS</th>
-              <th style="width: 110px; text-align: center;">Acción</th>
+              <th style="width: 48px; text-align: center;">Nivel</th>
+              <th style="width: 60px;">Zona</th>
+              <th style="width: 240px;">Vendedor</th>
+              <th class="num" style="width: 75px;">Facturas</th>
+              <th class="num" style="width: 75px;">Vencidas</th>
+              <th class="num" style="width: 105px;">Estimado USD</th>
+              <th style="width: 140px;">Avance Cobro</th>
+              <th style="width: 110px; text-align: center;">Estado WS</th>
+              <th style="width: 105px; text-align: center;">Acción</th>
             </tr>
           </thead>
           <tbody></tbody>

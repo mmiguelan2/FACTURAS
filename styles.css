@@ -4,38 +4,40 @@
   --texto: #f8fafc;
   --suave: #94a3b8;
   --borde: #1e293b;
-  --beval-lime: #c5e01b;
-  --beval-lime-hover: #d4f024;
-  --beval-dark: #0f172a;
-  --primario: #c5e01b;
-  --primario-texto: #0f172a;
+  --beval-lime: #ccdb2a;
+  --beval-lime-hover: #b8c919;
+  --beval-dark: #1d1d1b;
+  --primario: #ccdb2a;
+  --primario-texto: #1d1d1b;
   --alerta: #fb923c;
+  --exito: #00a885;
   --fila: #162235;
   --chip: #1e293b;
-  --chip-texto: #bef264;
+  --chip-texto: #ccdb2a;
   --sombra: 0 20px 40px -15px rgba(0, 0, 0, 0.6);
   --hero-bg: linear-gradient(135deg, #111b2b 0%, #0d1522 100%);
   --gauge-track: #1e293b;
 }
 
 :root[data-theme="light"] {
-  --bg: #f8fafc;
+  --bg: #fafafa;
   --panel: #ffffff;
-  --texto: #0f172a;
+  --texto: #1d1d1b;
   --suave: #64748b;
-  --borde: #e2e8f0;
-  --beval-lime: #a3e635;
-  --beval-lime-hover: #84cc16;
-  --beval-dark: #0f172a;
-  --primario: #0f172a;
+  --borde: #e5e5e5;
+  --beval-lime: #ccdb2a;
+  --beval-lime-hover: #b8c919;
+  --beval-dark: #1d1d1b;
+  --primario: #1d1d1b;
   --primario-texto: #ffffff;
   --alerta: #ea580c;
-  --fila: #f1f5f9;
-  --chip: #f1f5f9;
-  --chip-texto: #3f6212;
-  --sombra: 0 12px 30px -10px rgba(15, 23, 42, 0.08), 0 0 1px 1px rgba(15, 23, 42, 0.05);
-  --hero-bg: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-  --gauge-track: #e2e8f0;
+  --exito: #00a885;
+  --fila: #f8fafc;
+  --chip: #f4f4f5;
+  --chip-texto: #1d1d1b;
+  --sombra: 0 12px 30px -10px rgba(29, 29, 27, 0.08), 0 0 1px 1px rgba(29, 29, 27, 0.05);
+  --hero-bg: linear-gradient(135deg, #ffffff 0%, #fafafa 100%);
+  --gauge-track: #e5e5e5;
 }
 
 :root[data-theme="dark"] {
@@ -44,15 +46,16 @@
   --texto: #f8fafc;
   --suave: #94a3b8;
   --borde: #1e293b;
-  --beval-lime: #c5e01b;
-  --beval-lime-hover: #d4f024;
-  --beval-dark: #0f172a;
-  --primario: #c5e01b;
-  --primario-texto: #0f172a;
+  --beval-lime: #ccdb2a;
+  --beval-lime-hover: #b8c919;
+  --beval-dark: #1d1d1b;
+  --primario: #ccdb2a;
+  --primario-texto: #1d1d1b;
   --alerta: #fb923c;
+  --exito: #00a885;
   --fila: #162235;
   --chip: #1e293b;
-  --chip-texto: #bef264;
+  --chip-texto: #ccdb2a;
   --sombra: 0 20px 40px -15px rgba(0, 0, 0, 0.6);
   --hero-bg: linear-gradient(135deg, #111b2b 0%, #0d1522 100%);
   --gauge-track: #1e293b;
@@ -693,8 +696,8 @@ html, body {
 
 .vendor-hero-grid {
   display: grid;
-  grid-template-columns: 280px 1fr 240px;
-  gap: 20px;
+  grid-template-columns: 240px 1fr 350px;
+  gap: 18px;
   align-items: center;
 }
 
@@ -732,7 +735,7 @@ html, body {
 
 .vendor-hero-nombre {
   margin: 0;
-  font-size: 20px;
+  font-size: 19px;
   font-weight: 800;
   color: var(--texto);
   letter-spacing: -0.02em;
@@ -745,13 +748,49 @@ html, body {
   font-weight: 500;
 }
 
+/* Semáforo Badge en el Hero */
+.vh-semaforo-wrap {
+  margin-top: 6px;
+}
+
+.badge-semaforo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  width: fit-content;
+}
+
+.badge-semaforo.riesgo {
+  background: rgba(239, 68, 68, 0.16);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+.badge-semaforo.precaucion {
+  background: rgba(245, 158, 11, 0.16);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+.badge-semaforo.estable {
+  background: rgba(34, 197, 94, 0.16);
+  color: #4ade80;
+  border: 1px solid rgba(34, 197, 94, 0.4);
+}
+
 .vendor-hero-metrics {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 12px;
   background: var(--panel);
   border: 1px solid var(--borde);
-  padding: 12px 16px;
+  padding: 12px 14px;
   border-radius: 14px;
 }
 
@@ -762,7 +801,7 @@ html, body {
 }
 
 .vh-metric-lbl {
-  font-size: 10.5px;
+  font-size: 10px;
   font-weight: 700;
   color: var(--suave);
   text-transform: uppercase;
@@ -770,7 +809,7 @@ html, body {
 }
 
 .vh-metric-val {
-  font-size: 16px;
+  font-size: 15.5px;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   color: var(--texto);
@@ -795,7 +834,7 @@ html, body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 700;
   color: var(--suave);
 }
@@ -807,12 +846,12 @@ html, body {
 .vh-gauge-wrap {
   width: 100%;
   position: relative;
-  padding: 4px 0;
+  padding: 2px 0;
 }
 
 .vh-gauge-track {
   width: 100%;
-  height: 10px;
+  height: 9px;
   background: var(--gauge-track);
   border-radius: 99px;
   position: relative;
@@ -835,6 +874,173 @@ html, body {
   border-radius: 2px;
   box-shadow: 0 0 4px rgba(0, 0, 0, 0.6);
   left: 65%; /* Meta estándar */
+}
+
+/* Switch de Vistas: Cartera Completa / Solo Vencido / Solo al Día */
+.vh-switch-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.vh-switch-lbl {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--suave);
+}
+
+.vh-switch-pills {
+  display: inline-flex;
+  background: var(--fila);
+  border: 1px solid var(--borde);
+  border-radius: 99px;
+  padding: 2px;
+  gap: 2px;
+}
+
+.vh-pill-btn {
+  font: inherit;
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border: none;
+  border-radius: 99px;
+  background: transparent;
+  color: var(--suave);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.vh-pill-btn:hover {
+  color: var(--texto);
+}
+
+.vh-pill-btn.activa {
+  background: var(--beval-lime);
+  color: #0f172a;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Barra de Distribución Porcentual */
+.vh-distribucion-wrap {
+  display: grid;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.vh-distribucion-bar {
+  display: flex;
+  height: 6px;
+  width: 100%;
+  border-radius: 99px;
+  overflow: hidden;
+  background: var(--gauge-track);
+}
+
+.vh-dist-seg {
+  height: 100%;
+  transition: width 0.4s ease;
+}
+
+.seg-cobrado { background: #22c55e; }
+.seg-aldia { background: #38bdf8; }
+.seg-vencido { background: #ef4444; }
+
+.vh-distribucion-legend {
+  display: flex;
+  gap: 10px;
+  font-size: 10.5px;
+  color: var(--suave);
+  flex-wrap: wrap;
+}
+
+.vh-leg-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.vh-leg-item strong {
+  color: var(--texto);
+  font-variant-numeric: tabular-nums;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.dot-cobrado { background: #22c55e; }
+.dot-aldia { background: #38bdf8; }
+.dot-vencido { background: #ef4444; }
+
+/* Semáforo en la Tabla de Vendedores */
+.vendedores-header-info {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.vendedores-semaforo-filtro {
+  display: inline-flex;
+  background: var(--fila);
+  border: 1px solid var(--borde);
+  border-radius: 99px;
+  padding: 2px;
+  gap: 2px;
+}
+
+.btn-sem-filtro {
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border: none;
+  border-radius: 99px;
+  background: transparent;
+  color: var(--suave);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-sem-filtro:hover {
+  color: var(--texto);
+}
+
+.btn-sem-filtro.activa {
+  background: var(--panel);
+  color: var(--texto);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+  border: 1px solid var(--borde);
+}
+
+.dot-semaforo {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.dot-semaforo.riesgo {
+  background: #ef4444;
+  box-shadow: 0 0 6px rgba(239, 68, 68, 0.8);
+}
+
+.dot-semaforo.precaucion {
+  background: #f59e0b;
+  box-shadow: 0 0 6px rgba(245, 158, 11, 0.8);
+}
+
+.dot-semaforo.estable {
+  background: #22c55e;
+  box-shadow: 0 0 6px rgba(34, 197, 94, 0.8);
 }
 
 /* ========================================================

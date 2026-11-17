@@ -35,6 +35,8 @@
     seleccionadas: new Set(),
     wsEnviados: cargarWsEnviados(),
     tema: localStorage.getItem(STORAGE_KEY_TEMA) || "dark",
+    vistaCartera: "completa",
+    filtroSemaforo: "todos",
   };
 
   // ---------- utilidades ----------
@@ -263,6 +265,31 @@
     aplicarFiltros();
   });
 
+  // ---------- SEMÁFORO DE COBRANZA ----------
+  function calcularSemaforo(facturado, cobrado, saldoVencido, saldoTotal) {
+    const avance = facturado > 0 ? (cobrado / facturado) * 100 : 0;
+    const ratioMora = saldoTotal > 0 ? (saldoVencido / saldoTotal) * 100 : 0;
+
+    // Si no tiene mora (todas sus facturas están al día)
+    if (saldoVencido <= 0 || ratioMora === 0) {
+      if (avance >= 40) return { nivel: "estable", label: "🟢 Estable", clase: "estable" };
+      return { nivel: "precaucion", label: "🟡 En precaución", clase: "precaucion" };
+    }
+
+    // Si tiene alta morosidad (> 45%) o avance muy rezagado (< 25% con mora activa) -> Rojo
+    if (ratioMora > 45 || (avance < 25 && ratioMora > 20)) {
+      return { nivel: "riesgo", label: "🔴 En riesgo", clase: "riesgo" };
+    }
+
+    // Si el avance es bueno (>= 50%) y mora controlada (< 25%) -> Verde
+    if (avance >= 50 && ratioMora <= 25) {
+      return { nivel: "estable", label: "🟢 Estable", clase: "estable" };
+    }
+
+    // Resto en seguimiento / precaución -> Amarillo
+    return { nivel: "precaucion", label: "🟡 En precaución", clase: "precaucion" };
+  }
+
   // ---------- TARJETA EJECUTIVA DEL VENDEDOR (VENDOR HERO) ----------
   function pintarHeroCard() {
     const hero = $("vendor-hero");
@@ -288,15 +315,66 @@
 
     hero.hidden = false;
 
-    const facturasHero = codVendedor
+    // Facturas del universo del asesor o global
+    const facturasHeroTotal = codVendedor
       ? estado.facturas.filter((f) => f.vendedor === codVendedor)
       : estado.filtradas;
 
-    const totalFacturado = facturasHero.reduce((s, f) => s + (Number(f.monto_dolar) || 0), 0);
-    const saldoPendiente = facturasHero.reduce((s, f) => s + (Number(f.saldo_usd) || 0), 0);
+    // Métricas totales de la cartera completa (para porcentajes y semáforo)
+    const totalFacturadoGlobal = facturasHeroTotal.reduce((s, f) => s + (Number(f.monto_dolar) || 0), 0);
+    const saldoTotalGlobal = facturasHeroTotal.reduce((s, f) => s + (Number(f.saldo_usd) || 0), 0);
+    const cobradoGlobal = Math.max(0, totalFacturadoGlobal - saldoTotalGlobal);
+
+    const facturasVencidas = facturasHeroTotal.filter((f) => f.dias_vencida > 0);
+    const facturasAlDia = facturasHeroTotal.filter((f) => f.dias_vencida <= 0);
+
+    const saldoVencidoGlobal = facturasVencidas.reduce((s, f) => s + (Number(f.saldo_usd) || 0), 0);
+    const saldoAlDiaGlobal = facturasAlDia.reduce((s, f) => s + (Number(f.saldo_usd) || 0), 0);
+
+    // Semáforo institucional
+    const sem = calcularSemaforo(totalFacturadoGlobal, cobradoGlobal, saldoVencidoGlobal, saldoTotalGlobal);
+    const semEl = $("vh-semaforo");
+    if (semEl) {
+      semEl.className = `badge-semaforo ${sem.clase}`;
+      semEl.textContent = esGlobal ? `Cartera ${sem.label}` : `Asesor ${sem.label}`;
+    }
+
+    // Distribución porcentual expresada abajo
+    let pctCobrado = totalFacturadoGlobal > 0 ? Math.round((cobradoGlobal / totalFacturadoGlobal) * 100) : 0;
+    let pctAlDia = totalFacturadoGlobal > 0 ? Math.round((saldoAlDiaGlobal / totalFacturadoGlobal) * 100) : 0;
+    let pctVencido = Math.max(0, 100 - pctCobrado - pctAlDia);
+    if (totalFacturadoGlobal === 0) {
+      pctCobrado = 0; pctAlDia = 0; pctVencido = 0;
+    }
+
+    const bCob = $("vh-bar-cobrado"), bDia = $("vh-bar-aldia"), bVen = $("vh-bar-vencido");
+    if (bCob) bCob.style.width = `${pctCobrado}%`;
+    if (bDia) bDia.style.width = `${pctAlDia}%`;
+    if (bVen) bVen.style.width = `${pctVencido}%`;
+
+    const txtCob = $("vh-pct-cobrado"), txtDia = $("vh-pct-aldia"), txtVen = $("vh-pct-vencido");
+    if (txtCob) txtCob.textContent = `${pctCobrado}%`;
+    if (txtDia) txtDia.textContent = `${pctAlDia}%`;
+    if (txtVen) txtVen.textContent = `${pctVencido}%`;
+
+    // Filtro según switch de vista (Cartera completa / Solo vencido / Solo al día)
+    const vista = estado.vistaCartera || "completa";
+    let facturasVista = facturasHeroTotal;
+    let tituloAvance = "Avance & Proyección Cierre";
+
+    if (vista === "vencida") {
+      facturasVista = facturasVencidas;
+      tituloAvance = "Recuperación de Cartera Vencida (Mora)";
+    } else if (vista === "aldia") {
+      facturasVista = facturasAlDia;
+      tituloAvance = "Avance de Cartera al Día (Por Vencer)";
+    }
+
+    const totalFacturado = facturasVista.reduce((s, f) => s + (Number(f.monto_dolar) || 0), 0);
+    const saldoPendiente = facturasVista.reduce((s, f) => s + (Number(f.saldo_usd) || 0), 0);
     const cobrado = Math.max(0, totalFacturado - saldoPendiente);
-    const retencionEstimada = facturasHero.reduce((s, f) => s + (Number(f.monto_estimado) || 0), 0);
-    const sinVencer = facturasHero.filter((f) => f.dias_vencida <= 0).reduce((s, f) => s + (Number(f.saldo_usd) || 0), 0);
+    const retencionEstimada = facturasVista.reduce((s, f) => s + (Number(f.monto_estimado) || 0), 0);
+    const sinVencer = facturasVista.filter((f) => f.dias_vencida <= 0).reduce((s, f) => s + (Number(f.saldo_usd) || 0), 0);
 
     const avancePct = totalFacturado > 0 ? Math.min(100, Math.round((cobrado / totalFacturado) * 100)) : 0;
     const proyPct = totalFacturado > 0 ? Math.min(130, Math.round(((cobrado + (sinVencer * 0.75)) / totalFacturado) * 100)) : 0;
@@ -304,18 +382,45 @@
     $("vh-tag").textContent = esGlobal ? "Consolidado Ejecutivo Beval" : `Asesor Comercial Softland · Código ${codVendedor}`;
     $("vh-nombre").textContent = nombreVendedor;
     $("vh-sub").textContent = esGlobal
-      ? `${ent(facturasHero.length)} facturas totales en seguimiento activo`
-      : `Zona ${facturasHero[0]?.zona || "N/A"} · ${ent(facturasHero.length)} facturas asignadas`;
+      ? `${ent(facturasHeroTotal.length)} facturas totales en seguimiento activo`
+      : `Zona ${facturasHeroTotal[0]?.zona || "N/A"} · ${ent(facturasHeroTotal.length)} facturas asignadas`;
 
     $("vh-facturado").textContent = `$${usd(totalFacturado)}`;
     $("vh-cobrado").textContent = `$${usd(cobrado)}`;
     $("vh-saldo").textContent = `$${usd(saldoPendiente)}`;
     $("vh-retencion").textContent = `$${usd(retencionEstimada)}`;
 
-    $("vh-avance-txt").textContent = `${avancePct}% (Proy. Cierre ${proyPct}%)`;
+    const titAvEl = $("vh-avance-titulo");
+    if (titAvEl) titAvEl.textContent = tituloAvance;
+
+    $("vh-avance-txt").textContent = vista === "vencida"
+      ? `${avancePct}% recuperado`
+      : `${avancePct}% (Proy. Cierre ${proyPct}%)`;
+
     const fillBar = $("vh-gauge-fill");
-    if (fillBar) fillBar.style.width = `${Math.min(100, Math.max(0, avancePct))}%`;
+    if (fillBar) {
+      fillBar.style.width = `${Math.min(100, Math.max(0, avancePct))}%`;
+      fillBar.style.background = avancePct >= 65
+        ? "linear-gradient(90deg, #f59e0b, #22c55e)"
+        : avancePct >= 35
+          ? "linear-gradient(90deg, #ea580c, #f59e0b)"
+          : "linear-gradient(90deg, #b91c1c, #ef4444)";
+    }
+
+    // Sincronizar botones del switch
+    document.querySelectorAll("#vh-switch-cartera .vh-pill-btn").forEach((btn) => {
+      btn.classList.toggle("activa", btn.dataset.vista === vista);
+    });
   }
+
+  // Switch de Cartera listener
+  $("vh-switch-cartera")?.addEventListener("click", (e) => {
+    const btn = e.target.closest(".vh-pill-btn");
+    if (!btn) return;
+    estado.vistaCartera = btn.dataset.vista;
+    pintarHeroCard();
+    aviso(`Vista: ${btn.textContent}`);
+  });
 
   // ---------- render kpis & facturas ----------
   function resumen(lista) {
@@ -468,18 +573,48 @@
   function pintarVendedores() {
     if (!esAdmin()) return;
     const listaGrupos = grupos(estado.filtradas);
+
+    // Contadores para el filtro de semáforo
+    let cntRiesgo = 0, cntPrecaucion = 0, cntEstable = 0;
+
+    const listaConSemaforo = listaGrupos.map((g) => {
+      const saldoVencido = g.fs.filter((f) => f.dias_vencida > 0).reduce((s, f) => s + (Number(f.saldo_usd) || 0), 0);
+      const saldoTotal = g.fs.reduce((s, f) => s + (Number(f.saldo_usd) || 0), 0);
+      const totalFact = g.fs.reduce((s, f) => s + (Number(f.monto_dolar) || 0), 0);
+      const cobrado = Math.max(0, totalFact - saldoTotal);
+      const sem = calcularSemaforo(totalFact, cobrado, saldoVencido, saldoTotal);
+
+      if (sem.nivel === "riesgo") cntRiesgo++;
+      else if (sem.nivel === "precaucion") cntPrecaucion++;
+      else cntEstable++;
+
+      return { ...g, sem };
+    });
+
+    // Actualizar contadores del header del semáforo
+    const elR = $("count-sem-riesgo"), elP = $("count-sem-precaucion"), elE = $("count-sem-estable");
+    if (elR) elR.textContent = cntRiesgo;
+    if (elP) elP.textContent = cntPrecaucion;
+    if (elE) elE.textContent = cntEstable;
+
+    // Filtrar por semáforo si está activo
+    const semFiltro = estado.filtroSemaforo || "todos";
+    const listaMostrada = semFiltro === "todos"
+      ? listaConSemaforo
+      : listaConSemaforo.filter((g) => g.sem.nivel === semFiltro);
+
     const tbody = $("tabla-vendedores")?.querySelector("tbody");
     if (!tbody) return;
 
-    tbody.innerHTML = listaGrupos.map(({ cod, fs, r, avancePct, zona }) => {
+    tbody.innerHTML = listaMostrada.map(({ cod, fs, r, avancePct, zona, sem }) => {
       const v = estado.vendedores.get(cod) || {};
       const yaEnviado = estado.wsEnviados.has(cod);
       const statusBadge = yaEnviado
         ? `<span class="badge-ws enviado">✅ Enviado</span>`
         : `<span class="badge-ws espera">⏳ En espera</span>`;
 
-      // Color de barra de avance según porcentaje (rojo, ámbar, verde)
-      const colorAvance = avancePct >= 50 ? "#22c55e" : avancePct >= 25 ? "#f59e0b" : "#ef4444";
+      // Color de avance según porcentaje
+      const colorAvance = avancePct >= 65 ? "#22c55e" : avancePct >= 35 ? "#f59e0b" : "#ef4444";
 
       const avanceHtml = `
         <div class="avance-cell">
@@ -498,6 +633,9 @@
         </div>`;
 
       return `<tr>
+        <td style="text-align: center;">
+          <span class="dot-semaforo ${sem.clase}" title="Asesor ${sem.label}"></span>
+        </td>
         <td style="font-weight: 700; color: var(--suave);">${esc(zona || cod)}</td>
         <td>${celdaVendedor}</td>
         <td class="num">${ent(r.facturas)}</td>
@@ -511,11 +649,23 @@
           </button>
         </td>
       </tr>`;
-    }).join("") || `<tr><td colspan="8" style="text-align: center; padding: 24px;">No hay asesores disponibles.</td></tr>`;
+    }).join("") || `<tr><td colspan="9" style="text-align: center; padding: 24px;">No hay asesores en esta categoría del semáforo.</td></tr>`;
 
-    $("vendedores-conteo").textContent = `${ent(listaGrupos.length)} asesores comerciales`;
+    $("vendedores-conteo").textContent = `${ent(listaMostrada.length)} asesores comerciales`;
     actualizarModalMasivo();
   }
+
+  // Filtro de semáforo listener
+  $("filtro-semaforo")?.addEventListener("click", (e) => {
+    const btn = e.target.closest(".btn-sem-filtro");
+    if (!btn) return;
+    estado.filtroSemaforo = btn.dataset.sem;
+    document.querySelectorAll("#filtro-semaforo .btn-sem-filtro").forEach((b) => {
+      b.classList.toggle("activa", b === btn);
+    });
+    pintarVendedores();
+    aviso(`Filtro semáforo: ${btn.textContent.trim()}`);
+  });
 
   // Reiniciar estados WhatsApp
   $("btn-reset-ws")?.addEventListener("click", () => {
