@@ -151,7 +151,7 @@
       <div>
         <div class="marca-titulo-wrap">
           <strong>Facturas sin Retención</strong>
-          <button id="btn-refrescar" class="btn-refrescar" title="Refrescar datos" aria-label="Refrescar datos">
+          <button id="btn-refrescar" type="button" class="btn-refrescar" title="Sincronizar datos" aria-label="Sincronizar datos">
             <svg class="icono-refrescar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
               <path d="M 15 4 H 8 A 4 4 0 0 0 4 8 V 19" />
               <path d="M 1.5 16.5 L 4 19.5 L 6.5 16.5" />
@@ -163,17 +163,70 @@
         <small id="ultima-carga">—</small>
       </div>
     </div>
+    
     <div class="usuario">
+      <!-- Selector Modo Oscuro / Claro -->
+      <div class="tema-toggle" id="btn-tema" role="button" tabindex="0" title="Alternar modo claro u oscuro">
+        <span class="tema-icon tema-icon-sun">☀️</span>
+        <span class="tema-icon tema-icon-moon">🌙</span>
+        <span class="tema-texto" id="tema-texto">Oscuro</span>
+      </div>
+
       <span id="usuario-nombre"></span>
       <span class="chip" id="usuario-rol"></span>
       <button class="btn" id="btn-salir">Salir</button>
     </div>
   </header>
 
+  <!-- Tarjeta Ejecutiva del Asesor / Vendedor (Inspirada en Centro de Mando) -->
+  <section id="vendor-hero" class="vendor-hero" hidden>
+    <div class="vendor-hero-grid">
+      <div class="vendor-hero-perfil">
+        <div class="vendor-hero-pill">
+          <span class="punto-verde-pulsante"></span>
+          <span id="vh-tag">Asesor Comercial Softland</span>
+        </div>
+        <h2 id="vh-nombre" class="vendor-hero-nombre">—</h2>
+        <div id="vh-sub" class="vendor-hero-sub">—</div>
+      </div>
+
+      <div class="vendor-hero-metrics">
+        <div class="vh-metric">
+          <span class="vh-metric-lbl">Total Facturado</span>
+          <strong id="vh-facturado" class="vh-metric-val">$0,00</strong>
+        </div>
+        <div class="vh-metric">
+          <span class="vh-metric-lbl">Cobrado</span>
+          <strong id="vh-cobrado" class="vh-metric-val vh-verde">$0,00</strong>
+        </div>
+        <div class="vh-metric">
+          <span class="vh-metric-lbl">Falta / Saldo</span>
+          <strong id="vh-saldo" class="vh-metric-val vh-ambar">$0,00</strong>
+        </div>
+        <div class="vh-metric">
+          <span class="vh-metric-lbl">Retención Estimada 75%</span>
+          <strong id="vh-retencion" class="vh-metric-val vh-lima">$0,00</strong>
+        </div>
+      </div>
+
+      <div class="vendor-hero-avance-box">
+        <div class="vh-avance-header">
+          <span>Avance & Proyección Cierre</span>
+          <strong id="vh-avance-txt">0% (Proy. 0%)</strong>
+        </div>
+        <div class="vh-gauge-wrap">
+          <div class="vh-gauge-track">
+            <div id="vh-gauge-fill" class="vh-gauge-fill" style="width: 0%"></div>
+            <div class="vh-gauge-target-tick" title="Meta esperada"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <nav class="pestanas" id="pestanas">
     <button data-tab="facturas" class="activa">Facturas</button>
     <button data-tab="vendedores" class="solo-admin">Por vendedor</button>
-    <button data-tab="noretienen" class="solo-admin">Ya no retienen</button>
   </nav>
 
   <main>
@@ -196,22 +249,115 @@
 
     <!-- Facturas -->
     <section class="tab" id="tab-facturas">
-      <div class="acciones"><span id="conteo"></span><div><button class="btn" id="btn-mensaje">Copiar mensaje</button><button class="btn" id="btn-csv">Descargar CSV</button></div></div>
-      <div class="tabla-wrap"><table id="tabla-facturas"><thead></thead><tbody></tbody></table></div>
-      <div class="paginacion"><button class="btn" id="pag-ant">‹ Anterior</button><span id="pag-info"></span><button class="btn" id="pag-sig">Siguiente ›</button></div>
+      <div class="acciones">
+        <span id="conteo"></span>
+        <div class="acciones-botones">
+          <button class="btn btn-masivo-accion" id="btn-abrir-masivo">🚀 Mensajería Masiva</button>
+          <button class="btn" id="btn-mensaje">Copiar mensaje</button>
+          <button class="btn" id="btn-csv">Descargar CSV</button>
+        </div>
+      </div>
+      <div class="tabla-wrap">
+        <table id="tabla-facturas" class="tabla-fija">
+          <thead></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="paginacion">
+        <button class="btn" id="pag-ant">‹ Anterior</button>
+        <span id="pag-info"></span>
+        <button class="btn" id="pag-sig">Siguiente ›</button>
+      </div>
     </section>
 
     <!-- Por vendedor -->
     <section class="tab" id="tab-vendedores" hidden>
-      <div class="tabla-wrap"><table id="tabla-vendedores"><thead><tr><th>Código</th><th>Vendedor</th><th>Teléfono</th><th class="num">Facturas</th><th class="num">Vencidas</th><th class="num">Estimado USD</th><th></th></tr></thead><tbody></tbody></table></div>
-    </section>
-
-    <!-- Ya no retienen -->
-    <section class="tab" id="tab-noretienen" hidden>
-      <p class="nota">Facturas pendientes de clientes que ya no son agentes de retención. Pida los comprobantes antes de reclasificarlos en el sistema.</p>
-      <div class="tabla-wrap"><table id="tabla-noretienen"><thead></thead><tbody></tbody></table></div>
+      <div class="acciones">
+        <span id="vendedores-conteo"></span>
+        <div class="acciones-botones">
+          <button class="btn btn-masivo-accion" id="btn-masivo-vendedores">🚀 Mensajería Masiva a Asesores</button>
+          <button class="btn" id="btn-reset-ws" title="Reiniciar estados de envío del día">🔄 Reiniciar Estados WhatsApp</button>
+        </div>
+      </div>
+      <div class="tabla-wrap">
+        <table id="tabla-vendedores" class="tabla-fija tabla-vendedores-estilo">
+          <thead>
+            <tr>
+              <th style="width: 70px;">Zona</th>
+              <th style="width: 250px;">Vendedor</th>
+              <th class="num" style="width: 80px;">Facturas</th>
+              <th class="num" style="width: 80px;">Vencidas</th>
+              <th class="num" style="width: 110px;">Estimado USD</th>
+              <th style="width: 150px;">Avance Cobro</th>
+              <th style="width: 120px; text-align: center;">Estado WS</th>
+              <th style="width: 110px; text-align: center;">Acción</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
     </section>
   </main>
+</div>
+
+<!-- Modal de Mensajería Masiva -->
+<div id="modal-masivo" class="modal-backdrop" hidden>
+  <div class="modal-caja">
+    <div class="modal-header">
+      <div class="modal-titulos">
+        <div class="badge-modal">WhatsApp Cobranzas</div>
+        <h3>Mensajería Masiva de Cobro</h3>
+        <p>Gestión automatizada de recordatorios de retención de IVA</p>
+      </div>
+      <button type="button" class="btn-cerrar-modal" id="btn-cerrar-modal">✕</button>
+    </div>
+    <div class="modal-cuerpo">
+      <div class="modal-tabs">
+        <button type="button" class="modal-tab-btn activa" id="mtab-vendedores">A Asesores Comerciales</button>
+        <button type="button" class="modal-tab-btn" id="mtab-clientes">A Clientes Seleccionados</button>
+      </div>
+
+      <!-- Panel Masivo Vendedores -->
+      <div id="mpanel-vendedores" class="modal-subpanel">
+        <div class="masivo-progreso-card">
+          <div class="masivo-progreso-info">
+            <span>Progreso de envíos hoy:</span>
+            <strong id="masivo-progreso-txt">0 de 0 enviados (0%)</strong>
+          </div>
+          <div class="progreso-barra-wrap">
+            <div id="masivo-progreso-bar" class="progreso-barra-fill" style="width: 0%"></div>
+          </div>
+        </div>
+
+        <div class="masivo-cola-card" id="masivo-proximo-card">
+          <div class="cola-etiqueta">Próximo asesor en cola:</div>
+          <div class="cola-nombre" id="masivo-proximo-nombre">—</div>
+          <div class="cola-detalles" id="masivo-proximo-detalles">—</div>
+          <div class="masivo-acciones">
+            <button type="button" class="btn primario btn-masivo-enviar" id="btn-enviar-siguiente">
+              <span>▶ Abrir WhatsApp Web del Asesor</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="modal-pie-acciones">
+          <button type="button" class="btn" id="btn-copiar-todos-ws">📋 Copiar todos los mensajes de asesores</button>
+        </div>
+      </div>
+
+      <!-- Panel Masivo Clientes -->
+      <div id="mpanel-clientes" class="modal-subpanel" hidden>
+        <p class="modal-pista">Selecciona facturas en la tabla principal usando las casillas de verificación para preparar recordatorios directos por cliente.</p>
+        <div class="masivo-cola-card">
+          <div class="cola-etiqueta">Facturas seleccionadas:</div>
+          <strong id="masivo-clientes-conteo">0 facturas seleccionadas</strong>
+          <div class="masivo-acciones" style="margin-top: 14px;">
+            <button type="button" class="btn primario" id="btn-copiar-clientes-sel">📋 Copiar mensaje de seleccionados</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div id="cargando" class="cargando">Cargando…</div>
