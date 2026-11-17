@@ -106,45 +106,220 @@ body {
 }
 
 /* ========================================================
-   SECCIÓN DE LOGIN (DISEÑO BEVAL AMIGABLE Y ESTÉTICO)
+   SECCIÓN DE LOGIN CORPORATIVO MODERNO Y MINIMALISTA
    ======================================================== */
 .login {
   min-height: 100vh;
-  display: grid;
-  place-items: center;
-  padding: 24px 16px;
-  background:
-    radial-gradient(ellipse 80% 60% at 50% 0%, rgba(204, 219, 42, 0.22), transparent 70%),
-    radial-gradient(circle at 10% 90%, rgba(204, 219, 42, 0.08), transparent 30%),
-    var(--bg);
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 20px;
   position: relative;
+  background-color: #0b1120;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
-.login-wrapper {
+/* Contenedor del fondo dinámico */
+.login-bg {
+  position: absolute;
+  inset: 0;
   width: 100%;
-  max-width: 420px;
+  height: 100%;
+  overflow: hidden;
+  pointer-events: none;
+  background: 
+    radial-gradient(ellipse 90% 70% at 50% -10%, rgba(30, 41, 59, 0.7) 0%, transparent 70%),
+    radial-gradient(circle at 50% 50%, #0f172a 0%, #060911 100%);
+}
+
+/* Patrón geométrico abstracto / rejilla sutil */
+.login-grid-pattern {
+  position: absolute;
+  inset: 0;
+  background-image: 
+    linear-gradient(rgba(148, 163, 184, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.045) 1px, transparent 1px);
+  background-size: 40px 40px;
+  mask-image: radial-gradient(circle at 50% 50%, black 35%, transparent 88%);
+  -webkit-mask-image: radial-gradient(circle at 50% 50%, black 35%, transparent 88%);
+}
+
+/* Líneas topográficas vectoriales suaves */
+.login-topo-svg {
+  position: absolute;
+  top: -12%;
+  left: -12%;
+  width: 124%;
+  height: 124%;
+  opacity: 0.88;
+  transform-origin: center center;
+  animation: topoDrift 30s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+.topo-line {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: opacity 0.3s ease;
+}
+
+/* Grupo base topográfico en tonos azul pizarra (#0f172a / #1e293b / #334155) */
+.topo-b1 { stroke: #1e293b; stroke-width: 1.1; opacity: 0.6; }
+.topo-b2 { stroke: #334155; stroke-width: 1.1; opacity: 0.4; }
+.topo-b3 { stroke: #1e293b; stroke-width: 1.2; opacity: 0.55; }
+.topo-b4 { stroke: #334155; stroke-width: 1.1; opacity: 0.45; }
+.topo-b5 { stroke: #1e293b; stroke-width: 1.3; opacity: 0.65; }
+.topo-b6 { stroke: #334155; stroke-width: 1.1; opacity: 0.4; }
+.topo-b7 { stroke: #1e293b; stroke-width: 1.2; opacity: 0.5; }
+.topo-b8 { stroke: #334155; stroke-width: 1.1; opacity: 0.35; }
+.topo-b9 { stroke: #1e293b; stroke-width: 1.2; opacity: 0.45; }
+
+/* Grupo de acentos sutiles en Verde Lima Beval (#c5e01b) */
+.topo-lime-continuous {
+  stroke-width: 1.6;
+  opacity: 0.6;
+}
+
+.topo-lime-dashed {
+  stroke-width: 1.4;
+  stroke-dasharray: 8 14;
+  opacity: 0.65;
+  animation: topoDashFlow 30s linear infinite;
+}
+
+@keyframes topoDashFlow {
+  to {
+    stroke-dashoffset: -220;
+  }
+}
+
+.topo-node {
+  fill: #334155;
+  opacity: 0.6;
+}
+.topo-node-lime {
+  fill: #c5e01b;
+  opacity: 0.85;
+  filter: drop-shadow(0 0 6px rgba(197, 224, 27, 0.7));
+}
+
+.topo-cross {
+  stroke: #334155;
+  stroke-width: 1.2;
+  opacity: 0.5;
+}
+
+.topo-cross-lime {
+  stroke: #c5e01b;
+  stroke-width: 1.2;
+  opacity: 0.7;
+}
+
+/* Viñeta para suavizar bordes del fondo */
+.login-vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 50%, transparent 40%, rgba(6, 9, 17, 0.65) 100%);
+}
+
+/* Animaciones CSS ligeras de alto rendimiento */
+@keyframes topoDrift {
+  0% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(-20px, 16px) scale(1.03);
+  }
+  100% {
+    transform: translate(16px, -14px) scale(1.015);
+  }
+}
+
+/* Destello radial suave detrás de la tarjeta de login para efecto de profundidad */
+.login-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 720px;
+  height: 720px;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(
+    circle,
+    rgba(197, 224, 27, 0.18) 0%,
+    rgba(30, 58, 138, 0.16) 38%,
+    rgba(15, 23, 42, 0) 72%
+  );
+  filter: blur(75px);
+  border-radius: 50%;
+  pointer-events: none;
+  animation: glowBreathe 10s ease-in-out infinite alternate;
+  will-change: transform, opacity;
+}
+
+@keyframes glowBreathe {
+  0% {
+    transform: translate(-50%, -50%) scale(0.95);
+    opacity: 0.75;
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.08);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(0.98);
+    opacity: 0.85;
+  }
+}
+
+/* Contenedor y Tarjeta de Login */
+.login-wrapper {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  max-width: 430px;
+  margin: auto;
 }
 
 .login-card {
-  background: var(--panel);
-  border: 1px solid var(--borde);
-  border-radius: 24px;
-  padding: 36px 32px;
-  box-shadow: var(--sombra);
   position: relative;
+  background: rgba(15, 23, 42, 0.88);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 24px;
+  padding: 40px 36px;
+  box-shadow: 
+    0 30px 65px -15px rgba(0, 0, 0, 0.75),
+    0 0 1px 1px rgba(255, 255, 255, 0.08),
+    0 0 35px -5px rgba(197, 224, 27, 0.08);
   overflow: hidden;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
 }
 
+.login-card:hover {
+  border-color: rgba(197, 224, 27, 0.32);
+  box-shadow: 
+    0 35px 70px -15px rgba(0, 0, 0, 0.8),
+    0 0 1px 1px rgba(255, 255, 255, 0.1),
+    0 0 45px -5px rgba(197, 224, 27, 0.14);
+}
+
+/* Línea superior con gradiente verde lima corporativo */
 .login-card::before {
   content: "";
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
-  height: 5px;
-  background: linear-gradient(90deg, #ccdb2a, #84cc16, #ccdb2a);
+  height: 3px;
+  background: linear-gradient(90deg, transparent 0%, #c5e01b 50%, transparent 100%);
+  opacity: 0.95;
 }
 
+/* Cabecera del Login */
 .login-header {
   text-align: center;
   margin-bottom: 28px;
@@ -154,39 +329,44 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: #ccdb2a;
-  padding: 10px 22px;
+  background: #c5e01b;
+  padding: 10px 24px;
   border-radius: 18px;
-  box-shadow: 0 8px 20px -4px rgba(204, 219, 42, 0.5);
-  margin-bottom: 16px;
-  transition: transform 0.2s ease;
+  box-shadow: 0 8px 24px -4px rgba(197, 224, 27, 0.45);
+  margin-bottom: 18px;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s ease;
 }
+
 .beval-logo-box:hover {
-  transform: scale(1.03);
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 12px 28px -4px rgba(197, 224, 27, 0.6);
 }
 
 .beval-logo {
-  height: 44px;
+  height: 42px;
   width: auto;
   display: block;
   object-fit: contain;
 }
 
 .login-titulos h1 {
-  font-size: 22px;
+  font-size: 23px;
   font-weight: 800;
-  color: var(--texto);
+  color: #f8fafc;
   margin: 0 0 6px 0;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
 }
 
 .login-titulos p {
   font-size: 13px;
-  color: var(--suave);
+  color: #94a3b8;
   margin: 0;
   font-weight: 500;
+  letter-spacing: 0.01em;
 }
 
+/* Formulario de Login */
 .login-form {
   display: grid;
   gap: 20px;
@@ -194,14 +374,14 @@ body {
 
 .campo {
   display: grid;
-  gap: 6px;
+  gap: 7px;
 }
 
 .campo label {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
-  color: var(--texto);
-  letter-spacing: 0.01em;
+  color: #cbd5e1;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
 }
 
@@ -213,88 +393,150 @@ body {
 
 .input-icono {
   position: absolute;
-  left: 12px;
+  left: 14px;
   width: 18px;
   height: 18px;
-  color: var(--suave);
+  color: #64748b;
   pointer-events: none;
-  transition: color 0.15s ease;
+  transition: color 0.2s ease, transform 0.2s ease;
 }
 
+/* Inputs de alto contraste con focus en verde lima (#c5e01b) */
 .input-contenedor input {
   font: inherit;
   width: 100%;
-  padding: 11px 14px 11px 38px;
-  border: 1.5px solid var(--borde);
+  padding: 12.5px 14px 12.5px 44px;
+  border: 1.5px solid rgba(148, 163, 184, 0.32);
   border-radius: 12px;
-  background: var(--panel);
-  color: var(--texto);
+  background: rgba(11, 17, 32, 0.8);
+  color: #f8fafc;
   font-size: 14px;
-  transition: all 0.15s ease;
+  font-weight: 500;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.input-contenedor input::placeholder {
+  color: #64748b;
+  font-weight: 400;
+}
+
+.input-contenedor input:hover {
+  border-color: rgba(197, 224, 27, 0.45);
+  background: rgba(11, 17, 32, 0.92);
 }
 
 .input-contenedor input:focus {
   outline: none;
-  border-color: #a3b811;
-  box-shadow: 0 0 0 4px rgba(204, 219, 42, 0.25);
+  border-color: #c5e01b;
+  background: #060a12;
+  color: #ffffff;
+  box-shadow: 
+    0 0 0 3.5px rgba(197, 224, 27, 0.25),
+    0 0 24px -2px rgba(197, 224, 27, 0.4),
+    inset 0 2px 4px rgba(0, 0, 0, 0.25);
 }
 
-.input-contenedor input:focus + .input-icono,
-.input-contenedor input:focus ~ .input-icono {
-  color: #0f172a;
+.input-contenedor:focus-within .input-icono {
+  color: #c5e01b;
+  transform: scale(1.1);
 }
 
 .pista {
-  font-size: 11px;
-  color: var(--suave);
+  font-size: 11.5px;
+  color: #94a3b8;
   line-height: 1.4;
-  margin-top: 2px;
+  margin-top: 3px;
+  display: block;
 }
 
+/* Botón de Ingreso Principal */
 .btn-login {
   width: 100%;
-  padding: 13px;
-  font-size: 15px;
-  border-radius: 14px;
-  margin-top: 4px;
+  padding: 13px 20px;
+  font-size: 14.5px;
+  font-weight: 700;
+  border-radius: 12px;
+  margin-top: 6px;
+  background: #c5e01b;
+  color: #0f172a;
+  border: 1px solid #c5e01b;
+  box-shadow: 0 6px 20px -2px rgba(197, 224, 27, 0.42);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-login:hover {
+  background: #d4f024;
+  border-color: #d4f024;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 28px -3px rgba(197, 224, 27, 0.58);
+}
+
+.btn-login:active {
+  transform: translateY(0);
+}
+
+.btn-login:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
 }
 
 .btn-flecha {
   width: 16px;
   height: 16px;
-  transition: transform 0.15s ease;
+  transition: transform 0.2s ease;
 }
+
 .btn-login:hover .btn-flecha {
-  transform: translateX(3px);
+  transform: translateX(4px);
 }
 
 .error {
-  color: #dc2626;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
+  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.35);
   padding: 10px 14px;
   border-radius: 10px;
-  font-size: 12px;
-  font-weight: 600;
-  margin: 0;
+  font-size: 12.5px;
+  font-weight: 500;
+  margin: 4px 0 0 0;
   text-align: center;
+  line-height: 1.4;
 }
 
+/* Footer del Login */
 .login-footer {
-  margin-top: 24px;
+  margin-top: 26px;
   padding-top: 18px;
-  border-top: 1px solid var(--borde);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
   text-align: center;
-  font-size: 11px;
-  color: var(--suave);
+  font-size: 11.5px;
+  color: #64748b;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .beval-empresa {
-  font-weight: 700;
+  font-weight: 600;
+  color: #94a3b8;
+}
+
+.separador {
+  color: #475569;
+}
+
+.version {
+  color: #64748b;
 }
 
 /* ========================================================
@@ -592,9 +834,14 @@ tbody tr:hover {
   z-index: 100;
 }
 
+/* Adaptación Responsiva Móvil / Tablet */
 @media (max-width: 640px) {
   .barra, main { padding-left: 16px; padding-right: 16px; }
   .pestanas { padding: 0 16px; }
   .filtros label { flex: 1 1 45%; min-width: 0; }
-  .login-card { padding: 28px 20px; }
+  .login { padding: 20px 14px; }
+  .login-card { padding: 32px 20px; border-radius: 20px; }
+  .login-titulos h1 { font-size: 21px; }
+  .beval-logo { height: 38px; }
+  .login-glow { width: 380px; height: 380px; }
 }
