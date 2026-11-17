@@ -577,11 +577,71 @@ body {
   display: block;
 }
 
+.marca-titulo-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .marca strong {
   font-size: 15px;
   font-weight: 800;
   color: var(--texto);
   letter-spacing: -0.01em;
+}
+
+.btn-refrescar {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 8px;
+  color: var(--suave);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  line-height: 1;
+}
+
+.btn-refrescar:hover {
+  color: var(--beval-lime);
+  border-color: var(--beval-lime);
+  background: rgba(204, 219, 42, 0.15);
+  transform: scale(1.08);
+  box-shadow: 0 0 12px rgba(204, 219, 42, 0.3);
+}
+
+.btn-refrescar:active {
+  transform: scale(0.92);
+}
+
+.btn-refrescar:disabled {
+  opacity: 0.85;
+  cursor: default;
+}
+
+.icono-refrescar {
+  width: 16px;
+  height: 16px;
+  transform-origin: center center;
+  transition: color 0.2s ease;
+}
+
+.icono-refrescar.girando {
+  animation: girarCirculos 0.75s linear infinite;
+  color: var(--beval-lime);
+}
+
+@keyframes girarCirculos {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .marca small {

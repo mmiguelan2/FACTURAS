@@ -55,6 +55,24 @@
 
   $("btn-salir").addEventListener("click", async () => { await sb.auth.signOut(); location.reload(); });
 
+  $("btn-refrescar")?.addEventListener("click", async () => {
+    const btn = $("btn-refrescar");
+    const icono = btn?.querySelector(".icono-refrescar");
+    if (btn?.disabled) return;
+    if (btn) btn.disabled = true;
+    if (icono) icono.classList.add("girando");
+    try {
+      await cargarDatos();
+    } catch (err) {
+      console.error("Error al refrescar datos:", err);
+    } finally {
+      setTimeout(() => {
+        if (icono) icono.classList.remove("girando");
+        if (btn) btn.disabled = false;
+      }, 700);
+    }
+  });
+
   async function entrar() {
     const { data: u } = await sb.auth.getUser();
     const { data: perfil } = await sb.from("perfiles").select("*").eq("user_id", u.user.id).maybeSingle();
@@ -87,7 +105,14 @@
       todo("facturas"), todo("vendedores"),
       sb.from("cargas").select("fecha,facturas").order("fecha", { ascending: false }).limit(1),
     ]);
-    estado.facturas = facturas;
+    estado.facturas = facturas.map((f) => {
+      const montoDolar = Number(f.monto_dolar) || 0;
+      const montoEst = Number(f.monto_estimado);
+      const estimado = (montoEst && !isNaN(montoEst) && montoEst > 0)
+        ? montoEst
+        : (montoDolar > 0 ? Math.round(montoDolar * (12 / 116) * 100) / 100 : 0);
+      return { ...f, monto_estimado: estimado };
+    });
     estado.vendedores = new Map(vendedores.map((v) => [v.codigo, v]));
     if (esAdmin()) estado.noEspeciales = new Set((await todo("clientes_no_especiales", "codigo_cliente")).map((c) => c.codigo_cliente));
 

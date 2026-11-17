@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Facturas sin Retención · Beval</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- ============ LOGIN CORPORATIVO MODERNO ============ -->
+<section id="vista-login" class="login" hidden>
+  <!-- Fondo dinámico con líneas topográficas y rejilla abstracta -->
+  <div class="login-bg" aria-hidden="true">
+    <div class="login-glow"></div>
+    <div class="login-grid-pattern"></div>
+    <svg class="login-topo-svg" viewBox="0 0 1440 900" fill="none" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <!-- Gradientes para líneas en Verde Lima Beval -->
+        <linearGradient id="limeGrad1" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#c5e01b" stop-opacity="0.08" />
+          <stop offset="25%" stop-color="#c5e01b" stop-opacity="0.6" />
+          <stop offset="70%" stop-color="#84cc16" stop-opacity="0.7" />
+          <stop offset="100%" stop-color="#c5e01b" stop-opacity="0.1" />
+        </linearGradient>
+        <linearGradient id="limeGrad2" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#c5e01b" stop-opacity="0.1" />
+          <stop offset="35%" stop-color="#c5e01b" stop-opacity="0.85" />
+          <stop offset="75%" stop-color="#bef264" stop-opacity="0.6" />
+          <stop offset="100%" stop-color="#c5e01b" stop-opacity="0.1" />
+        </linearGradient>
+        <filter id="topoGlow" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur stdDeviation="3.5" result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
+
+      <!-- Grupo 1: Curvas Topográficas Base (Azul pizarra corporativo #1e293b / #334155) -->
+      <g class="topo-base-group">
+        <path class="topo-line topo-b1" d="M -100,100 C 220,40 460,200 780,120 C 1100,40 1300,180 1560,90" />
+        <path class="topo-line topo-b2" d="M -100,180 C 240,110 480,290 810,190 C 1140,90 1320,260 1560,170" />
+        <path class="topo-line topo-b3" d="M -100,260 C 260,180 500,380 840,260 C 1180,140 1340,340 1560,250" />
+        <path class="topo-line topo-b4" d="M -100,340 C 280,250 520,470 870,330 C 1220,190 1360,420 1560,330" />
+        <path class="topo-line topo-b5" d="M -100,430 C 260,330 540,560 900,410 C 1250,250 1380,510 1560,420" />
+        <path class="topo-line topo-b6" d="M -100,520 C 240,410 560,650 930,490 C 1280,310 1400,600 1560,510" />
+        <path class="topo-line topo-b7" d="M -100,610 C 220,490 580,740 960,570 C 1310,380 1420,690 1560,600" />
+        <path class="topo-line topo-b8" d="M -100,700 C 200,570 600,820 1000,650 C 1340,460 1440,780 1560,690" />
+        <path class="topo-line topo-b9" d="M -100,790 C 180,650 620,890 1040,730 C 1370,550 1460,860 1560,780" />
+      </g>
+
+      <!-- Grupo 2: Acentos Sutiles en Verde Lima Corporativo (#c5e01b) -->
+      <g class="topo-accent-group">
+        <!-- Curva acento 1 continua con sutil resplandor -->
+        <path class="topo-line topo-lime-continuous" stroke="url(#limeGrad1)" filter="url(#topoGlow)" d="M -100,220 C 250,145 490,335 825,225 C 1160,115 1330,300 1560,210" />
+        
+        <!-- Curva acento 2 discontinua y fluida -->
+        <path class="topo-line topo-lime-dashed" stroke="url(#limeGrad2)" d="M -100,385 C 270,290 530,515 885,370 C 1235,220 1370,465 1560,375" />
+
+        <!-- Curva acento 3 en la parte inferior -->
+        <path class="topo-line topo-lime-continuous" stroke="url(#limeGrad1)" filter="url(#topoGlow)" d="M -100,655 C 210,530 590,780 980,610 C 1325,420 1430,735 1560,645" />
+
+        <!-- Nodos de coordenadas técnicas y acento -->
+        <circle cx="250" cy="145" r="3" class="topo-node" />
+        <circle cx="825" cy="225" r="4.5" class="topo-node-lime" />
+        <circle cx="1160" cy="115" r="3" class="topo-node" />
+        <circle cx="530" cy="515" r="4.5" class="topo-node-lime" />
+        <circle cx="885" cy="370" r="3.5" class="topo-node" />
+        <circle cx="1235" cy="220" r="4" class="topo-node-lime" />
+        <circle cx="980" cy="610" r="4.5" class="topo-node-lime" />
+        <circle cx="1430" cy="735" r="3" class="topo-node" />
+
+        <!-- Marcadores geométricos discretos (+) -->
+        <path class="topo-cross" d="M 180,180 L 190,180 M 185,175 L 185,185" />
+        <path class="topo-cross topo-cross-lime" d="M 1260,260 L 1270,260 M 1265,255 L 1265,265" />
+        <path class="topo-cross" d="M 160,720 L 170,720 M 165,715 L 165,725" />
+        <path class="topo-cross topo-cross-lime" d="M 1310,750 L 1320,750 M 1315,745 L 1315,755" />
+      </g>
+    </svg>
+    <div class="login-vignette"></div>
+  </div>
+
+  <div class="login-wrapper">
+    <div class="login-card">
+      
+      <!-- Logo Beval Oficial -->
+      <div class="login-header">
+        <div class="beval-logo-box">
+          <img src="logo_beval_lime.png" alt="Comercializadora Beval" class="beval-logo">
+        </div>
+        <div class="login-titulos">
+          <h1>Facturas sin Retención</h1>
+          <p>Portal de Cuentas por Cobrar &bull; IVA</p>
+        </div>
+      </div>
+
+      <!-- Formulario de Ingreso -->
+      <form id="form-login" class="login-form">
+        <div class="campo">
+          <label for="login-correo">Código de vendedor o correo</label>
+          <div class="input-contenedor">
+            <svg class="input-icono" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
+            </svg>
+            <input type="text" id="login-correo" autocomplete="username" placeholder="Ej: 103 o usuario@beval.biz" required>
+          </div>
+          <span class="pista">💡 Los asesores comerciales pueden ingresar solo con su código (ej. 103)</span>
+        </div>
+
+        <div class="campo">
+          <label for="login-clave">Contraseña</label>
+          <div class="input-contenedor">
+            <svg class="input-icono" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" />
+            </svg>
+            <input type="password" id="login-clave" autocomplete="current-password" placeholder="••••••••" required>
+          </div>
+        </div>
+
+        <button type="submit" class="btn primario btn-login" id="btn-entrar">
+          <span>Ingresar al Sistema</span>
+          <svg class="btn-flecha" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" />
+          </svg>
+        </button>
+
+        <p class="error" id="login-error" hidden></p>
+      </form>
+
+      <div class="login-footer">
+        <span class="beval-empresa">Comercializadora Beval, C.A.</span>
+        <span class="separador">&bull;</span>
+        <span class="version">Softland ERP Sync</span>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ============ APP ============ -->
+<div id="vista-app" hidden>
+  <header class="barra">
+    <div class="marca">
+      <div class="beval-logo-nav">
+        <img src="logo_beval_lime.png" alt="Beval" class="logo-mini">
+      </div>
+      <div>
+        <div class="marca-titulo-wrap">
+          <strong>Facturas sin Retención</strong>
+          <button id="btn-refrescar" class="btn-refrescar" title="Refrescar datos" aria-label="Refrescar datos">
+            <svg class="icono-refrescar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M 15 4 H 8 A 4 4 0 0 0 4 8 V 19" />
+              <path d="M 1.5 16.5 L 4 19.5 L 6.5 16.5" />
+              <path d="M 9 20 H 16 A 4 4 0 0 0 20 16 V 5" />
+              <path d="M 17.5 7.5 L 20 4.5 L 22.5 7.5" />
+            </svg>
+          </button>
+        </div>
+        <small id="ultima-carga">—</small>
+      </div>
+    </div>
+    <div class="usuario">
+      <span id="usuario-nombre"></span>
+      <span class="chip" id="usuario-rol"></span>
+      <button class="btn" id="btn-salir">Salir</button>
+    </div>
+  </header>
+
+  <nav class="pestanas" id="pestanas">
+    <button data-tab="facturas" class="activa">Facturas</button>
+    <button data-tab="vendedores" class="solo-admin">Por vendedor</button>
+    <button data-tab="noretienen" class="solo-admin">Ya no retienen</button>
+  </nav>
+
+  <main>
+    <section class="kpis">
+      <div class="kpi"><span>Facturas</span><strong id="k-facturas">0</strong></div>
+      <div class="kpi"><span>Monto estimado USD</span><strong id="k-estimado">0</strong></div>
+      <div class="kpi alerta"><span>Vencidas</span><strong id="k-vencidas">0</strong></div>
+      <div class="kpi"><span>Clientes</span><strong id="k-clientes">0</strong></div>
+    </section>
+
+    <section class="filtros">
+      <label class="solo-admin">Vendedor<select id="f-vendedor"><option value="">Todos</option></select></label>
+      <label>Zona<select id="f-zona"><option value="">Todas</option></select></label>
+      <label>Estado<select id="f-estado"><option value="">Todas</option><option value="vencidas">Vencidas</option><option value="sinvencer">Sin vencer</option></select></label>
+      <label class="crece">Buscar<input id="f-buscar" placeholder="Cliente, RIF, código o factura"></label>
+      <label>Monto desde<input id="f-desde" type="number" step="0.01"></label>
+      <label>Monto hasta<input id="f-hasta" type="number" step="0.01"></label>
+      <button class="btn" id="btn-limpiar">Limpiar</button>
+    </section>
+
+    <!-- Facturas -->
+    <section class="tab" id="tab-facturas">
+      <div class="acciones"><span id="conteo"></span><div><button class="btn" id="btn-mensaje">Copiar mensaje</button><button class="btn" id="btn-csv">Descargar CSV</button></div></div>
+      <div class="tabla-wrap"><table id="tabla-facturas"><thead></thead><tbody></tbody></table></div>
+      <div class="paginacion"><button class="btn" id="pag-ant">‹ Anterior</button><span id="pag-info"></span><button class="btn" id="pag-sig">Siguiente ›</button></div>
+    </section>
+
+    <!-- Por vendedor -->
+    <section class="tab" id="tab-vendedores" hidden>
+      <div class="tabla-wrap"><table id="tabla-vendedores"><thead><tr><th>Código</th><th>Vendedor</th><th>Teléfono</th><th class="num">Facturas</th><th class="num">Vencidas</th><th class="num">Estimado USD</th><th></th></tr></thead><tbody></tbody></table></div>
+    </section>
+
+    <!-- Ya no retienen -->
+    <section class="tab" id="tab-noretienen" hidden>
+      <p class="nota">Facturas pendientes de clientes que ya no son agentes de retención. Pida los comprobantes antes de reclasificarlos en el sistema.</p>
+      <div class="tabla-wrap"><table id="tabla-noretienen"><thead></thead><tbody></tbody></table></div>
+    </section>
+  </main>
+</div>
+
+<div id="cargando" class="cargando">Cargando…</div>
+<div id="aviso" class="aviso" hidden></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
