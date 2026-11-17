@@ -73,16 +73,16 @@
   // Inicializar tema guardado
   aplicarTema(estado.tema);
 
-  // Definición de Columnas (SIN RIF, con cliente consolidado)
+  // Definición de Columnas (SIN RIF, con cliente consolidado y fechas completas)
   const COLUMNAS = [
-    { campo: "sel", titulo: "", ancho: "36px", noSort: true },
+    { campo: "sel", titulo: "", ancho: "34px", noSort: true },
     { campo: "factura", titulo: "Factura", ancho: "85px" },
-    { campo: "fecha_emision", titulo: "Emisión", ancho: "78px", fmt: fecha },
-    { campo: "fecha_vence", titulo: "Vence", ancho: "78px", fmt: fecha },
-    { campo: "dias_vencida", titulo: "Días V.", ancho: "68px", num: true, fmt: (v) => (v > 0 ? `<span class="vencida">${ent(v)}</span>` : ent(v)), html: true },
+    { campo: "fecha_emision", titulo: "Emisión", ancho: "94px", fmt: fecha },
+    { campo: "fecha_vence", titulo: "Vence", ancho: "94px", fmt: fecha },
+    { campo: "dias_vencida", titulo: "Días V.", ancho: "62px", num: true, fmt: (v) => (v > 0 ? `<span class="vencida">${ent(v)}</span>` : ent(v)), html: true },
     { campo: "cliente_consolidado", titulo: "Cliente / Razón Social", ancho: "auto", noSort: true, html: true },
-    { campo: "vendedor", titulo: "Vend.", ancho: "52px" },
-    { campo: "zona", titulo: "Zona", ancho: "54px" },
+    { campo: "vendedor", titulo: "Vend.", ancho: "48px" },
+    { campo: "zona", titulo: "Zona", ancho: "50px" },
     { campo: "monto_dolar", titulo: "Monto USD", ancho: "86px", num: true, fmt: usd },
     { campo: "saldo_usd", titulo: "Saldo USD", ancho: "86px", num: true, fmt: usd },
     { campo: "monto_estimado", titulo: "Estimado USD", ancho: "92px", num: true, fmt: usd },
@@ -450,21 +450,24 @@
     const clienteHtml = `
       <div class="cliente-consolidado" title="${esc(f.razon_social)} · ${esc(f.codigo_cliente)}">
         <span class="cliente-nombre">${esc(f.razon_social || "Sin nombre")}</span>
-        <span class="cliente-codigo">${esc(f.codigo_cliente || "")}</span>
+        <button type="button" class="cliente-codigo-btn" data-copiar-codigo="${esc(f.codigo_cliente)}" title="Toca para copiar código ${esc(f.codigo_cliente)}">
+          <span class="cod-icono">📋</span>
+          <span class="cod-txt">${esc(f.codigo_cliente || "")}</span>
+        </button>
         ${badgeDias}
       </div>`;
 
     return `<tr data-fac="${esc(f.factura)}">
-      <td style="width: 36px; text-align: center;">
+      <td style="width: 34px; text-align: center;">
         <input type="checkbox" class="chk-factura" data-factura="${esc(f.factura)}" ${isChecked ? "checked" : ""}>
       </td>
       <td style="width: 85px; font-weight: 700;">${esc(f.factura)}</td>
-      <td style="width: 78px;">${fecha(f.fecha_emision)}</td>
-      <td style="width: 78px;">${fecha(f.fecha_vence)}</td>
-      <td class="num" style="width: 68px;">${diasV > 0 ? `<span class="vencida">${ent(diasV)}</span>` : ent(diasV)}</td>
+      <td class="celda-fecha" style="width: 94px;">${fecha(f.fecha_emision)}</td>
+      <td class="celda-fecha" style="width: 94px;">${fecha(f.fecha_vence)}</td>
+      <td class="num" style="width: 62px;">${diasV > 0 ? `<span class="vencida">${ent(diasV)}</span>` : ent(diasV)}</td>
       <td style="width: auto;">${clienteHtml}</td>
-      <td style="width: 52px; text-align: center;">${esc(f.vendedor)}</td>
-      <td style="width: 54px; text-align: center;">${esc(f.zona)}</td>
+      <td style="width: 48px; text-align: center;">${esc(f.vendedor)}</td>
+      <td style="width: 50px; text-align: center;">${esc(f.zona)}</td>
       <td class="num" style="width: 86px;">${usd(f.monto_dolar)}</td>
       <td class="num" style="width: 86px;">${usd(f.saldo_usd)}</td>
       <td class="num" style="width: 92px; font-weight: 700; color: var(--beval-lime);">${usd(f.monto_estimado)}</td>
@@ -552,6 +555,55 @@
     if (colDef?.noSort) return;
     estado.orden = { campo, asc: estado.orden.campo === campo ? !estado.orden.asc : true };
     aplicarFiltros();
+  });
+
+  // Copiado inmediato de código de cliente con un toque / clic (sin sombrear)
+  document.addEventListener("click", async (e) => {
+    const btn = e.target.closest("[data-copiar-codigo]");
+    if (!btn) return;
+    e.stopPropagation();
+    e.preventDefault();
+    const cod = btn.dataset.copiarCodigo;
+    if (!cod) return;
+
+    let copiado = false;
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(cod);
+        copiado = true;
+      }
+    } catch {
+      copiado = false;
+    }
+
+    if (!copiado) {
+      try {
+        const ta = document.createElement("textarea");
+        ta.value = cod;
+        ta.style.position = "fixed";
+        ta.style.top = "0";
+        ta.style.left = "0";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+        copiado = true;
+      } catch (err) {
+        console.warn("Error al copiar:", err);
+      }
+    }
+
+    btn.classList.add("copiado");
+    const icono = btn.querySelector(".cod-icono");
+    const txtOrig = icono ? icono.textContent : "";
+    if (icono) icono.textContent = "✓";
+    setTimeout(() => {
+      btn.classList.remove("copiado");
+      if (icono) icono.textContent = txtOrig || "📋";
+    }, 1200);
+    aviso(`📋 Código copiado: ${cod}`);
   });
 
   // ---------- TABLA VENDEDORES (CON STATUS WS & AVANCE BAR) ----------

@@ -1267,18 +1267,30 @@ tbody tr:hover {
   font-weight: 700;
 }
 
-/* Celda de Cliente Consolidado (Nombre + Código + Badge Días) */
+/* Fechas completas con formato tabular legible y sin truncar */
+.celda-fecha {
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+  padding: 9px 4px !important;
+  text-align: center;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+
+/* Celda de Cliente Consolidado (Nombre + Código Copiable + Badge Días) */
 .cliente-consolidado {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+/* Razón social un poco más pequeña y legible para permitir fechas completas */
 .cliente-nombre {
-  font-weight: 700;
+  font-size: 11.5px;
+  font-weight: 600;
   color: var(--texto);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1286,15 +1298,53 @@ tbody tr:hover {
   flex: 1;
 }
 
-.cliente-codigo {
-  font-size: 11px;
-  color: var(--suave);
+/* Botón de Código de Cliente más grande y copiable al toque */
+.cliente-codigo-btn {
+  font-family: 'Plus Jakarta Sans', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--texto);
   background: var(--fila);
-  border: 1px solid var(--borde);
-  padding: 1px 6px;
-  border-radius: 6px;
+  border: 1.5px solid var(--borde);
+  padding: 2.5px 8px;
+  border-radius: 7px;
   flex-shrink: 0;
-  font-family: monospace;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+  line-height: 1.2;
+}
+
+.cliente-codigo-btn:hover {
+  border-color: var(--beval-lime);
+  background: rgba(204, 219, 42, 0.15);
+  color: var(--beval-lime);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.cliente-codigo-btn:active {
+  transform: scale(0.94);
+}
+
+.cliente-codigo-btn.copiado {
+  background: var(--exito) !important;
+  color: #ffffff !important;
+  border-color: var(--exito) !important;
+  box-shadow: 0 0 10px rgba(0, 168, 133, 0.6) !important;
+  transform: scale(1.05);
+}
+
+.cliente-codigo-btn .cod-icono {
+  font-size: 10px;
+  opacity: 0.65;
+}
+
+.cliente-codigo-btn:hover .cod-icono {
+  opacity: 1;
 }
 
 .badge-dias {
