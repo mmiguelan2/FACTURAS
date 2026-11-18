@@ -164,6 +164,15 @@
             <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z"/></svg>
             <span>Google Sheets</span>
           </a>
+          <button id="btn-abrir-comprobante-nav" type="button" class="btn-sheet-link btn-comprobante-nav" title="Subir comprobante y asociar facturas con lectura inteligente">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="12" y1="18" x2="12" y2="12"></line>
+              <line x1="9" y1="15" x2="15" y2="15"></line>
+            </svg>
+            <span>Cargar Comprobante</span>
+          </button>
         </div>
         <small id="ultima-carga">Cargando datos desde Google Sheets...</small>
       </div>
@@ -295,10 +304,20 @@
       <div class="acciones">
         <span id="conteo"></span>
         <div class="acciones-botones">
+          <button class="btn btn-comprobante-accion" id="btn-comprobante-accion">📥 Cargar Comprobante</button>
           <button class="btn btn-masivo-accion" id="btn-abrir-masivo">🚀 Mensajería Masiva</button>
           <button class="btn" id="btn-mensaje">Copiar mensaje</button>
           <button class="btn" id="btn-csv">Descargar CSV</button>
         </div>
+      </div>
+      <!-- Banner Filtro Comprobante Activo -->
+      <div id="banner-filtro-comp-facturas" class="banner-filtro-comprobante" hidden>
+        <div class="banner-filtro-info">
+          <span class="banner-filtro-tag">📥 Filtro Comprobante Activo</span>
+          <strong id="banner-comp-num">—</strong>
+          <span id="banner-comp-cant">(0 facturas)</span>
+        </div>
+        <button type="button" class="btn-quitar-filtro" id="btn-quitar-filtro-comp">✕ Quitar filtro y ver todas</button>
       </div>
       <div class="tabla-wrap">
         <table id="tabla-facturas" class="tabla-fija">
@@ -321,9 +340,19 @@
           <span class="pista-procesar">💡 Retenciones ya cargadas en el ERP pendientes por procesar y aplicar</span>
         </div>
         <div class="acciones-botones">
+          <button class="btn btn-comprobante-accion" id="btn-comprobante-accion-proc">📥 Cargar Comprobante</button>
           <button class="btn" id="btn-copiar-procesar">📋 Copiar lista por procesar</button>
           <button class="btn" id="btn-csv-procesar">📥 Descargar CSV</button>
         </div>
+      </div>
+      <!-- Banner Filtro Comprobante Activo -->
+      <div id="banner-filtro-comp-proc" class="banner-filtro-comprobante" hidden>
+        <div class="banner-filtro-info">
+          <span class="banner-filtro-tag">📥 Filtro Comprobante Activo</span>
+          <strong id="banner-comp-num-proc">—</strong>
+          <span id="banner-comp-cant-proc">(0 facturas)</span>
+        </div>
+        <button type="button" class="btn-quitar-filtro" id="btn-quitar-filtro-comp-proc">✕ Quitar filtro y ver todas</button>
       </div>
       <div class="tabla-wrap">
         <table id="tabla-por-procesar" class="tabla-fija">
@@ -438,10 +467,101 @@
   </div>
 </div>
 
+<!-- Modal Cargar Comprobante y Lectura Inteligente de Facturas -->
+<div id="modal-comprobante" class="modal-backdrop" hidden>
+  <div class="modal-caja modal-caja-amplia">
+    <div class="modal-header">
+      <div class="modal-titulos">
+        <div class="badge-modal">Conciliador Digital &bull; OCR Asistido</div>
+        <h3>Cargar Comprobante de Retención</h3>
+        <p>Sube el comprobante (PDF o imagen). El sistema detectará las facturas automáticamente y podrás asociar las que falten con 1 clic.</p>
+      </div>
+      <button type="button" class="btn-cerrar-modal" id="btn-cerrar-modal-comp">✕</button>
+    </div>
+
+    <div class="modal-cuerpo">
+      <!-- Zona de Carga (Drag & Drop) -->
+      <div class="dropzone-comprobante" id="dropzone-comprobante">
+        <input type="file" id="input-file-comprobante" accept=".pdf,image/png,image/jpeg,image/webp" hidden>
+        <div class="dropzone-icono">📄</div>
+        <div class="dropzone-textos">
+          <strong>Arrastra tu comprobante aquí o haz clic para seleccionarlo</strong>
+          <p>Soporta archivos <strong>PDF</strong>, o fotos / capturas en <strong>PNG, JPG</strong></p>
+        </div>
+        <button type="button" class="btn primario" id="btn-seleccionar-archivo">Seleccionar Archivo</button>
+      </div>
+
+      <!-- Indicador de procesamiento / spinner -->
+      <div id="comprobante-procesando" class="comprobante-procesando" hidden>
+        <div class="spinner-beval"></div>
+        <span>Analizando documento y buscando facturas en la base de datos...</span>
+      </div>
+
+      <!-- Panel de Resultados del Comprobante -->
+      <div id="comprobante-resultados" class="comprobante-resultados" hidden>
+        <div class="comp-meta-grid">
+          <div class="comp-meta-item">
+            <label for="comp-input-numero">N° Comprobante:</label>
+            <input type="text" id="comp-input-numero" placeholder="Ej: 20261100012345">
+          </div>
+          <div class="comp-meta-item">
+            <label for="comp-input-fecha">Fecha Comprobante:</label>
+            <input type="text" id="comp-input-fecha" placeholder="DD/MM/AAAA">
+          </div>
+          <div class="comp-meta-item crece">
+            <label for="comp-input-cliente">Cliente / RIF:</label>
+            <input type="text" id="comp-input-cliente" placeholder="Nombre o RIF del cliente">
+          </div>
+        </div>
+
+        <!-- Bloque de Facturas Detectadas -->
+        <div class="comp-seccion">
+          <div class="comp-seccion-header">
+            <strong>Facturas Asociadas a este Comprobante (<span id="comp-conteo-facturas">0</span>)</strong>
+            <span id="comp-totales-txt" class="comp-totales-txt">Total: $0,00 USD &bull; Retención Est.: $0,00 USD</span>
+          </div>
+          <div id="comp-lista-facturas" class="comp-lista-facturas">
+            <!-- Tarjetas de facturas asociadas -->
+          </div>
+        </div>
+
+        <!-- Bloque "Si no la identificas, uno te ayuda" (Asistente de Búsqueda y Sugerencias) -->
+        <div class="comp-asistente-card">
+          <div class="asistente-header">
+            <span class="asistente-tag">💡 Asistente Inteligente</span>
+            <strong>¿Falta alguna factura o la foto está borrosa?</strong>
+            <p>Busca cualquier factura por número o cliente y agrégala con 1 clic:</p>
+          </div>
+
+          <div class="asistente-buscador-wrap">
+            <input type="text" id="comp-buscador-asistente" placeholder="🔍 Escribe el N° de factura (ej: 3405586) o cliente para agregar...">
+            <div id="comp-sugerencias-dropdown" class="comp-sugerencias-dropdown" hidden></div>
+          </div>
+
+          <!-- Facturas sugeridas del mismo cliente -->
+          <div id="comp-otras-facturas-cliente" class="comp-otras-cliente" hidden>
+            <div class="otras-cliente-titulo">Otras facturas abiertas de este cliente:</div>
+            <div id="comp-otras-cliente-lista" class="otras-cliente-lista"></div>
+          </div>
+        </div>
+
+        <!-- Acciones Finales -->
+        <div class="modal-pie-acciones comp-pie-acciones">
+          <button type="button" class="btn" id="btn-comp-limpiar">🔄 Cargar otro</button>
+          <button type="button" class="btn" id="btn-comp-copiar-ws">📋 Copiar Resumen WhatsApp</button>
+          <button type="button" class="btn primario" id="btn-comp-filtrar-tabla">🔍 Filtrar en la Tabla</button>
+          <button type="button" class="btn primario btn-exito-beval" id="btn-comp-guardar">💾 Guardar y Asociar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="cargando" class="cargando">Cargando…</div>
 <div id="aviso" class="aviso" hidden></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="config.js"></script>
 <script src="app.js"></script>
 </body>

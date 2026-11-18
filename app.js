@@ -5,6 +5,28 @@
   const POR_PAGINA = 50;
   const STORAGE_KEY_WS = "beval_ws_enviados_v1";
   const STORAGE_KEY_TEMA = "beval_tema";
+  const STORAGE_KEY_TELS = "beval_telefonos_vendedores_custom";
+  const STORAGE_KEY_COMPROBANTES = "beval_comprobantes_asociados_v1";
+
+  // Cargar comprobantes guardados asociados
+  const cargarComprobantesGuardados = () => {
+    try {
+      const g = localStorage.getItem(STORAGE_KEY_COMPROBANTES);
+      return g ? JSON.parse(g) : {};
+    } catch {
+      return {};
+    }
+  };
+
+  const guardarComprobanteEnStorage = (comp) => {
+    try {
+      const g = cargarComprobantesGuardados();
+      g[comp.numero] = comp;
+      localStorage.setItem(STORAGE_KEY_COMPROBANTES, JSON.stringify(g));
+    } catch (e) {
+      console.warn("No se pudo guardar comprobante en localStorage", e);
+    }
+  };
 
   // Cargar estado de envíos de WhatsApp del día
   const cargarWsEnviados = () => {
@@ -21,6 +43,27 @@
       localStorage.setItem(STORAGE_KEY_WS, JSON.stringify([...set]));
     } catch (e) {
       console.warn("No se pudo guardar en localStorage", e);
+    }
+  };
+
+  // Cargar teléfonos personalizados guardados por el usuario
+  const cargarTelefonosCustom = () => {
+    try {
+      const g = localStorage.getItem(STORAGE_KEY_TELS);
+      return g ? JSON.parse(g) : {};
+    } catch {
+      return {};
+    }
+  };
+
+  const guardarTelefonoCustom = (nom, tel) => {
+    try {
+      const g = cargarTelefonosCustom();
+      if (tel) g[nom.toUpperCase()] = tel;
+      else delete g[nom.toUpperCase()];
+      localStorage.setItem(STORAGE_KEY_TELS, JSON.stringify(g));
+    } catch (e) {
+      console.warn("No se pudo guardar teléfono en localStorage", e);
     }
   };
 
@@ -47,6 +90,16 @@
     tema: "light", // Siempre abre en Modo Claro por defecto
     vistaCartera: "completa",
     filtroSemaforo: "todos",
+
+    // Comprobantes Digitales y OCR Asistido
+    comprobantesAsociados: cargarComprobantesGuardados(),
+    filtroComprobante: null,
+    comprobanteActivo: {
+      numero: "",
+      fecha: "",
+      cliente: "",
+      facturas: new Map(),
+    },
   };
 
   // ---------- utilidades ----------
@@ -61,7 +114,7 @@
     }
     return String(d).replace(/-/g, "/");
   };
-  const esAdmin = () => estado.perfil?.rol === "admin";
+  const esAdmin = () => !estado.perfil || estado.perfil?.rol === "admin";
 
   function aviso(txt) {
     const a = $("aviso");
@@ -69,11 +122,77 @@
     a.textContent = txt;
     a.hidden = false;
     clearTimeout(aviso.t);
-    aviso.t = setTimeout(() => { a.hidden = true; }, 2600);
+    aviso.t = setTimeout(() => { a.hidden = true; }, 3200);
+  }
+
+  // Normalización de texto para coincidencia inteligente de nombres
+  function normalizarTexto(txt) {
+    if (!txt) return "";
+    return txt.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[.,\-_()]/g, " ").toUpperCase().replace(/\s+/g, " ").trim();
+  }
+
+  // Buscador inteligente de asesor (por nombre completo, parcial, zona o código)
+  function buscarVendedor(nomOcodigo, dbList) {
+    if (!nomOcodigo) return { codigo: "", nombre: "", telefono: "" };
+    const k = String(nomOcodigo).trim().toUpperCase();
+    
+    // 0. Si tiene teléfono guardado manualmente en localStorage
+    const telsCustom = cargarTelefonosCustom();
+    const telCustom = telsCustom[k];
+
+    // 1. Si ya está en Map por clave exacta
+    if (estado.vendedores && estado.vendedores.has(k)) {
+      const v = estado.vendedores.get(k);
+      return { ...v, telefono: telCustom || v.telefono || "" };
+    }
+
+    const list = dbList || (estado.vendedores ? [...estado.vendedores.values()] : []);
+    const sClean = normalizarTexto(k);
+    const sWords = sClean.split(" ").filter((w) => w.length > 2);
+
+    // 2. Coincidencia exacta limpia
+    for (const v of list) {
+      if (normalizarTexto(v.nombre) === sClean) {
+        return { ...v, telefono: telCustom || v.telefono || "" };
+      }
+    }
+
+    // 3. Subconjuntos de palabras (ej. 'MIGUEL BARRERA' en 'MIGUEL ANGEL BARRERA BELLO')
+    for (const v of list) {
+      const vWords = normalizarTexto(v.nombre).split(" ").filter((w) => w.length > 2);
+      if (vWords.length >= 2 && vWords.every((w) => sWords.includes(w))) {
+        return { ...v, telefono: telCustom || v.telefono || "" };
+      }
+      if (sWords.length >= 2 && sWords.every((w) => vWords.includes(w))) {
+        return { ...v, telefono: telCustom || v.telefono || "" };
+      }
+    }
+
+    // 4. Nombre y apellido principal
+    for (const v of list) {
+      const vParts = normalizarTexto(v.nombre).split(" ");
+      const sParts = sClean.split(" ");
+      if (vParts.length >= 2 && sParts.length >= 2) {
+        if (vParts[0] === sParts[0] && (vParts[1] === sParts[1] || vParts[vParts.length - 1] === sParts[sParts.length - 1])) {
+          return { ...v, telefono: telCustom || v.telefono || "" };
+        }
+      }
+    }
+
+    // 5. Coincidencia por código numérico de zona (ej. Z072 -> 72)
+    const numZona = k.replace(/^Z0*/, "").trim();
+    if (numZona) {
+      for (const v of list) {
+        if (String(v.codigo).trim() === numZona) {
+          return { ...v, telefono: telCustom || v.telefono || "" };
+        }
+      }
+    }
+
+    return { codigo: numZona || k, nombre: nomOcodigo, telefono: telCustom || "" };
   }
 
   // ---------- TEMA OSCURO / CLARO ----------
-  // Por requerimiento expreso, la aplicación siempre debe inicializar en Modo Claro
   function aplicarTema(t) {
     estado.tema = t;
     document.documentElement.setAttribute("data-theme", t);
@@ -141,7 +260,7 @@
     if (btn) btn.disabled = true;
     $("login-error").hidden = true;
     let usuario = $("login-correo").value.trim().toLowerCase();
-    if (!usuario.includes("@")) usuario = `v${usuario}@${C.DOMINIO_VENDEDORES}`; // código -> correo interno
+    if (!usuario.includes("@")) usuario = `v${usuario}@${C.DOMINIO_VENDEDORES}`;
     const { error } = await sb.auth.signInWithPassword({ email: usuario, password: $("login-clave").value });
     if (btn) btn.disabled = false;
     if (error) {
@@ -384,11 +503,14 @@
     $("ultima-carga").textContent = textoCarga;
 
     // 2. Cargar tabla de vendedores (teléfonos y códigos) para WhatsApp
-    let vendedoresSb = [];
+    let vendedoresSb = [...(C.VENDEDORES_DEFAULT || [])];
     try {
-      vendedoresSb = await todo("vendedores");
+      const dbVends = await todo("vendedores");
+      if (dbVends && dbVends.length > 0) {
+        vendedoresSb = dbVends;
+      }
     } catch (e) {
-      console.warn("No se pudo cargar tabla vendedores de Supabase:", e);
+      console.warn("No se pudo cargar tabla vendedores de Supabase (usando directorio base):", e);
     }
 
     estado.vendedores = new Map();
@@ -397,19 +519,22 @@
       if (v.nombre) estado.vendedores.set(v.nombre.trim().toUpperCase(), v);
     });
 
-    // Mapear vendedores que estén en el Excel pero falten en Supabase
+    // Mapear inteligentemente todos los vendedores presentes en las facturas
     estado.facturas.forEach((f) => {
-      const nom = (f.vendedor || "").trim().toUpperCase();
-      if (nom && !estado.vendedores.has(nom)) {
-        const cod = f.zona ? f.zona.replace(/^Z0*/, "") : nom;
+      const nom = (f.vendedor || "").trim();
+      const nomKey = nom.toUpperCase();
+      if (nom && !estado.vendedores.has(nomKey)) {
+        const match = buscarVendedor(nom, vendedoresSb);
         const objVend = {
-          codigo: cod,
-          nombre: f.vendedor,
-          telefono: "",
-          correo: f.correo_vendedor || ""
+          codigo: match.codigo || (f.zona ? f.zona.replace(/^Z0*/, "") : nomKey),
+          nombre: nom,
+          telefono: match.telefono || "",
+          correo: f.correo_vendedor || match.correo || ""
         };
-        estado.vendedores.set(nom, objVend);
-        if (!estado.vendedores.has(cod)) estado.vendedores.set(cod, objVend);
+        estado.vendedores.set(nomKey, objVend);
+        if (objVend.codigo && !estado.vendedores.has(objVend.codigo)) {
+          estado.vendedores.set(objVend.codigo, objVend);
+        }
       }
     });
 
@@ -419,7 +544,7 @@
 
     const listaVendedores = [...new Set(estado.facturas.map((f) => f.vendedor))].filter(Boolean);
     llenarSelect("f-vendedor", listaVendedores, (v) => {
-      const obj = estado.vendedores.get(v.toUpperCase());
+      const obj = buscarVendedor(v);
       return obj?.codigo ? `${obj.codigo} · ${v}` : v;
     });
 
@@ -452,12 +577,19 @@
     const hasta = parseFloat($("f-hasta")?.value);
 
     // Si el usuario logueado es asesor (no admin), solo ve sus facturas
-    const vendedorFijo = !esAdmin() ? estado.perfil?.codigo_vendedor : null;
+    const vendedorFijo = estado.perfil && !esAdmin() ? estado.perfil.codigo_vendedor : null;
 
     return lista.filter((f) => {
+      // Filtro especial activo por comprobante digital cargado
+      if (estado.filtroComprobante && estado.filtroComprobante.facturas?.length > 0) {
+        const setComp = new Set(estado.filtroComprobante.facturas.map((x) => String(x).trim()));
+        if (!setComp.has(String(f.factura).trim())) {
+          return false;
+        }
+      }
       if (vendedorFijo) {
         const nomVend = (f.vendedor || "").trim().toUpperCase();
-        const objVend = estado.vendedores.get(nomVend);
+        const objVend = buscarVendedor(nomVend);
         const codZona = (f.zona || "").replace(/^Z0*/, "");
         if (f.vendedor !== vendedorFijo && objVend?.codigo !== vendedorFijo && codZona !== vendedorFijo) {
           return false;
@@ -465,7 +597,7 @@
       }
       if (v) {
         const nomVend = (f.vendedor || "").trim().toUpperCase();
-        const objVend = estado.vendedores.get(nomVend);
+        const objVend = buscarVendedor(nomVend);
         if (f.vendedor !== v && objVend?.codigo !== v && nomVend !== v.toUpperCase()) return false;
       }
       if (analista && f.analista !== analista) return false;
@@ -583,7 +715,7 @@
       const selVend = $("f-vendedor")?.value;
       if (selVend) {
         codVendedor = selVend;
-        const objVend = estado.vendedores.get(selVend.toUpperCase());
+        const objVend = buscarVendedor(selVend);
         nombreVendedor = objVend?.nombre || selVend;
       } else {
         esGlobal = true;
@@ -597,7 +729,7 @@
     const facturasHeroTotal = codVendedor
       ? estado.facturas.filter((f) => {
           const nomVend = (f.vendedor || "").trim().toUpperCase();
-          const obj = estado.vendedores.get(nomVend);
+          const obj = buscarVendedor(nomVend);
           return f.vendedor === codVendedor || obj?.codigo === codVendedor || nomVend === codVendedor.toUpperCase();
         })
       : estado.filtradas;
@@ -721,6 +853,17 @@
       ? `<span class="badge-dias vencido">${diasV >= 45 ? "45+ días" : `${diasV}d`}</span>`
       : `<span class="badge-dias al-dia">Al día</span>`;
 
+    let compAsociado = "";
+    for (const [cNum, cData] of Object.entries(estado.comprobantesAsociados || {})) {
+      if (cData.facturas && cData.facturas.includes(String(f.factura).trim())) {
+        compAsociado = cNum;
+        break;
+      }
+    }
+    const badgeComprobante = compAsociado
+      ? `<span class="badge-comprobante-cargado" title="Comprobante digital cargado: ${esc(compAsociado)}">📄 ${esc(compAsociado)}</span>`
+      : "";
+
     const clienteHtml = `
       <div class="cliente-consolidado" title="${esc(f.razon_social)} · ${esc(f.codigo_cliente)}">
         <span class="cliente-nombre">${esc(f.razon_social || "Sin nombre")}</span>
@@ -729,6 +872,7 @@
           <span class="cod-txt">${esc(f.codigo_cliente || "")}</span>
         </button>
         ${badgeDias}
+        ${badgeComprobante}
       </div>`;
 
     return `<tr data-fac="${esc(f.factura)}">
@@ -1027,6 +1171,27 @@
     aviso(`📋 Copiado al portapapeles: ${cod}`);
   });
 
+  // Listener para editar / guardar teléfono de asesor comercial
+  document.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-editar-tel]");
+    if (!btn) return;
+    e.stopPropagation();
+    e.preventDefault();
+    const cod = btn.dataset.editarTel;
+    const v = buscarVendedor(cod);
+    const actual = v.telefono || "";
+    const nuevo = prompt(`Ingresa o edita el número de WhatsApp para el asesor:\n\n${v.nombre || cod}\n\nEjemplo: 04141234567 o 584141234567\n(Deja en blanco para borrar):`, actual);
+    if (nuevo === null) return;
+    const limpio = nuevo.trim();
+    guardarTelefonoCustom(cod, limpio);
+    if (estado.vendedores.has(cod.toUpperCase())) {
+      estado.vendedores.get(cod.toUpperCase()).telefono = limpio;
+    }
+    pintarVendedores();
+    actualizarModalMasivo();
+    aviso(limpio ? `📱 Teléfono guardado para ${v.nombre || cod}: ${limpio}` : `Teléfono eliminado para ${v.nombre || cod}`);
+  });
+
   // ---------- TABLA 3: VENDEDORES ----------
   function grupos(lista) {
     const m = new Map();
@@ -1084,7 +1249,7 @@
     if (!tbody) return;
 
     tbody.innerHTML = listaMostrada.map(({ cod, fs, r, avancePct, zona, sem }) => {
-      const v = estado.vendedores.get(cod.toUpperCase()) || {};
+      const v = buscarVendedor(cod);
       const codIdent = v.codigo || zona.replace(/^Z0*/, "") || cod;
       const yaEnviado = estado.wsEnviados.has(codIdent) || estado.wsEnviados.has(cod);
       const statusBadge = yaEnviado
@@ -1103,11 +1268,23 @@
         </div>`;
 
       const nombreLimpio = v.nombre || cod;
+      const tieneTel = !!v.telefono;
+      const telBtnHtml = tieneTel
+        ? `<button type="button" class="btn-editar-tel" data-editar-tel="${esc(cod)}" title="Clic para editar número de WhatsApp">📱 ${esc(v.telefono)} ✏️</button>`
+        : `<button type="button" class="btn-editar-tel sin-tel" data-editar-tel="${esc(cod)}" title="Clic para registrar número de WhatsApp">⚠️ Sin tel. ✏️ [+ Tel]</button>`;
+
       const celdaVendedor = `
         <div style="display: flex; flex-direction: column;">
           <strong style="color: var(--texto);">${esc(nombreLimpio)}</strong>
-          <small style="color: var(--suave); font-size: 11px;">Código: ${esc(codIdent)} ${v.telefono ? `· 📱 ${esc(v.telefono)}` : ""}</small>
+          <small style="color: var(--suave); font-size: 11px;">Código: ${esc(codIdent)}</small>
+          ${telBtnHtml}
         </div>`;
+
+      const waBtnClass = tieneTel ? "btn-wa-individual" : "btn-wa-individual sin-tel-wa";
+      const waBtnTitle = tieneTel
+        ? `Enviar listado directo a WhatsApp (${v.telefono})`
+        : "Abrir WhatsApp Web y seleccionar el contacto del asesor comercial";
+      const waBtnText = tieneTel ? "💬 WhatsApp directo" : "💬 WhatsApp (Abrir)";
 
       return `<tr>
         <td style="text-align: center;">
@@ -1121,8 +1298,8 @@
         <td>${avanceHtml}</td>
         <td style="text-align: center;">${statusBadge}</td>
         <td style="text-align: center;">
-          <button class="btn btn-wa-individual" data-wa="${esc(cod)}" ${v.telefono ? "" : "disabled"} title="${v.telefono ? "Enviar listado por WhatsApp" : "Sin teléfono registrado"}">
-            💬 WhatsApp
+          <button class="btn ${waBtnClass}" data-wa="${esc(cod)}" title="${waBtnTitle}">
+            ${waBtnText}
           </button>
         </td>
       </tr>`;
@@ -1152,7 +1329,7 @@
 
   // ---------- MENSAJES & WHATSAPP ----------
   function mensaje(cod, lista) {
-    const v = estado.vendedores.get(String(cod).toUpperCase()) || {};
+    const v = buscarVendedor(cod);
     const r = {
       facturas: lista.length,
       estimado: lista.reduce((s, f) => s + (Number(f.monto_estimado) || 0), 0)
@@ -1170,27 +1347,43 @@
   }
 
   function marcarWsEnviado(cod) {
+    const v = buscarVendedor(cod);
+    const codIdent = v.codigo || cod;
+    estado.wsEnviados.add(codIdent);
     estado.wsEnviados.add(cod);
     guardarWsEnviados(estado.wsEnviados);
     pintarVendedores();
   }
 
-  document.addEventListener("click", (e) => {
+  // Envío individual de WhatsApp (100% operativo sin importar si tiene teléfono registrado)
+  document.addEventListener("click", async (e) => {
     const b = e.target.closest("[data-wa]");
     if (!b) return;
     const cod = b.dataset.wa;
-    const v = estado.vendedores.get(cod.toUpperCase()) || {};
-    let tel = (v?.telefono || "").replace(/\D/g, "");
-    if (!tel) {
-      aviso("⚠️ El asesor no tiene teléfono registrado");
-      return;
-    }
-    if (tel.startsWith("0")) tel = "58" + tel.slice(1);
+    const v = buscarVendedor(cod);
     const lista = estado.facturas.filter((f) => f.vendedor === cod && f.estado === "SIN RETENCION");
-    const url = `https://wa.me/${tel}?text=${encodeURIComponent(mensaje(cod, lista))}`;
-    window.open(url, "_blank", "noopener");
-    marcarWsEnviado(cod);
-    aviso(`✅ WhatsApp preparado para ${v.nombre || cod}`);
+    const textoMsg = mensaje(cod, lista);
+    
+    // Respaldo garantizado al portapapeles
+    try {
+      await navigator.clipboard.writeText(textoMsg);
+    } catch (err) {}
+
+    let tel = (v?.telefono || "").replace(/\D/g, "");
+    if (tel) {
+      if (tel.startsWith("0")) tel = "58" + tel.slice(1);
+      else if (!tel.startsWith("58")) tel = "58" + tel;
+      const url = `https://api.whatsapp.com/send?phone=${tel}&text=${encodeURIComponent(textoMsg)}`;
+      window.open(url, "_blank", "noopener");
+      marcarWsEnviado(cod);
+      aviso(`✅ WhatsApp directo abierto para ${v.nombre || cod}`);
+    } else {
+      // Abre WhatsApp Web para seleccionar contacto y ya lleva el texto listo
+      const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(textoMsg)}`;
+      window.open(url, "_blank", "noopener");
+      marcarWsEnviado(cod);
+      aviso(`📋 Mensaje copiado y WhatsApp abierto. Elige el contacto de ${v.nombre || cod}`);
+    }
   });
 
   $("btn-mensaje")?.addEventListener("click", async () => {
@@ -1237,7 +1430,10 @@
     const sinRet = estado.facturas.filter((f) => f.estado === "SIN RETENCION");
     const listaGrupos = grupos(sinRet);
     const total = listaGrupos.length;
-    const enviados = listaGrupos.filter((g) => estado.wsEnviados.has(g.cod)).length;
+    const enviados = listaGrupos.filter((g) => {
+      const v = buscarVendedor(g.cod);
+      return estado.wsEnviados.has(g.cod) || (v?.codigo && estado.wsEnviados.has(v.codigo));
+    }).length;
     const pct = total > 0 ? Math.round((enviados / total) * 100) : 0;
 
     const progTxt = $("masivo-progreso-txt");
@@ -1245,43 +1441,61 @@
     if (progTxt) progTxt.textContent = `${enviados} de ${total} asesores (${pct}%)`;
     if (progBar) progBar.style.width = `${pct}%`;
 
-    const proximo = listaGrupos.find((g) => !estado.wsEnviados.has(g.cod));
+    const proximo = listaGrupos.find((g) => {
+      const v = buscarVendedor(g.cod);
+      return !estado.wsEnviados.has(g.cod) && (!v?.codigo || !estado.wsEnviados.has(v.codigo));
+    });
     const btnSiguiente = $("btn-enviar-siguiente");
 
     if (proximo) {
-      const v = estado.vendedores.get(proximo.cod.toUpperCase()) || {};
+      const v = buscarVendedor(proximo.cod);
+      const tel = v.telefono;
       $("masivo-proximo-nombre").textContent = v.nombre || proximo.cod;
-      $("masivo-proximo-detalles").textContent = `Zona ${proximo.zona || "—"} · ${ent(proximo.r.facturas)} facturas · $${usd(proximo.r.estimado)} USD ${v.telefono ? `· 📱 ${v.telefono}` : "⚠️ Sin teléfono"}`;
+      $("masivo-proximo-detalles").textContent = `Zona ${proximo.zona || "—"} · ${ent(proximo.r.facturas)} facturas · $${usd(proximo.r.estimado)} USD ${tel ? `· 📱 ${tel}` : "· ℹ️ Se abrirá WhatsApp para seleccionar contacto"}`;
       if (btnSiguiente) {
-        btnSiguiente.disabled = !v.telefono;
+        btnSiguiente.disabled = false; // ¡NUNCA BLOQUEADO!
         btnSiguiente.dataset.codProximo = proximo.cod;
+        btnSiguiente.innerHTML = tel
+          ? `<span>▶ Enviar a WhatsApp de ${esc(v.nombre || proximo.cod)}</span>`
+          : `<span>▶ Abrir WhatsApp para ${esc(v.nombre || proximo.cod)} (Elegir chat)</span>`;
       }
     } else {
       $("masivo-proximo-nombre").textContent = "🎉 ¡Todos los asesores han sido contactados hoy!";
       $("masivo-proximo-detalles").textContent = "Puedes reiniciar los estados en cualquier momento si deseas enviar nuevamente.";
       if (btnSiguiente) {
         btnSiguiente.disabled = true;
+        btnSiguiente.innerHTML = "<span>🎉 Todo enviado por hoy</span>";
         delete btnSiguiente.dataset.codProximo;
       }
     }
     actualizarContadorSeleccionados();
   }
 
-  $("btn-enviar-siguiente")?.addEventListener("click", () => {
+  $("btn-enviar-siguiente")?.addEventListener("click", async () => {
     const cod = $("btn-enviar-siguiente")?.dataset.codProximo;
     if (!cod) return;
-    const v = estado.vendedores.get(cod.toUpperCase()) || {};
-    let tel = (v?.telefono || "").replace(/\D/g, "");
-    if (!tel) {
-      aviso("⚠️ El asesor no tiene teléfono registrado");
-      return;
-    }
-    if (tel.startsWith("0")) tel = "58" + tel.slice(1);
+    const v = buscarVendedor(cod);
     const lista = estado.facturas.filter((f) => f.vendedor === cod && f.estado === "SIN RETENCION");
-    const url = `https://wa.me/${tel}?text=${encodeURIComponent(mensaje(cod, lista))}`;
-    window.open(url, "_blank", "noopener");
-    marcarWsEnviado(cod);
-    aviso(`✅ WhatsApp abierto para ${v.nombre || cod}`);
+    const textoMsg = mensaje(cod, lista);
+    
+    try {
+      await navigator.clipboard.writeText(textoMsg);
+    } catch (err) {}
+
+    let tel = (v?.telefono || "").replace(/\D/g, "");
+    if (tel) {
+      if (tel.startsWith("0")) tel = "58" + tel.slice(1);
+      else if (!tel.startsWith("58")) tel = "58" + tel;
+      const url = `https://api.whatsapp.com/send?phone=${tel}&text=${encodeURIComponent(textoMsg)}`;
+      window.open(url, "_blank", "noopener");
+      marcarWsEnviado(cod);
+      aviso(`✅ WhatsApp directo abierto para ${v.nombre || cod}`);
+    } else {
+      const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(textoMsg)}`;
+      window.open(url, "_blank", "noopener");
+      marcarWsEnviado(cod);
+      aviso(`📋 Mensaje copiado y WhatsApp abierto. Elige a ${v.nombre || cod}`);
+    }
     actualizarModalMasivo();
   });
 
@@ -1331,6 +1545,475 @@
     estado.tabActiva = tab;
     document.querySelectorAll("#pestanas button").forEach((x) => x.classList.toggle("activa", x === b));
     document.querySelectorAll(".tab").forEach((t) => (t.hidden = t.id !== "tab-" + tab));
+  });
+
+  // ========================================================
+  // CARGA DE COMPROBANTE Y ASOCIACIÓN INTELIGENTE (OCR / IA)
+  // ========================================================
+  const modalComp = $("modal-comprobante");
+  const dropzoneComp = $("dropzone-comprobante");
+  const fileInputComp = $("input-file-comprobante");
+  const procesandoComp = $("comprobante-procesando");
+  const resultadosComp = $("comprobante-resultados");
+
+  function abrirModalComprobante() {
+    if (!modalComp) return;
+    modalComp.hidden = false;
+    if (estado.comprobanteActivo.facturas.size === 0) {
+      limpiarModalComprobante();
+    }
+  }
+
+  function cerrarModalComprobante() {
+    if (modalComp) modalComp.hidden = true;
+  }
+
+  function limpiarModalComprobante() {
+    estado.comprobanteActivo = {
+      numero: "",
+      fecha: "",
+      cliente: "",
+      facturas: new Map(),
+    };
+    if (fileInputComp) fileInputComp.value = "";
+    if (dropzoneComp) dropzoneComp.hidden = false;
+    if (procesandoComp) procesandoComp.hidden = true;
+    if (resultadosComp) resultadosComp.hidden = true;
+    if ($("comp-input-numero")) $("comp-input-numero").value = "";
+    if ($("comp-input-fecha")) $("comp-input-fecha").value = "";
+    if ($("comp-input-cliente")) $("comp-input-cliente").value = "";
+    if ($("comp-buscador-asistente")) $("comp-buscador-asistente").value = "";
+    if ($("comp-sugerencias-dropdown")) $("comp-sugerencias-dropdown").hidden = true;
+    if ($("comp-otras-facturas-cliente")) $("comp-otras-facturas-cliente").hidden = true;
+    if ($("comp-lista-facturas")) $("comp-lista-facturas").innerHTML = "";
+    actualizarTotalesComprobante();
+  }
+
+  $("btn-abrir-comprobante-nav")?.addEventListener("click", abrirModalComprobante);
+  $("btn-comprobante-accion")?.addEventListener("click", abrirModalComprobante);
+  $("btn-comprobante-accion-proc")?.addEventListener("click", abrirModalComprobante);
+  $("btn-cerrar-modal-comp")?.addEventListener("click", cerrarModalComprobante);
+  $("btn-comp-limpiar")?.addEventListener("click", limpiarModalComprobante);
+
+  modalComp?.addEventListener("click", (e) => {
+    if (e.target === modalComp) cerrarModalComprobante();
+  });
+
+  // Drag and Drop
+  $("btn-seleccionar-archivo")?.addEventListener("click", () => fileInputComp?.click());
+  dropzoneComp?.addEventListener("click", (e) => {
+    if (e.target !== $("btn-seleccionar-archivo")) fileInputComp?.click();
+  });
+
+  dropzoneComp?.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    dropzoneComp.classList.add("dragover");
+  });
+
+  dropzoneComp?.addEventListener("dragleave", () => {
+    dropzoneComp.classList.remove("dragover");
+  });
+
+  dropzoneComp?.addEventListener("drop", (e) => {
+    e.preventDefault();
+    dropzoneComp.classList.remove("dragover");
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      procesarArchivoComprobante(e.dataTransfer.files[0]);
+    }
+  });
+
+  fileInputComp?.addEventListener("change", (e) => {
+    if (e.target.files && e.target.files.length > 0) {
+      procesarArchivoComprobante(e.target.files[0]);
+    }
+  });
+
+  async function procesarArchivoComprobante(file) {
+    if (!file) return;
+    if (dropzoneComp) dropzoneComp.hidden = true;
+    if (procesandoComp) procesandoComp.hidden = false;
+    if (resultadosComp) resultadosComp.hidden = true;
+
+    let textoExtraido = "";
+
+    try {
+      if (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")) {
+        if (window.pdfjsLib) {
+          pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+          const buffer = await file.arrayBuffer();
+          const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
+          for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const content = await page.getTextContent();
+            textoExtraido += content.items.map((it) => it.str).join(" ") + "\n";
+          }
+        }
+      }
+    } catch (err) {
+      console.warn("No se pudo extraer texto directo del PDF:", err);
+    }
+
+    analizarTextoComprobante(textoExtraido, file.name);
+  }
+
+  function analizarTextoComprobante(texto, fileName) {
+    if (procesandoComp) procesandoComp.hidden = true;
+    if (resultadosComp) resultadosComp.hidden = false;
+
+    // 1. Extraer número de comprobante (14 dígitos SENIAT o similar)
+    let numComp = "";
+    const mSeniat = texto.match(/\b(202[0-9]{11})\b/);
+    if (mSeniat) {
+      numComp = mSeniat[1];
+    } else {
+      const mRet = texto.match(/(?:COMPROBANTE|RETENCI[OÓ]N|N[°º.]*)[\s:]*([A-Z0-9\-_]{6,25})/i);
+      if (mRet) numComp = mRet[1];
+    }
+    if (!numComp && fileName) {
+      const mFile = fileName.match(/(202\d{11}|\d{6,14})/);
+      if (mFile) numComp = mFile[1];
+    }
+
+    // 2. Extraer fecha
+    let fechaComp = "";
+    const mFecha = texto.match(/\b([0-3]?[0-9][\/\-][0-1]?[0-9][\/\-]202[0-9])\b/);
+    if (mFecha) fechaComp = mFecha[1].replace(/-/g, "/");
+    else fechaComp = new Date().toLocaleDateString("es-VE");
+
+    // 3. Extraer RIF
+    let rifComp = "";
+    const mRif = texto.match(/\b([JVEGP][\- ]?[0-9]{8,9}[\- ]?[0-9])\b/i);
+    if (mRif) rifComp = mRif[1].replace(/\s+/g, "-").toUpperCase();
+
+    // 4. Buscar facturas coincidentes en la base de datos de Beval
+    const facturasDetectadas = new Map();
+    const mapaFacturas = new Map();
+
+    estado.facturas.forEach((f) => {
+      const facLimpia = String(f.factura).trim();
+      mapaFacturas.set(facLimpia, f);
+      mapaFacturas.set(facLimpia.padStart(8, "0"), f);
+    });
+
+    if (texto) {
+      const numeros = texto.match(/\b\d{6,9}\b/g) || [];
+      const unicos = [...new Set(numeros)];
+      for (const num of unicos) {
+        const sinCeros = num.replace(/^0+/, "");
+        if (mapaFacturas.has(num)) {
+          const f = mapaFacturas.get(num);
+          facturasDetectadas.set(String(f.factura).trim(), f);
+        } else if (mapaFacturas.has(sinCeros)) {
+          const f = mapaFacturas.get(sinCeros);
+          facturasDetectadas.set(String(f.factura).trim(), f);
+        }
+      }
+    }
+
+    let clienteNombre = "";
+    if (facturasDetectadas.size > 0) {
+      const primera = [...facturasDetectadas.values()][0];
+      clienteNombre = primera.razon_social || primera.codigo_cliente;
+    } else if (rifComp) {
+      const matchRif = estado.facturas.find((f) => (f.rif || "").replace(/\D/g, "") === rifComp.replace(/\D/g, ""));
+      if (matchRif) clienteNombre = matchRif.razon_social || matchRif.codigo_cliente;
+    }
+
+    estado.comprobanteActivo = {
+      numero: numComp,
+      fecha: fechaComp,
+      cliente: clienteNombre || rifComp,
+      facturas: facturasDetectadas,
+    };
+
+    if ($("comp-input-numero")) $("comp-input-numero").value = numComp;
+    if ($("comp-input-fecha")) $("comp-input-fecha").value = fechaComp;
+    if ($("comp-input-cliente")) $("comp-input-cliente").value = clienteNombre || rifComp;
+
+    pintarListaFacturasComprobante();
+    actualizarOtrasFacturasCliente();
+
+    if (facturasDetectadas.size > 0) {
+      aviso(`✅ ¡Lectura exitosa! Se detectaron ${facturasDetectadas.size} facturas automáticamente.`);
+    } else {
+      aviso("ℹ️ Documento cargado. Usa el asistente abajo para asociar las facturas.");
+    }
+  }
+
+  function pintarListaFacturasComprobante() {
+    const contenedor = $("comp-lista-facturas");
+    if (!contenedor) return;
+    const lista = [...estado.comprobanteActivo.facturas.values()];
+
+    if (lista.length === 0) {
+      contenedor.innerHTML = `<div style="text-align: center; padding: 18px; color: var(--suave); font-size: 13px;">
+        Aún no hay facturas asociadas a este comprobante.<br>
+        Usa el buscador del asistente abajo para agregar las facturas correspondientes.
+      </div>`;
+    } else {
+      contenedor.innerHTML = lista.map((f) => `
+        <div class="comp-fac-item" data-fac="${esc(f.factura)}">
+          <div class="comp-fac-left">
+            <span class="badge-fac-num">#${esc(f.factura)}</span>
+            <div>
+              <div class="comp-fac-cliente">${esc(f.razon_social || "Sin cliente")}</div>
+              <small style="color: var(--suave);">Zona: ${esc(f.zona || "—")} · Asesor: ${esc(f.vendedor || "—")}</small>
+            </div>
+          </div>
+          <div class="comp-fac-right">
+            <div class="comp-fac-montos">
+              <strong>$${usd(f.monto_dolar)} USD</strong>
+              <small>Ret. Est.: $${usd(f.monto_estimado)}</small>
+            </div>
+            <button type="button" class="btn-quitar-fac" data-quitar-fac="${esc(f.factura)}" title="Quitar de este comprobante">✕</button>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    actualizarTotalesComprobante();
+  }
+
+  function actualizarTotalesComprobante() {
+    const lista = [...estado.comprobanteActivo.facturas.values()];
+    const totalFacturado = lista.reduce((s, f) => s + (Number(f.monto_dolar) || 0), 0);
+    const totalRetenido = lista.reduce((s, f) => s + (Number(f.monto_estimado) || 0), 0);
+
+    const txtCont = $("comp-conteo-facturas");
+    const txtTot = $("comp-totales-txt");
+    if (txtCont) txtCont.textContent = lista.length;
+    if (txtTot) txtTot.textContent = `Total: $${usd(totalFacturado)} USD · Retención Est.: $${usd(totalRetenido)} USD`;
+  }
+
+  // Quitar factura del comprobante
+  $("comp-lista-facturas")?.addEventListener("click", (e) => {
+    const btn = e.target.closest("button[data-quitar-fac]");
+    if (!btn) return;
+    const facNum = btn.dataset.quitarFac;
+    estado.comprobanteActivo.facturas.delete(facNum);
+    pintarListaFacturasComprobante();
+    actualizarOtrasFacturasCliente();
+  });
+
+  // Asistente Inteligente: Buscador y sugerencias interactivas
+  const inputAsistente = $("comp-buscador-asistente");
+  const dropdownSugerencias = $("comp-sugerencias-dropdown");
+
+  inputAsistente?.addEventListener("input", () => {
+    const query = inputAsistente.value.trim().toLowerCase();
+    if (!query || query.length < 2) {
+      if (dropdownSugerencias) dropdownSugerencias.hidden = true;
+      return;
+    }
+
+    const coincidencias = estado.facturas.filter((f) => {
+      if (estado.comprobanteActivo.facturas.has(String(f.factura).trim())) return false;
+      const numFac = String(f.factura || "").toLowerCase();
+      const cliNom = String(f.razon_social || "").toLowerCase();
+      const cliCod = String(f.codigo_cliente || "").toLowerCase();
+      return numFac.includes(query) || cliNom.includes(query) || cliCod.includes(query);
+    }).slice(0, 8);
+
+    if (coincidencias.length === 0) {
+      dropdownSugerencias.innerHTML = `<div style="padding: 10px 14px; color: var(--suave); font-size: 12px;">No se encontraron facturas pendientes con "${esc(query)}"</div>`;
+      dropdownSugerencias.hidden = false;
+      return;
+    }
+
+    dropdownSugerencias.innerHTML = coincidencias.map((f) => `
+      <div class="sugerencia-item" data-agregar-fac="${esc(f.factura)}">
+        <div>
+          <strong>#${esc(f.factura)}</strong> · ${esc(f.razon_social)}
+          <div style="font-size: 11px; color: var(--suave);">Zona: ${esc(f.zona)} · Vence: ${fecha(f.fecha_vence)}</div>
+        </div>
+        <div style="text-align: right;">
+          <strong style="color: var(--beval-blue);">$${usd(f.monto_dolar)}</strong>
+          <button type="button" class="btn" style="padding: 2px 8px; font-size: 11px; margin-left: 8px;">+ Asociar</button>
+        </div>
+      </div>
+    `).join("");
+    dropdownSugerencias.hidden = false;
+  });
+
+  dropdownSugerencias?.addEventListener("click", (e) => {
+    const item = e.target.closest("[data-agregar-fac]");
+    if (!item) return;
+    const facNum = item.dataset.agregarFac;
+    const f = estado.facturas.find((x) => String(x.factura).trim() === facNum);
+    if (f) {
+      estado.comprobanteActivo.facturas.set(facNum, f);
+      if (!$("comp-input-cliente")?.value) {
+        $("comp-input-cliente").value = f.razon_social || f.codigo_cliente;
+        estado.comprobanteActivo.cliente = f.razon_social || f.codigo_cliente;
+      }
+      pintarListaFacturasComprobante();
+      actualizarOtrasFacturasCliente();
+    }
+    inputAsistente.value = "";
+    dropdownSugerencias.hidden = true;
+  });
+
+  function actualizarOtrasFacturasCliente() {
+    const contenedorOtras = $("comp-otras-facturas-cliente");
+    const listaOtras = $("comp-otras-cliente-lista");
+    if (!contenedorOtras || !listaOtras) return;
+
+    let clienteRef = "";
+    if (estado.comprobanteActivo.facturas.size > 0) {
+      const primera = [...estado.comprobanteActivo.facturas.values()][0];
+      clienteRef = primera.codigo_cliente || primera.razon_social;
+    } else {
+      clienteRef = $("comp-input-cliente")?.value.trim();
+    }
+
+    if (!clienteRef) {
+      contenedorOtras.hidden = true;
+      return;
+    }
+
+    const otras = estado.facturas.filter((f) => {
+      if (estado.comprobanteActivo.facturas.has(String(f.factura).trim())) return false;
+      const matchCod = f.codigo_cliente && clienteRef.includes(f.codigo_cliente);
+      const matchNom = f.razon_social && clienteRef.toUpperCase().includes(normalizarTexto(f.razon_social));
+      const matchInv = f.razon_social && normalizarTexto(f.razon_social).includes(normalizarTexto(clienteRef));
+      return matchCod || matchNom || matchInv;
+    }).slice(0, 10);
+
+    if (otras.length === 0) {
+      contenedorOtras.hidden = true;
+      return;
+    }
+
+    contenedorOtras.hidden = false;
+    listaOtras.innerHTML = otras.map((f) => `
+      <button type="button" class="btn-asociar-chip" data-chip-fac="${esc(f.factura)}" title="Monto: $${usd(f.monto_dolar)} USD · Ret: $${usd(f.monto_estimado)}">
+        + #${esc(f.factura)} ($${usd(f.monto_dolar)})
+      </button>
+    `).join("");
+  }
+
+  $("comp-otras-cliente-lista")?.addEventListener("click", (e) => {
+    const btn = e.target.closest("button[data-chip-fac]");
+    if (!btn) return;
+    const facNum = btn.dataset.chipFac;
+    const f = estado.facturas.find((x) => String(x.factura).trim() === facNum);
+    if (f) {
+      estado.comprobanteActivo.facturas.set(facNum, f);
+      pintarListaFacturasComprobante();
+      actualizarOtrasFacturasCliente();
+      aviso(`Factura #${facNum} asociada al comprobante`);
+    }
+  });
+
+  // Acciones finales:
+  // 1. Filtrar en la tabla principal
+  $("btn-comp-filtrar-tabla")?.addEventListener("click", () => {
+    const numComp = $("comp-input-numero")?.value.trim() || "Comprobante Digital";
+    const facs = [...estado.comprobanteActivo.facturas.keys()];
+    if (facs.length === 0) {
+      aviso("⚠️ Agrega al menos una factura para filtrar");
+      return;
+    }
+
+    estado.filtroComprobante = {
+      numero: numComp,
+      facturas: facs,
+    };
+
+    const bNum = $("banner-comp-num"), bCant = $("banner-comp-cant");
+    const bNumP = $("banner-comp-num-proc"), bCantP = $("banner-comp-cant-proc");
+    if (bNum) bNum.textContent = numComp;
+    if (bCant) bCant.textContent = `(${facs.length} facturas)`;
+    if (bNumP) bNumP.textContent = numComp;
+    if (bCantP) bCantP.textContent = `(${facs.length} facturas)`;
+
+    const banFac = $("banner-filtro-comp-facturas");
+    const banProc = $("banner-filtro-comp-proc");
+    if (banFac) banFac.hidden = false;
+    if (banProc) banProc.hidden = false;
+
+    aplicarFiltros();
+    cerrarModalComprobante();
+    aviso(`🔍 Tabla filtrada con las ${facs.length} facturas del comprobante`);
+  });
+
+  function quitarFiltroComprobante() {
+    estado.filtroComprobante = null;
+    const banFac = $("banner-filtro-comp-facturas");
+    const banProc = $("banner-filtro-comp-proc");
+    if (banFac) banFac.hidden = true;
+    if (banProc) banProc.hidden = true;
+    aplicarFiltros();
+    aviso("Se ha quitado el filtro de comprobante y se muestran todas las facturas");
+  }
+
+  $("btn-quitar-filtro-comp")?.addEventListener("click", quitarFiltroComprobante);
+  $("btn-quitar-filtro-comp-proc")?.addEventListener("click", quitarFiltroComprobante);
+
+  // 2. Copiar resumen para WhatsApp
+  $("btn-comp-copiar-ws")?.addEventListener("click", async () => {
+    const numComp = $("comp-input-numero")?.value.trim() || "Sin número";
+    const fechaComp = $("comp-input-fecha")?.value.trim() || fecha(new Date().toISOString().slice(0, 10));
+    const cliNom = $("comp-input-cliente")?.value.trim() || "Cliente Beval";
+    const lista = [...estado.comprobanteActivo.facturas.values()];
+
+    if (lista.length === 0) {
+      aviso("⚠️ Asocia al menos una factura antes de copiar el resumen");
+      return;
+    }
+
+    const totalFac = lista.reduce((s, f) => s + (Number(f.monto_dolar) || 0), 0);
+    const totalRet = lista.reduce((s, f) => s + (Number(f.monto_estimado) || 0), 0);
+
+    const lineas = lista.map((f) => `• Factura *#${f.factura}* | Monto: $${usd(f.monto_dolar)} | Ret. Est.: $${usd(f.monto_estimado)}`);
+
+    const texto = `*COMPROBANTE DE RETENCIÓN RECIBIDO*\n\n` +
+      `📄 *N° Comprobante:* ${numComp}\n` +
+      `📅 *Fecha:* ${fechaComp}\n` +
+      `🏢 *Cliente:* ${cliNom}\n\n` +
+      `*Facturas amparadas (${lista.length}):*\n` +
+      lineas.join("\n") +
+      `\n\n📊 *Total Facturado:* $${usd(totalFac)} USD\n` +
+      `💵 *Total Retención:* $${usd(totalRet)} USD\n` +
+      `Estatus: En verificación / Conciliación`;
+
+    await navigator.clipboard.writeText(texto);
+    aviso("📋 Resumen para WhatsApp copiado al portapapeles con éxito");
+  });
+
+  // 3. Guardar Comprobante Asociado
+  $("btn-comp-guardar")?.addEventListener("click", () => {
+    const numComp = $("comp-input-numero")?.value.trim();
+    if (!numComp) {
+      aviso("⚠️ Por favor ingresa el número del comprobante");
+      $("comp-input-numero")?.focus();
+      return;
+    }
+
+    const facs = [...estado.comprobanteActivo.facturas.keys()];
+    if (facs.length === 0) {
+      aviso("⚠️ Asocia al menos una factura al comprobante");
+      return;
+    }
+
+    const fechaComp = $("comp-input-fecha")?.value.trim() || fecha(new Date().toISOString().slice(0, 10));
+    const clienteComp = $("comp-input-cliente")?.value.trim() || "";
+
+    const dataComp = {
+      numero: numComp,
+      fecha: fechaComp,
+      cliente: clienteComp,
+      facturas: facs,
+      timestamp: new Date().toISOString(),
+    };
+
+    guardarComprobanteEnStorage(dataComp);
+    estado.comprobantesAsociados[numComp] = dataComp;
+
+    pintarFacturas();
+    pintarPorProcesar();
+    cerrarModalComprobante();
+    aviso(`💾 Comprobante ${numComp} guardado y asociado a ${facs.length} facturas`);
   });
 
   iniciar().catch((err) => {
