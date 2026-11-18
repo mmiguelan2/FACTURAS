@@ -29,12 +29,22 @@
     facturas: [],
     vendedores: new Map(),
     noEspeciales: new Set(),
+    
+    // Tab Sin Retención
     filtradas: [],
     orden: { campo: "dias_vencida", asc: false },
     pagina: 0,
     seleccionadas: new Set(),
+
+    // Tab Pendiente por Procesar
+    filtradasProc: [],
+    ordenProc: { campo: "dias_vencida", asc: false },
+    paginaProc: 0,
+    seleccionadasProc: new Set(),
+
+    tabActiva: "facturas",
     wsEnviados: cargarWsEnviados(),
-    tema: localStorage.getItem(STORAGE_KEY_TEMA) || "dark",
+    tema: "light", // Siempre abre en Modo Claro por defecto
     vistaCartera: "completa",
     filtroSemaforo: "todos",
   };
@@ -43,7 +53,14 @@
   const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const usd = (n) => (Number(n) || 0).toLocaleString("es-VE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const ent = (n) => (Number(n) || 0).toLocaleString("es-VE");
-  const fecha = (d) => (d ? d.split("-").reverse().join("/") : "");
+  const fecha = (d) => {
+    if (!d) return "";
+    const partes = String(d).trim().split("-");
+    if (partes.length === 3 && partes[0].length === 4) {
+      return `${partes[2]}/${partes[1]}/${partes[0]}`;
+    }
+    return String(d).replace(/-/g, "/");
+  };
   const esAdmin = () => estado.perfil?.rol === "admin";
 
   function aviso(txt) {
@@ -56,6 +73,7 @@
   }
 
   // ---------- TEMA OSCURO / CLARO ----------
+  // Por requerimiento expreso, la aplicación siempre debe inicializar en Modo Claro
   function aplicarTema(t) {
     estado.tema = t;
     document.documentElement.setAttribute("data-theme", t);
@@ -70,10 +88,10 @@
     aviso(`Modo ${nuevoTema === "light" ? "Claro" : "Oscuro"} activado`);
   });
 
-  // Inicializar tema guardado
-  aplicarTema(estado.tema);
+  // Forzar siempre modo claro al abrir la página
+  aplicarTema("light");
 
-  // Definición de Columnas (SIN RIF, con cliente consolidado y fechas completas)
+  // Definición de Columnas para Sin Retención
   const COLUMNAS = [
     { campo: "sel", titulo: "", ancho: "34px", noSort: true },
     { campo: "factura", titulo: "Factura", ancho: "85px" },
@@ -81,11 +99,28 @@
     { campo: "fecha_vence", titulo: "Vence", ancho: "94px", fmt: fecha },
     { campo: "dias_vencida", titulo: "Días V.", ancho: "62px", num: true, fmt: (v) => (v > 0 ? `<span class="vencida">${ent(v)}</span>` : ent(v)), html: true },
     { campo: "cliente_consolidado", titulo: "Cliente / Razón Social", ancho: "auto", noSort: true, html: true },
-    { campo: "vendedor", titulo: "Vend.", ancho: "48px" },
+    { campo: "analista", titulo: "Analista", ancho: "125px" },
+    { campo: "vendedor", titulo: "Vend.", ancho: "115px" },
     { campo: "zona", titulo: "Zona", ancho: "50px" },
     { campo: "monto_dolar", titulo: "Monto USD", ancho: "86px", num: true, fmt: usd },
     { campo: "saldo_usd", titulo: "Saldo USD", ancho: "86px", num: true, fmt: usd },
     { campo: "monto_estimado", titulo: "Estimado USD", ancho: "92px", num: true, fmt: usd },
+  ];
+
+  // Definición de Columnas para Pendiente por Procesar
+  const COLUMNAS_POR_PROCESAR = [
+    { campo: "sel", titulo: "", ancho: "34px", noSort: true },
+    { campo: "factura", titulo: "Factura", ancho: "85px" },
+    { campo: "fecha_emision", titulo: "Emisión", ancho: "94px", fmt: fecha },
+    { campo: "fecha_vence", titulo: "Vence", ancho: "94px", fmt: fecha },
+    { campo: "dias_vencida", titulo: "Días V.", ancho: "62px", num: true, fmt: (v) => (v > 0 ? `<span class="vencida">${ent(v)}</span>` : ent(v)), html: true },
+    { campo: "cliente_consolidado", titulo: "Cliente / Razón Social", ancho: "auto", noSort: true, html: true },
+    { campo: "retencion", titulo: "Comprobante Retención", ancho: "155px", html: true },
+    { campo: "monto_retencion", titulo: "Monto Ret. USD", ancho: "95px", num: true, fmt: usd },
+    { campo: "saldo_usd", titulo: "Saldo USD", ancho: "85px", num: true, fmt: usd },
+    { campo: "analista", titulo: "Analista", ancho: "125px" },
+    { campo: "vendedor", titulo: "Vendedor", ancho: "120px" },
+    { campo: "zona", titulo: "Zona", ancho: "50px" },
   ];
 
   // ---------- sesión ----------
@@ -100,15 +135,15 @@
     $("vista-login").hidden = false;
   }
 
-  $("form-login").addEventListener("submit", async (e) => {
+  $("form-login")?.addEventListener("submit", async (e) => {
     e.preventDefault();
     const btn = $("btn-entrar");
-    btn.disabled = true;
+    if (btn) btn.disabled = true;
     $("login-error").hidden = true;
     let usuario = $("login-correo").value.trim().toLowerCase();
     if (!usuario.includes("@")) usuario = `v${usuario}@${C.DOMINIO_VENDEDORES}`; // código -> correo interno
     const { error } = await sb.auth.signInWithPassword({ email: usuario, password: $("login-clave").value });
-    btn.disabled = false;
+    if (btn) btn.disabled = false;
     if (error) {
       $("login-error").textContent = "Usuario o contraseña incorrectos.";
       $("login-error").hidden = false;
@@ -120,33 +155,33 @@
     $("cargando").hidden = true;
   });
 
-  $("btn-salir").addEventListener("click", async () => {
+  $("btn-salir")?.addEventListener("click", async () => {
     await sb.auth.signOut();
     location.reload();
   });
 
-  // ---------- BOTÓN REFRESCAR / SINCRONIZAR CON GIRO ----------
+  // ---------- BOTÓN REFRESCAR / SINCRONIZAR CON GOOGLE SHEETS ----------
   $("btn-refrescar")?.addEventListener("click", async () => {
     const btn = $("btn-refrescar");
     const icono = btn?.querySelector(".icono-refrescar");
     if (btn?.disabled) return;
     if (btn) btn.disabled = true;
     if (icono) icono.classList.add("girando");
-    aviso("⏳ Sincronizando datos con la base de datos...");
+    aviso("⏳ Leyendo datos en vivo desde Google Sheets...");
     const inicioTiempo = Date.now();
     try {
       await cargarDatos();
-      const demora = Math.max(0, 800 - (Date.now() - inicioTiempo));
+      const demora = Math.max(0, 600 - (Date.now() - inicioTiempo));
       setTimeout(() => {
         if (icono) icono.classList.remove("girando");
         if (btn) btn.disabled = false;
-        aviso("✅ Datos sincronizados correctamente");
+        aviso("✅ Datos sincronizados con Google Sheets");
       }, demora);
     } catch (err) {
       console.error("Error al refrescar datos:", err);
       if (icono) icono.classList.remove("girando");
       if (btn) btn.disabled = false;
-      aviso("❌ Error al sincronizar: " + (err.message || "Verifique la conexión"));
+      aviso("❌ Error al leer Google Sheets: " + (err.message || "Verifique la conexión"));
     }
   });
 
@@ -169,7 +204,134 @@
     $("vista-app").hidden = false;
   }
 
-  // ---------- datos ----------
+  // ---------- CSV PARSER RFC 4180 ----------
+  function parseCSV(text) {
+    const rows = [];
+    let currentRow = [];
+    let currentField = "";
+    let insideQuotes = false;
+    for (let i = 0; i < text.length; i++) {
+      const char = text[i];
+      const nextChar = text[i + 1];
+      if (char === '"') {
+        if (insideQuotes && nextChar === '"') {
+          currentField += '"';
+          i++;
+        } else {
+          insideQuotes = !insideQuotes;
+        }
+      } else if (char === "," && !insideQuotes) {
+        currentRow.push(currentField);
+        currentField = "";
+      } else if ((char === "\r" || char === "\n") && !insideQuotes) {
+        if (char === "\r" && nextChar === "\n") i++;
+        currentRow.push(currentField);
+        currentField = "";
+        if (currentRow.length > 1 || (currentRow.length === 1 && currentRow[0] !== "")) {
+          rows.push(currentRow);
+        }
+        currentRow = [];
+      } else {
+        currentField += char;
+      }
+    }
+    if (currentField || currentRow.length > 0) {
+      currentRow.push(currentField);
+      rows.push(currentRow);
+    }
+    return rows;
+  }
+
+  const parseNum = (v) => {
+    if (!v) return 0;
+    const limpio = String(v).replace(/\./g, "").replace(",", ".").trim();
+    const n = parseFloat(limpio);
+    return isNaN(n) ? 0 : n;
+  };
+
+  const parseFechaIso = (d) => {
+    if (!d) return "";
+    const s = String(d).trim();
+    const m = s.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
+    if (m) {
+      return `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`;
+    }
+    const m2 = s.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/);
+    if (m2) {
+      return `${m2[1]}-${m2[2].padStart(2, "0")}-${m2[3].padStart(2, "0")}`;
+    }
+    return s;
+  };
+
+  function calcularDiasVencida(fechaVenceIso) {
+    if (!fechaVenceIso) return 0;
+    const partes = fechaVenceIso.split("-");
+    if (partes.length !== 3) return 0;
+    const vence = new Date(Number(partes[0]), Number(partes[1]) - 1, Number(partes[2]));
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    const diffMs = hoy.getTime() - vence.getTime();
+    const diffDias = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    return diffDias > 0 ? diffDias : 0;
+  }
+
+  function procesarCsvGoogleSheet(text) {
+    const rows = parseCSV(text);
+    if (!rows || rows.length < 2) return [];
+    const facturas = [];
+    for (let i = 1; i < rows.length; i++) {
+      const r = rows[i];
+      if (!r || r.length < 3 || !r[2]) continue;
+
+      const codCliente = (r[0] || "").trim();
+      const razonSocial = (r[1] || "").trim();
+      const numFactura = (r[2] || "").trim();
+      const fEmision = parseFechaIso(r[3]);
+      const fVence = parseFechaIso(r[4]);
+      const montoDolar = parseNum(r[5]);
+      const saldoUsd = parseNum(r[6]);
+      const retencion = (r[7] || "").trim();
+      const montoRetencion = parseNum(r[8]);
+      const zona = (r[9] || "").trim();
+      const vendedor = (r[10] || "").trim();
+      const analista = (r[11] || "").trim();
+      const estadoFila = (r[12] || "").trim().toUpperCase() || "SIN RETENCION";
+      const correoCliente = (r[13] || "").trim();
+      const correoVendedor = (r[14] || "").trim();
+      const ultimaAct = (r[15] || "").trim();
+
+      const diasV = calcularDiasVencida(fVence);
+      const estimado = montoRetencion > 0
+        ? montoRetencion
+        : (montoDolar > 0 ? Math.round(montoDolar * (12.0 / 116.0) * 100) / 100 : 0);
+
+      facturas.push({
+        codigo_cliente: codCliente,
+        razon_social: razonSocial,
+        rif: codCliente,
+        factura: numFactura,
+        fecha_emision: fEmision,
+        fecha_vence: fVence,
+        dias_vencida: diasV,
+        monto_dolar: montoDolar,
+        saldo_usd: saldoUsd,
+        retencion: retencion,
+        monto_retencion: montoRetencion,
+        monto_estimado: estimado,
+        zona: zona,
+        vendedor: vendedor,
+        vendedor_nombre: vendedor,
+        analista: analista,
+        estado: estadoFila,
+        correo_cliente: correoCliente,
+        correo_vendedor: correoVendedor,
+        ultima_actualizacion: ultimaAct,
+      });
+    }
+    return facturas;
+  }
+
+  // ---------- DATOS (SIEMPRE LEYENDO GOOGLE SHEETS) ----------
   async function todo(tabla, select = "*") {
     const filas = [];
     for (let desde = 0; ; desde += 1000) {
@@ -181,80 +343,199 @@
   }
 
   async function cargarDatos() {
-    const [facturas, vendedores, carga] = await Promise.all([
-      todo("facturas"),
-      todo("vendedores"),
-      sb.from("cargas").select("fecha,facturas").order("fecha", { ascending: false }).limit(1),
-    ]);
+    let facturasCargadas = [];
+    let textoCarga = "";
 
-    estado.facturas = facturas.map((f) => {
-      const montoDolar = Number(f.monto_dolar) || 0;
-      const montoEst = Number(f.monto_estimado);
-      // Cálculo preciso de retención del 75% sobre el 16% de IVA
-      const estimado = (montoEst && !isNaN(montoEst) && montoEst > 0)
-        ? montoEst
-        : (montoDolar > 0 ? Math.round(montoDolar * (12.0 / 116.0) * 100) / 100 : 0);
-      return { ...f, monto_estimado: estimado };
+    // 1. Siempre intentar leer directamente de Google Sheets
+    try {
+      const urlCsv = (C.GOOGLE_SHEET_CSV_URL || "") + ((C.GOOGLE_SHEET_CSV_URL || "").includes("?") ? "&" : "?") + "t=" + Date.now();
+      const resp = await fetch(urlCsv, { cache: "no-store" });
+      if (!resp.ok) throw new Error("HTTP " + resp.status);
+      const csvTexto = await resp.text();
+      facturasCargadas = procesarCsvGoogleSheet(csvTexto);
+      const horaStr = new Date().toLocaleTimeString("es-VE", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+      textoCarga = `Google Sheets en vivo · Sincronizado a las ${horaStr}`;
+    } catch (errSheets) {
+      console.warn("No se pudo conectar directamente a Google Sheets, usando base de datos Supabase:", errSheets);
+      // Respaldo secundario en Supabase
+      const [facturasSb, cargaSb] = await Promise.all([
+        todo("facturas"),
+        sb.from("cargas").select("fecha,facturas").order("fecha", { ascending: false }).limit(1),
+      ]);
+      facturasCargadas = facturasSb.map((f) => {
+        const montoDolar = Number(f.monto_dolar) || 0;
+        const montoEst = Number(f.monto_estimado);
+        const montoRet = Number(f.monto_retencion) || 0;
+        const estimado = montoRet > 0 ? montoRet : (montoEst && !isNaN(montoEst) && montoEst > 0 ? montoEst : (montoDolar > 0 ? Math.round(montoDolar * (12.0 / 116.0) * 100) / 100 : 0));
+        return {
+          ...f,
+          analista: f.analista || "Lolimar Oropeza",
+          estado: f.estado || (f.retencion ? "RETENCION CARGADA NO APLICADA" : "SIN RETENCION"),
+          monto_estimado: estimado,
+          dias_vencida: calcularDiasVencida(f.fecha_vence)
+        };
+      });
+      const c = cargaSb.data?.[0];
+      const fechaUltima = c ? new Date(c.fecha).toLocaleString("es-VE") : new Date().toLocaleString("es-VE");
+      textoCarga = `Caché BD · Actualizado ${fechaUltima}`;
+    }
+
+    estado.facturas = facturasCargadas;
+    $("ultima-carga").textContent = textoCarga;
+
+    // 2. Cargar tabla de vendedores (teléfonos y códigos) para WhatsApp
+    let vendedoresSb = [];
+    try {
+      vendedoresSb = await todo("vendedores");
+    } catch (e) {
+      console.warn("No se pudo cargar tabla vendedores de Supabase:", e);
+    }
+
+    estado.vendedores = new Map();
+    vendedoresSb.forEach((v) => {
+      if (v.codigo) estado.vendedores.set(v.codigo, v);
+      if (v.nombre) estado.vendedores.set(v.nombre.trim().toUpperCase(), v);
     });
 
-    estado.vendedores = new Map(vendedores.map((v) => [v.codigo, v]));
+    // Mapear vendedores que estén en el Excel pero falten en Supabase
+    estado.facturas.forEach((f) => {
+      const nom = (f.vendedor || "").trim().toUpperCase();
+      if (nom && !estado.vendedores.has(nom)) {
+        const cod = f.zona ? f.zona.replace(/^Z0*/, "") : nom;
+        const objVend = {
+          codigo: cod,
+          nombre: f.vendedor,
+          telefono: "",
+          correo: f.correo_vendedor || ""
+        };
+        estado.vendedores.set(nom, objVend);
+        if (!estado.vendedores.has(cod)) estado.vendedores.set(cod, objVend);
+      }
+    });
 
-    const c = carga.data?.[0];
-    const fechaUltima = c ? new Date(c.fecha).toLocaleString("es-VE") : new Date().toLocaleString("es-VE");
-    $("ultima-carga").textContent = `Actualizado ${fechaUltima}`;
+    // 3. Poblar selectores de filtros dinámicos
+    const listaAnalistas = [...new Set(estado.facturas.map((f) => f.analista))].filter(Boolean);
+    llenarSelect("f-analista", listaAnalistas);
 
-    llenarSelect("f-vendedor", [...new Set(facturas.map((f) => f.vendedor))], (cod) => `${cod} · ${estado.vendedores.get(cod)?.nombre ?? "Sin registrar"}`);
-    llenarSelect("f-zona", [...new Set(facturas.map((f) => f.zona))]);
+    const listaVendedores = [...new Set(estado.facturas.map((f) => f.vendedor))].filter(Boolean);
+    llenarSelect("f-vendedor", listaVendedores, (v) => {
+      const obj = estado.vendedores.get(v.toUpperCase());
+      return obj?.codigo ? `${obj.codigo} · ${v}` : v;
+    });
+
+    const listaZonas = [...new Set(estado.facturas.map((f) => f.zona))].filter(Boolean);
+    llenarSelect("f-zona", listaZonas);
+
     aplicarFiltros();
   }
 
   function llenarSelect(id, valores, etiqueta = (v) => v) {
     const sel = $(id);
     if (!sel) return;
+    const valorActual = sel.value;
     const primero = sel.options[0]?.outerHTML || '<option value="">Todos</option>';
     valores = valores.filter(Boolean).sort((a, b) => a.localeCompare(b, "es", { numeric: true }));
     sel.innerHTML = primero + valores.map((v) => `<option value="${esc(v)}">${esc(etiqueta(v))}</option>`).join("");
+    if (valorActual && valores.includes(valorActual)) {
+      sel.value = valorActual;
+    }
   }
 
-  // ---------- filtros ----------
+  // ---------- FILTROS COMUNES ----------
   function filtrar(lista) {
-    const v = $("f-vendedor").value, z = $("f-zona").value, e = $("f-estado").value;
-    const q = $("f-buscar").value.trim().toLowerCase();
-    const desde = parseFloat($("f-desde").value), hasta = parseFloat($("f-hasta").value);
-    
+    const v = $("f-vendedor")?.value || "";
+    const analista = $("f-analista")?.value || "";
+    const z = $("f-zona")?.value || "";
+    const e = $("f-estado")?.value || "";
+    const q = ($("f-buscar")?.value || "").trim().toLowerCase();
+    const desde = parseFloat($("f-desde")?.value);
+    const hasta = parseFloat($("f-hasta")?.value);
+
     // Si el usuario logueado es asesor (no admin), solo ve sus facturas
     const vendedorFijo = !esAdmin() ? estado.perfil?.codigo_vendedor : null;
 
     return lista.filter((f) => {
-      if (vendedorFijo && f.vendedor !== vendedorFijo) return false;
-      if (v && f.vendedor !== v) return false;
+      if (vendedorFijo) {
+        const nomVend = (f.vendedor || "").trim().toUpperCase();
+        const objVend = estado.vendedores.get(nomVend);
+        const codZona = (f.zona || "").replace(/^Z0*/, "");
+        if (f.vendedor !== vendedorFijo && objVend?.codigo !== vendedorFijo && codZona !== vendedorFijo) {
+          return false;
+        }
+      }
+      if (v) {
+        const nomVend = (f.vendedor || "").trim().toUpperCase();
+        const objVend = estado.vendedores.get(nomVend);
+        if (f.vendedor !== v && objVend?.codigo !== v && nomVend !== v.toUpperCase()) return false;
+      }
+      if (analista && f.analista !== analista) return false;
       if (z && f.zona !== z) return false;
       if (e === "vencidas" && !(f.dias_vencida > 0)) return false;
       if (e === "sinvencer" && !(f.dias_vencida <= 0)) return false;
       if (!isNaN(desde) && f.monto_dolar < desde) return false;
       if (!isNaN(hasta) && f.monto_dolar > hasta) return false;
-      if (q && ![f.razon_social, f.rif, f.codigo_cliente, f.factura].some((x) => (x || "").toLowerCase().includes(q))) {
-        return false;
+      if (q) {
+        const buscarCampos = [
+          f.razon_social,
+          f.codigo_cliente,
+          f.rif,
+          f.factura,
+          f.retencion,
+          f.analista,
+          f.vendedor,
+          f.zona
+        ];
+        if (!buscarCampos.some((x) => (x || "").toLowerCase().includes(q))) {
+          return false;
+        }
       }
       return true;
     });
   }
 
   function aplicarFiltros() {
-    const { campo, asc } = estado.orden;
-    estado.filtradas = filtrar(estado.facturas).sort((a, b) => {
-      const x = a[campo], y = b[campo];
+    // 1. Separar universos de datos según estado
+    const listaSinRetencion = estado.facturas.filter((f) => f.estado === "SIN RETENCION");
+    const listaPorProcesar = estado.facturas.filter((f) => f.estado === "RETENCION CARGADA NO APLICADA");
+
+    // 2. Aplicar filtros a ambas listas
+    const filtradasSin = filtrar(listaSinRetencion);
+    const filtradasProc = filtrar(listaPorProcesar);
+
+    // 3. Ordenar Sin Retención
+    const { campo: c1, asc: a1 } = estado.orden;
+    estado.filtradas = filtradasSin.sort((a, b) => {
+      const x = a[c1], y = b[c1];
       const r = typeof x === "number" || typeof y === "number" ? (x ?? 0) - (y ?? 0) : String(x ?? "").localeCompare(String(y ?? ""), "es", { numeric: true });
-      return asc ? r : -r;
+      return a1 ? r : -r;
     });
+
+    // 4. Ordenar Pendiente por Procesar
+    const { campo: c2, asc: a2 } = estado.ordenProc;
+    estado.filtradasProc = filtradasProc.sort((a, b) => {
+      const x = a[c2], y = b[c2];
+      const r = typeof x === "number" || typeof y === "number" ? (x ?? 0) - (y ?? 0) : String(x ?? "").localeCompare(String(y ?? ""), "es", { numeric: true });
+      return a2 ? r : -r;
+    });
+
     estado.pagina = 0;
+    estado.paginaProc = 0;
+
+    // 5. Actualizar badges en pestañas de navegación
+    const bSin = $("badge-sin-retencion");
+    if (bSin) bSin.textContent = ent(estado.filtradas.length);
+    const bProc = $("badge-por-procesar");
+    if (bProc) bProc.textContent = ent(estado.filtradasProc.length);
+
+    // 6. Actualizar métricas KPI globales
+    pintarKpis(estado.filtradas, estado.filtradasProc);
     pintarHeroCard();
-    pintarKpis(estado.filtradas);
     pintarFacturas();
+    pintarPorProcesar();
     pintarVendedores();
   }
 
-  ["f-vendedor", "f-zona", "f-estado"].forEach((id) => $(id)?.addEventListener("change", aplicarFiltros));
+  ["f-vendedor", "f-analista", "f-zona", "f-estado"].forEach((id) => $(id)?.addEventListener("change", aplicarFiltros));
   ["f-buscar", "f-desde", "f-hasta"].forEach((id) => $(id)?.addEventListener("input", () => {
     clearTimeout(aplicarFiltros.t);
     aplicarFiltros.t = setTimeout(aplicarFiltros, 200);
@@ -270,27 +551,23 @@
     const avance = facturado > 0 ? (cobrado / facturado) * 100 : 0;
     const ratioMora = saldoTotal > 0 ? (saldoVencido / saldoTotal) * 100 : 0;
 
-    // Si no tiene mora (todas sus facturas están al día)
     if (saldoVencido <= 0 || ratioMora === 0) {
       if (avance >= 40) return { nivel: "estable", label: "🟢 Estable", clase: "estable" };
       return { nivel: "precaucion", label: "🟡 En precaución", clase: "precaucion" };
     }
 
-    // Si tiene alta morosidad (> 45%) o avance muy rezagado (< 25% con mora activa) -> Rojo
     if (ratioMora > 45 || (avance < 25 && ratioMora > 20)) {
       return { nivel: "riesgo", label: "🔴 En riesgo", clase: "riesgo" };
     }
 
-    // Si el avance es bueno (>= 50%) y mora controlada (< 25%) -> Verde
     if (avance >= 50 && ratioMora <= 25) {
       return { nivel: "estable", label: "🟢 Estable", clase: "estable" };
     }
 
-    // Resto en seguimiento / precaución -> Amarillo
     return { nivel: "precaucion", label: "🟡 En precaución", clase: "precaucion" };
   }
 
-  // ---------- TARJETA EJECUTIVA DEL VENDEDOR (VENDOR HERO) ----------
+  // ---------- TARJETA EJECUTIVA HERO CARD ----------
   function pintarHeroCard() {
     const hero = $("vendor-hero");
     if (!hero) return;
@@ -306,7 +583,8 @@
       const selVend = $("f-vendedor")?.value;
       if (selVend) {
         codVendedor = selVend;
-        nombreVendedor = estado.vendedores.get(selVend)?.nombre || `Asesor ${selVend}`;
+        const objVend = estado.vendedores.get(selVend.toUpperCase());
+        nombreVendedor = objVend?.nombre || selVend;
       } else {
         esGlobal = true;
         nombreVendedor = "Centro de Mando Comercial · Global Beval";
@@ -315,12 +593,15 @@
 
     hero.hidden = false;
 
-    // Facturas del universo del asesor o global
+    // Facturas del universo del asesor o global (solo Sin Retención)
     const facturasHeroTotal = codVendedor
-      ? estado.facturas.filter((f) => f.vendedor === codVendedor)
+      ? estado.facturas.filter((f) => {
+          const nomVend = (f.vendedor || "").trim().toUpperCase();
+          const obj = estado.vendedores.get(nomVend);
+          return f.vendedor === codVendedor || obj?.codigo === codVendedor || nomVend === codVendedor.toUpperCase();
+        })
       : estado.filtradas;
 
-    // Métricas totales de la cartera completa (para porcentajes y semáforo)
     const totalFacturadoGlobal = facturasHeroTotal.reduce((s, f) => s + (Number(f.monto_dolar) || 0), 0);
     const saldoTotalGlobal = facturasHeroTotal.reduce((s, f) => s + (Number(f.saldo_usd) || 0), 0);
     const cobradoGlobal = Math.max(0, totalFacturadoGlobal - saldoTotalGlobal);
@@ -331,7 +612,6 @@
     const saldoVencidoGlobal = facturasVencidas.reduce((s, f) => s + (Number(f.saldo_usd) || 0), 0);
     const saldoAlDiaGlobal = facturasAlDia.reduce((s, f) => s + (Number(f.saldo_usd) || 0), 0);
 
-    // Semáforo institucional
     const sem = calcularSemaforo(totalFacturadoGlobal, cobradoGlobal, saldoVencidoGlobal, saldoTotalGlobal);
     const semEl = $("vh-semaforo");
     if (semEl) {
@@ -339,7 +619,6 @@
       semEl.textContent = esGlobal ? `Cartera ${sem.label}` : `Asesor ${sem.label}`;
     }
 
-    // Distribución porcentual expresada abajo
     let pctCobrado = totalFacturadoGlobal > 0 ? Math.round((cobradoGlobal / totalFacturadoGlobal) * 100) : 0;
     let pctAlDia = totalFacturadoGlobal > 0 ? Math.round((saldoAlDiaGlobal / totalFacturadoGlobal) * 100) : 0;
     let pctVencido = Math.max(0, 100 - pctCobrado - pctAlDia);
@@ -357,7 +636,6 @@
     if (txtDia) txtDia.textContent = `${pctAlDia}%`;
     if (txtVen) txtVen.textContent = `${pctVencido}%`;
 
-    // Filtro según switch de vista (Cartera completa / Solo vencido / Solo al día)
     const vista = estado.vistaCartera || "completa";
     let facturasVista = facturasHeroTotal;
     let tituloAvance = "Avance & Proyección Cierre";
@@ -379,7 +657,7 @@
     const avancePct = totalFacturado > 0 ? Math.min(100, Math.round((cobrado / totalFacturado) * 100)) : 0;
     const proyPct = totalFacturado > 0 ? Math.min(130, Math.round(((cobrado + (sinVencer * 0.75)) / totalFacturado) * 100)) : 0;
 
-    $("vh-tag").textContent = esGlobal ? "Consolidado Ejecutivo Beval" : `Asesor Comercial Softland · Código ${codVendedor}`;
+    $("vh-tag").textContent = esGlobal ? "Consolidado Ejecutivo Beval" : `Asesor Comercial Softland · ${codVendedor}`;
     $("vh-nombre").textContent = nombreVendedor;
     $("vh-sub").textContent = esGlobal
       ? `${ent(facturasHeroTotal.length)} facturas totales en seguimiento activo`
@@ -407,13 +685,11 @@
           : "linear-gradient(90deg, #b91c1c, #ef4444)";
     }
 
-    // Sincronizar botones del switch
     document.querySelectorAll("#vh-switch-cartera .vh-pill-btn").forEach((btn) => {
       btn.classList.toggle("activa", btn.dataset.vista === vista);
     });
   }
 
-  // Switch de Cartera listener
   $("vh-switch-cartera")?.addEventListener("click", (e) => {
     const btn = e.target.closest(".vh-pill-btn");
     if (!btn) return;
@@ -422,24 +698,22 @@
     aviso(`Vista: ${btn.textContent}`);
   });
 
-  // ---------- render kpis & facturas ----------
-  function resumen(lista) {
-    return {
-      facturas: lista.length,
-      estimado: lista.reduce((s, f) => s + (Number(f.monto_estimado) || 0), 0),
-      vencidas: lista.filter((f) => f.dias_vencida > 0).length,
-      clientes: new Set(lista.map((f) => f.codigo_cliente)).size,
-    };
+  // ---------- RENDER KPIS ----------
+  function pintarKpis(listaSinRet, listaProc) {
+    const facturasCount = listaSinRet.length;
+    const procCount = listaProc.length;
+    const estimado = listaSinRet.reduce((s, f) => s + (Number(f.monto_estimado) || 0), 0);
+    const vencidas = listaSinRet.filter((f) => f.dias_vencida > 0).length;
+    const clientes = new Set(listaSinRet.map((f) => f.codigo_cliente)).size;
+
+    if ($("k-facturas")) $("k-facturas").textContent = ent(facturasCount);
+    if ($("k-por-procesar")) $("k-por-procesar").textContent = ent(procCount);
+    if ($("k-estimado")) $("k-estimado").textContent = usd(estimado);
+    if ($("k-vencidas")) $("k-vencidas").textContent = ent(vencidas);
+    if ($("k-clientes")) $("k-clientes").textContent = ent(clientes);
   }
 
-  function pintarKpis(lista) {
-    const r = resumen(lista);
-    $("k-facturas").textContent = ent(r.facturas);
-    $("k-estimado").textContent = usd(r.estimado);
-    $("k-vencidas").textContent = ent(r.vencidas);
-    $("k-clientes").textContent = ent(r.clientes);
-  }
-
+  // ---------- TABLA 1: SIN RETENCIÓN ----------
   function filaHtml(f) {
     const isChecked = estado.seleccionadas.has(f.factura);
     const diasV = Number(f.dias_vencida) || 0;
@@ -466,7 +740,8 @@
       <td class="celda-fecha" style="width: 94px;">${fecha(f.fecha_vence)}</td>
       <td class="num" style="width: 62px;">${diasV > 0 ? `<span class="vencida">${ent(diasV)}</span>` : ent(diasV)}</td>
       <td style="width: auto;">${clienteHtml}</td>
-      <td style="width: 48px; text-align: center;">${esc(f.vendedor)}</td>
+      <td style="width: 125px; font-size: 11.5px;">${esc(f.analista)}</td>
+      <td style="width: 115px; font-size: 11.5px;" title="${esc(f.vendedor)}">${esc(f.vendedor)}</td>
       <td style="width: 50px; text-align: center;">${esc(f.zona)}</td>
       <td class="num" style="width: 86px;">${usd(f.monto_dolar)}</td>
       <td class="num" style="width: 86px;">${usd(f.saldo_usd)}</td>
@@ -474,61 +749,60 @@
     </tr>`;
   }
 
-  function encabezado(tabla) {
-    const { campo, asc } = estado.orden;
-    const thead = $(tabla)?.querySelector("thead");
+  function encabezado(tablaId, columnas, ordenActual, checkId) {
+    const thead = $(tablaId)?.querySelector("thead");
     if (!thead) return;
 
-    thead.innerHTML = "<tr>" + COLUMNAS.map((c) => {
+    thead.innerHTML = "<tr>" + columnas.map((c) => {
       if (c.campo === "sel") {
         return `<th style="width: ${c.ancho}; text-align: center;">
-          <input type="checkbox" id="th-check-todos" title="Seleccionar todas las visibles">
+          <input type="checkbox" id="${checkId}" title="Seleccionar todas las visibles">
         </th>`;
       }
-      const flecha = c.campo === campo ? (asc ? " ▲" : " ▼") : "";
+      const flecha = c.campo === ordenActual.campo ? (ordenActual.asc ? " ▲" : " ▼") : "";
       return `<th data-campo="${c.campo}" class="${c.num ? "num" : ""}" style="width: ${c.ancho};">${c.titulo}${flecha}</th>`;
     }).join("") + "</tr>";
-
-    // Manejador del checkbox del header
-    thead.querySelector("#th-check-todos")?.addEventListener("change", (e) => {
-      const marcar = e.target.checked;
-      const ini = estado.pagina * POR_PAGINA;
-      const paginaFacturas = estado.filtradas.slice(ini, ini + POR_PAGINA);
-      paginaFacturas.forEach((f) => {
-        if (marcar) estado.seleccionadas.add(f.factura);
-        else estado.seleccionadas.delete(f.factura);
-      });
-      pintarFacturas();
-      actualizarContadorSeleccionados();
-    });
   }
 
   function pintarFacturas() {
     const total = estado.filtradas.length;
     const paginas = Math.max(1, Math.ceil(total / POR_PAGINA));
     const ini = estado.pagina * POR_PAGINA;
-    encabezado("tabla-facturas");
+    encabezado("tabla-facturas", COLUMNAS, estado.orden, "th-check-todos");
+
+    // Manejador del checkbox maestro
+    const thCheck = $("th-check-todos");
+    if (thCheck) {
+      thCheck.onclick = (e) => {
+        const marcar = e.target.checked;
+        const paginaFacturas = estado.filtradas.slice(ini, ini + POR_PAGINA);
+        paginaFacturas.forEach((f) => {
+          if (marcar) estado.seleccionadas.add(f.factura);
+          else estado.seleccionadas.delete(f.factura);
+        });
+        pintarFacturas();
+        actualizarContadorSeleccionados();
+      };
+    }
 
     const paginaFacturas = estado.filtradas.slice(ini, ini + POR_PAGINA);
-    const tbody = $("tabla-facturas").querySelector("tbody");
+    const tbody = $("tabla-facturas")?.querySelector("tbody");
+    if (!tbody) return;
 
     tbody.innerHTML = paginaFacturas.map(filaHtml).join("") ||
-      `<tr><td colspan="${COLUMNAS.length}" style="text-align: center; padding: 24px;">No hay facturas con estos filtros.</td></tr>`;
+      `<tr><td colspan="${COLUMNAS.length}" style="text-align: center; padding: 24px;">No hay facturas sin retención con estos filtros.</td></tr>`;
 
-    // Sincronizar checkbox maestro
-    const thCheck = $("th-check-todos");
     if (thCheck && paginaFacturas.length > 0) {
       thCheck.checked = paginaFacturas.every((f) => estado.seleccionadas.has(f.factura));
     }
 
-    $("conteo").textContent = `${ent(total)} facturas`;
+    $("conteo").textContent = `${ent(total)} facturas sin retención`;
     $("pag-info").textContent = `Página ${estado.pagina + 1} de ${paginas}`;
     $("pag-ant").disabled = estado.pagina === 0;
     $("pag-sig").disabled = estado.pagina >= paginas - 1;
     actualizarContadorSeleccionados();
   }
 
-  // Delegación de clic en checkboxes individuales
   $("tabla-facturas")?.addEventListener("change", (e) => {
     if (e.target.classList.contains("chk-factura")) {
       const fac = e.target.dataset.factura;
@@ -557,7 +831,154 @@
     aplicarFiltros();
   });
 
-  // Copiado inmediato de código de cliente con un toque / clic (sin sombrear)
+  // ---------- TABLA 2: PENDIENTE POR PROCESAR (RETENCIÓN ERP) ----------
+  function filaPorProcesarHtml(f) {
+    const isChecked = estado.seleccionadasProc.has(f.factura);
+    const diasV = Number(f.dias_vencida) || 0;
+    const badgeDias = diasV > 0
+      ? `<span class="badge-dias vencido">${diasV >= 45 ? "45+ días" : `${diasV}d`}</span>`
+      : `<span class="badge-dias al-dia">Al día</span>`;
+
+    const clienteHtml = `
+      <div class="cliente-consolidado" title="${esc(f.razon_social)} · ${esc(f.codigo_cliente)}">
+        <span class="cliente-nombre">${esc(f.razon_social || "Sin nombre")}</span>
+        <button type="button" class="cliente-codigo-btn" data-copiar-codigo="${esc(f.codigo_cliente)}" title="Toca para copiar código ${esc(f.codigo_cliente)}">
+          <span class="cod-icono">📋</span>
+          <span class="cod-txt">${esc(f.codigo_cliente || "")}</span>
+        </button>
+        ${badgeDias}
+      </div>`;
+
+    const comprobanteHtml = f.retencion
+      ? `<button type="button" class="btn-copiar-comprobante" data-copiar-codigo="${esc(f.retencion)}" title="Toca para copiar comprobante ${esc(f.retencion)}">
+          <span class="cod-icono">📑</span>
+          <span class="cod-txt" style="font-family: monospace; font-weight: 700;">${esc(f.retencion)}</span>
+        </button>`
+      : `<span style="color: var(--suave);">—</span>`;
+
+    return `<tr data-fac="${esc(f.factura)}">
+      <td style="width: 34px; text-align: center;">
+        <input type="checkbox" class="chk-factura-proc" data-factura="${esc(f.factura)}" ${isChecked ? "checked" : ""}>
+      </td>
+      <td style="width: 85px; font-weight: 700;">${esc(f.factura)}</td>
+      <td class="celda-fecha" style="width: 94px;">${fecha(f.fecha_emision)}</td>
+      <td class="celda-fecha" style="width: 94px;">${fecha(f.fecha_vence)}</td>
+      <td class="num" style="width: 62px;">${diasV > 0 ? `<span class="vencida">${ent(diasV)}</span>` : ent(diasV)}</td>
+      <td style="width: auto;">${clienteHtml}</td>
+      <td style="width: 155px;">${comprobanteHtml}</td>
+      <td class="num" style="width: 95px; font-weight: 700; color: #0284c7;">$${usd(f.monto_retencion || f.monto_estimado)}</td>
+      <td class="num" style="width: 85px;">${usd(f.saldo_usd)}</td>
+      <td style="width: 125px; font-size: 11.5px;">${esc(f.analista)}</td>
+      <td style="width: 120px; font-size: 11.5px;" title="${esc(f.vendedor)}">${esc(f.vendedor)}</td>
+      <td style="width: 50px; text-align: center;">${esc(f.zona)}</td>
+    </tr>`;
+  }
+
+  function pintarPorProcesar() {
+    const total = estado.filtradasProc.length;
+    const paginas = Math.max(1, Math.ceil(total / POR_PAGINA));
+    const ini = estado.paginaProc * POR_PAGINA;
+    encabezado("tabla-por-procesar", COLUMNAS_POR_PROCESAR, estado.ordenProc, "th-check-proc");
+
+    const thCheck = $("th-check-proc");
+    if (thCheck) {
+      thCheck.onclick = (e) => {
+        const marcar = e.target.checked;
+        const paginaFacturas = estado.filtradasProc.slice(ini, ini + POR_PAGINA);
+        paginaFacturas.forEach((f) => {
+          if (marcar) estado.seleccionadasProc.add(f.factura);
+          else estado.seleccionadasProc.delete(f.factura);
+        });
+        pintarPorProcesar();
+      };
+    }
+
+    const paginaFacturas = estado.filtradasProc.slice(ini, ini + POR_PAGINA);
+    const tbody = $("tabla-por-procesar")?.querySelector("tbody");
+    if (!tbody) return;
+
+    tbody.innerHTML = paginaFacturas.map(filaPorProcesarHtml).join("") ||
+      `<tr><td colspan="${COLUMNAS_POR_PROCESAR.length}" style="text-align: center; padding: 24px;">No hay facturas por procesar con estos filtros.</td></tr>`;
+
+    if (thCheck && paginaFacturas.length > 0) {
+      thCheck.checked = paginaFacturas.every((f) => estado.seleccionadasProc.has(f.factura));
+    }
+
+    if ($("conteo-por-procesar")) $("conteo-por-procesar").textContent = `${ent(total)} facturas pendientes por procesar`;
+    if ($("pag-info-proc")) $("pag-info-proc").textContent = `Página ${estado.paginaProc + 1} de ${paginas}`;
+    if ($("pag-ant-proc")) $("pag-ant-proc").disabled = estado.paginaProc === 0;
+    if ($("pag-sig-proc")) $("pag-sig-proc").disabled = estado.paginaProc >= paginas - 1;
+  }
+
+  $("tabla-por-procesar")?.addEventListener("change", (e) => {
+    if (e.target.classList.contains("chk-factura-proc")) {
+      const fac = e.target.dataset.factura;
+      if (e.target.checked) estado.seleccionadasProc.add(fac);
+      else estado.seleccionadasProc.delete(fac);
+    }
+  });
+
+  $("pag-ant-proc")?.addEventListener("click", () => { estado.paginaProc--; pintarPorProcesar(); });
+  $("pag-sig-proc")?.addEventListener("click", () => { estado.paginaProc++; pintarPorProcesar(); });
+
+  document.addEventListener("click", (e) => {
+    const th = e.target.closest("#tabla-por-procesar th[data-campo]");
+    if (!th) return;
+    const campo = th.dataset.campo;
+    const colDef = COLUMNAS_POR_PROCESAR.find((c) => c.campo === campo);
+    if (colDef?.noSort) return;
+    estado.ordenProc = { campo, asc: estado.ordenProc.campo === campo ? !estado.ordenProc.asc : true };
+    aplicarFiltros();
+  });
+
+  // Copiar lista o seleccionados de "Por Procesar"
+  $("btn-copiar-procesar")?.addEventListener("click", async () => {
+    const lista = estado.seleccionadasProc.size > 0
+      ? estado.filtradasProc.filter((f) => estado.seleccionadasProc.has(f.factura))
+      : estado.filtradasProc;
+    if (lista.length === 0) {
+      aviso("⚠️ No hay facturas por procesar para copiar");
+      return;
+    }
+    const totalRet = lista.reduce((s, f) => s + (Number(f.monto_retencion) || Number(f.monto_estimado) || 0), 0);
+    const lineas = lista.map((f) =>
+      `• Fact. ${f.factura} | ${f.razon_social} | Comprobante: ${f.retencion || "S/C"} | Monto Ret: $${usd(f.monto_retencion || f.monto_estimado)} USD | Analista: ${f.analista || "N/A"}`
+    );
+    const texto = `*FACTURAS CON RETENCIÓN CARGADA EN ERP (PENDIENTES POR PROCESAR)*\n` +
+      `Total: ${ent(lista.length)} facturas | Retenciones: $${usd(totalRet)} USD\n\n` +
+      lineas.slice(0, 100).join("\n") +
+      (lineas.length > 100 ? `\n\n... y ${lineas.length - 100} facturas más.` : "");
+    await navigator.clipboard.writeText(texto);
+    aviso(`📋 Copiada lista de ${ent(lista.length)} facturas por procesar`);
+  });
+
+  // Exportar CSV de "Por Procesar"
+  $("btn-csv-procesar")?.addEventListener("click", () => {
+    const cab = ["Factura", "Emisión", "Vence", "Días Vencida", "Código Cliente", "Cliente", "Comprobante Retención", "Monto Retención USD", "Saldo USD", "Analista", "Vendedor", "Zona", "Estado"];
+    const filas = estado.filtradasProc.map((f) => [
+      f.factura,
+      fecha(f.fecha_emision),
+      fecha(f.fecha_vence),
+      f.dias_vencida,
+      f.codigo_cliente,
+      f.razon_social,
+      f.retencion,
+      usd(f.monto_retencion || f.monto_estimado),
+      usd(f.saldo_usd),
+      f.analista,
+      f.vendedor,
+      f.zona,
+      f.estado
+    ].map((v) => `"${String(v ?? "").replace(/"/g, '""')}"`).join(";"));
+
+    const blob = new Blob(["\uFEFF" + [cab.join(";"), ...filas].join("\r\n")], { type: "text/csv;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `facturas_por_procesar_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+  });
+
+  // Copiado inmediato de código de cliente o comprobante con un toque
   document.addEventListener("click", async (e) => {
     const btn = e.target.closest("[data-copiar-codigo]");
     if (!btn) return;
@@ -603,22 +1024,29 @@
       btn.classList.remove("copiado");
       if (icono) icono.textContent = txtOrig || "📋";
     }, 1200);
-    aviso(`📋 Código copiado: ${cod}`);
+    aviso(`📋 Copiado al portapapeles: ${cod}`);
   });
 
-  // ---------- TABLA VENDEDORES (CON STATUS WS & AVANCE BAR) ----------
+  // ---------- TABLA 3: VENDEDORES ----------
   function grupos(lista) {
     const m = new Map();
     lista.forEach((f) => {
-      if (!m.has(f.vendedor)) m.set(f.vendedor, []);
-      m.get(f.vendedor).push(f);
+      const vKey = f.vendedor || "Sin registrar";
+      if (!m.has(vKey)) m.set(vKey, []);
+      m.get(vKey).push(f);
     });
-    return [...m.entries()].map(([cod, fs]) => {
+    return [...m.entries()].map(([vendNom, fs]) => {
       const totalFact = fs.reduce((s, f) => s + (Number(f.monto_dolar) || 0), 0);
       const saldoPend = fs.reduce((s, f) => s + (Number(f.saldo_usd) || 0), 0);
       const cobrado = Math.max(0, totalFact - saldoPend);
       const avancePct = totalFact > 0 ? Math.min(100, Math.round((cobrado / totalFact) * 100)) : 0;
-      return { cod, fs, r: resumen(fs), avancePct, zona: fs[0]?.zona || "" };
+      const r = {
+        facturas: fs.length,
+        estimado: fs.reduce((s, f) => s + (Number(f.monto_estimado) || 0), 0),
+        vencidas: fs.filter((f) => f.dias_vencida > 0).length,
+        clientes: new Set(fs.map((f) => f.codigo_cliente)).size,
+      };
+      return { cod: vendNom, vendNom, fs, r, avancePct, zona: fs[0]?.zona || "" };
     }).sort((a, b) => b.r.estimado - a.r.estimado);
   }
 
@@ -626,7 +1054,6 @@
     if (!esAdmin()) return;
     const listaGrupos = grupos(estado.filtradas);
 
-    // Contadores para el filtro de semáforo
     let cntRiesgo = 0, cntPrecaucion = 0, cntEstable = 0;
 
     const listaConSemaforo = listaGrupos.map((g) => {
@@ -643,13 +1070,11 @@
       return { ...g, sem };
     });
 
-    // Actualizar contadores del header del semáforo
     const elR = $("count-sem-riesgo"), elP = $("count-sem-precaucion"), elE = $("count-sem-estable");
     if (elR) elR.textContent = cntRiesgo;
     if (elP) elP.textContent = cntPrecaucion;
     if (elE) elE.textContent = cntEstable;
 
-    // Filtrar por semáforo si está activo
     const semFiltro = estado.filtroSemaforo || "todos";
     const listaMostrada = semFiltro === "todos"
       ? listaConSemaforo
@@ -659,13 +1084,13 @@
     if (!tbody) return;
 
     tbody.innerHTML = listaMostrada.map(({ cod, fs, r, avancePct, zona, sem }) => {
-      const v = estado.vendedores.get(cod) || {};
-      const yaEnviado = estado.wsEnviados.has(cod);
+      const v = estado.vendedores.get(cod.toUpperCase()) || {};
+      const codIdent = v.codigo || zona.replace(/^Z0*/, "") || cod;
+      const yaEnviado = estado.wsEnviados.has(codIdent) || estado.wsEnviados.has(cod);
       const statusBadge = yaEnviado
         ? `<span class="badge-ws enviado">✅ Enviado</span>`
         : `<span class="badge-ws espera">⏳ En espera</span>`;
 
-      // Color de avance según porcentaje
       const colorAvance = avancePct >= 65 ? "#22c55e" : avancePct >= 35 ? "#f59e0b" : "#ef4444";
 
       const avanceHtml = `
@@ -677,18 +1102,18 @@
           <span class="avance-mini-txt" style="color: ${colorAvance};">${avancePct}%</span>
         </div>`;
 
-      const nombreLimpio = v.nombre || `Asesor ${cod}`;
+      const nombreLimpio = v.nombre || cod;
       const celdaVendedor = `
         <div style="display: flex; flex-direction: column;">
           <strong style="color: var(--texto);">${esc(nombreLimpio)}</strong>
-          <small style="color: var(--suave); font-size: 11px;">Código: ${esc(cod)} ${v.telefono ? `· 📱 ${esc(v.telefono)}` : ""}</small>
+          <small style="color: var(--suave); font-size: 11px;">Código: ${esc(codIdent)} ${v.telefono ? `· 📱 ${esc(v.telefono)}` : ""}</small>
         </div>`;
 
       return `<tr>
         <td style="text-align: center;">
           <span class="dot-semaforo ${sem.clase}" title="Asesor ${sem.label}"></span>
         </td>
-        <td style="font-weight: 700; color: var(--suave);">${esc(zona || cod)}</td>
+        <td style="font-weight: 700; color: var(--suave);">${esc(zona || codIdent)}</td>
         <td>${celdaVendedor}</td>
         <td class="num">${ent(r.facturas)}</td>
         <td class="num">${r.vencidas > 0 ? `<span class="vencida">${ent(r.vencidas)}</span>` : "0"}</td>
@@ -707,7 +1132,6 @@
     actualizarModalMasivo();
   }
 
-  // Filtro de semáforo listener
   $("filtro-semaforo")?.addEventListener("click", (e) => {
     const btn = e.target.closest(".btn-sem-filtro");
     if (!btn) return;
@@ -719,7 +1143,6 @@
     aviso(`Filtro semáforo: ${btn.textContent.trim()}`);
   });
 
-  // Reiniciar estados WhatsApp
   $("btn-reset-ws")?.addEventListener("click", () => {
     estado.wsEnviados.clear();
     guardarWsEnviados(estado.wsEnviados);
@@ -729,8 +1152,11 @@
 
   // ---------- MENSAJES & WHATSAPP ----------
   function mensaje(cod, lista) {
-    const v = estado.vendedores.get(cod);
-    const r = resumen(lista);
+    const v = estado.vendedores.get(String(cod).toUpperCase()) || {};
+    const r = {
+      facturas: lista.length,
+      estimado: lista.reduce((s, f) => s + (Number(f.monto_estimado) || 0), 0)
+    };
     const detalle = lista.slice(0, 40).map((f) =>
       `• Fact. ${f.factura} | ${f.razon_social} | Estimado: $${usd(f.monto_estimado)} USD${f.dias_vencida > 0 ? ` (${f.dias_vencida} días vencida)` : ""}`
     ).join("\n");
@@ -749,26 +1175,24 @@
     pintarVendedores();
   }
 
-  // Clic en WhatsApp individual de la tabla vendedores
   document.addEventListener("click", (e) => {
     const b = e.target.closest("[data-wa]");
     if (!b) return;
     const cod = b.dataset.wa;
-    const v = estado.vendedores.get(cod);
+    const v = estado.vendedores.get(cod.toUpperCase()) || {};
     let tel = (v?.telefono || "").replace(/\D/g, "");
     if (!tel) {
       aviso("⚠️ El asesor no tiene teléfono registrado");
       return;
     }
     if (tel.startsWith("0")) tel = "58" + tel.slice(1);
-    const lista = estado.facturas.filter((f) => f.vendedor === cod);
+    const lista = estado.facturas.filter((f) => f.vendedor === cod && f.estado === "SIN RETENCION");
     const url = `https://wa.me/${tel}?text=${encodeURIComponent(mensaje(cod, lista))}`;
     window.open(url, "_blank", "noopener");
     marcarWsEnviado(cod);
     aviso(`✅ WhatsApp preparado para ${v.nombre || cod}`);
   });
 
-  // Copiar mensaje en barra de acciones
   $("btn-mensaje")?.addEventListener("click", async () => {
     const cod = $("f-vendedor")?.value || (esAdmin() ? "" : estado.perfil?.codigo_vendedor);
     await navigator.clipboard.writeText(mensaje(cod, estado.filtradas));
@@ -810,7 +1234,8 @@
   $("mtab-clientes")?.addEventListener("click", () => activarTabModal("clientes"));
 
   function actualizarModalMasivo() {
-    const listaGrupos = grupos(estado.facturas);
+    const sinRet = estado.facturas.filter((f) => f.estado === "SIN RETENCION");
+    const listaGrupos = grupos(sinRet);
     const total = listaGrupos.length;
     const enviados = listaGrupos.filter((g) => estado.wsEnviados.has(g.cod)).length;
     const pct = total > 0 ? Math.round((enviados / total) * 100) : 0;
@@ -820,13 +1245,12 @@
     if (progTxt) progTxt.textContent = `${enviados} de ${total} asesores (${pct}%)`;
     if (progBar) progBar.style.width = `${pct}%`;
 
-    // Buscar el próximo asesor pendiente
     const proximo = listaGrupos.find((g) => !estado.wsEnviados.has(g.cod));
     const btnSiguiente = $("btn-enviar-siguiente");
 
     if (proximo) {
-      const v = estado.vendedores.get(proximo.cod) || {};
-      $("masivo-proximo-nombre").textContent = v.nombre || `Asesor ${proximo.cod}`;
+      const v = estado.vendedores.get(proximo.cod.toUpperCase()) || {};
+      $("masivo-proximo-nombre").textContent = v.nombre || proximo.cod;
       $("masivo-proximo-detalles").textContent = `Zona ${proximo.zona || "—"} · ${ent(proximo.r.facturas)} facturas · $${usd(proximo.r.estimado)} USD ${v.telefono ? `· 📱 ${v.telefono}` : "⚠️ Sin teléfono"}`;
       if (btnSiguiente) {
         btnSiguiente.disabled = !v.telefono;
@@ -843,18 +1267,17 @@
     actualizarContadorSeleccionados();
   }
 
-  // Acción Enviar Siguiente Asesor
   $("btn-enviar-siguiente")?.addEventListener("click", () => {
     const cod = $("btn-enviar-siguiente")?.dataset.codProximo;
     if (!cod) return;
-    const v = estado.vendedores.get(cod);
+    const v = estado.vendedores.get(cod.toUpperCase()) || {};
     let tel = (v?.telefono || "").replace(/\D/g, "");
     if (!tel) {
       aviso("⚠️ El asesor no tiene teléfono registrado");
       return;
     }
     if (tel.startsWith("0")) tel = "58" + tel.slice(1);
-    const lista = estado.facturas.filter((f) => f.vendedor === cod);
+    const lista = estado.facturas.filter((f) => f.vendedor === cod && f.estado === "SIN RETENCION");
     const url = `https://wa.me/${tel}?text=${encodeURIComponent(mensaje(cod, lista))}`;
     window.open(url, "_blank", "noopener");
     marcarWsEnviado(cod);
@@ -862,16 +1285,15 @@
     actualizarModalMasivo();
   });
 
-  // Copiar todos los mensajes de asesores
   $("btn-copiar-todos-ws")?.addEventListener("click", async () => {
-    const listaGrupos = grupos(estado.facturas);
+    const sinRet = estado.facturas.filter((f) => f.estado === "SIN RETENCION");
+    const listaGrupos = grupos(sinRet);
     const separador = "\n" + "=".repeat(45) + "\n\n";
     const textoCompleto = listaGrupos.map(({ cod, fs }) => mensaje(cod, fs)).join(separador);
     await navigator.clipboard.writeText(textoCompleto);
     aviso("📋 Se han copiado todos los mensajes al portapapeles");
   });
 
-  // Copiar recordatorios de clientes seleccionados
   $("btn-copiar-clientes-sel")?.addEventListener("click", async () => {
     if (estado.seleccionadas.size === 0) {
       aviso("⚠️ Primero marca al menos una factura en la tabla");
@@ -884,7 +1306,7 @@
     aviso(`📋 Mensaje copiado con ${listaSel.length} facturas`);
   });
 
-  // ---------- CSV EXPORT ----------
+  // ---------- CSV EXPORT (SIN RETENCIÓN) ----------
   $("btn-csv")?.addEventListener("click", () => {
     const cab = COLUMNAS.filter((c) => c.campo !== "sel").map((c) => c.titulo);
     const campos = COLUMNAS.filter((c) => c.campo !== "sel").map((c) => c.campo);
@@ -901,15 +1323,18 @@
     a.click();
   });
 
-  // ---------- PESTAÑAS ----------
+  // ---------- NAVEGACIÓN ENTRE PESTAÑAS ----------
   $("pestanas")?.addEventListener("click", (e) => {
     const b = e.target.closest("button[data-tab]");
     if (!b) return;
+    const tab = b.dataset.tab;
+    estado.tabActiva = tab;
     document.querySelectorAll("#pestanas button").forEach((x) => x.classList.toggle("activa", x === b));
-    document.querySelectorAll(".tab").forEach((t) => (t.hidden = t.id !== "tab-" + b.dataset.tab));
+    document.querySelectorAll(".tab").forEach((t) => (t.hidden = t.id !== "tab-" + tab));
   });
 
   iniciar().catch((err) => {
+    console.error("Error al iniciar aplicación:", err);
     $("cargando").textContent = "Error: " + err.message;
   });
 })();

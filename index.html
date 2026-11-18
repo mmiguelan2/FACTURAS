@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="es">
+<html lang="es" data-theme="light">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -152,7 +152,7 @@
       <div>
         <div class="marca-titulo-wrap">
           <strong>Facturas sin Retención</strong>
-          <button id="btn-refrescar" type="button" class="btn-refrescar" title="Sincronizar datos" aria-label="Sincronizar datos">
+          <button id="btn-refrescar" type="button" class="btn-refrescar" title="Sincronizar con Google Sheets en vivo" aria-label="Sincronizar datos">
             <svg class="icono-refrescar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
               <path d="M 15 4 H 8 A 4 4 0 0 0 4 8 V 19" />
               <path d="M 1.5 16.5 L 4 19.5 L 6.5 16.5" />
@@ -160,8 +160,12 @@
               <path d="M 17.5 7.5 L 20 4.5 L 22.5 7.5" />
             </svg>
           </button>
+          <a href="https://docs.google.com/spreadsheets/d/1Jf5oSCIGX7wKNswlpsea8mWDRqa2DYgKYVuNN5sqH6w/edit?gid=0#gid=0" target="_blank" rel="noopener" class="btn-sheet-link" title="Abrir Google Sheets maestro">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z"/></svg>
+            <span>Google Sheets</span>
+          </a>
         </div>
-        <small id="ultima-carga">—</small>
+        <small id="ultima-carga">Cargando datos desde Google Sheets...</small>
       </div>
     </div>
     
@@ -170,7 +174,7 @@
       <div class="tema-toggle" id="btn-tema" role="button" tabindex="0" title="Alternar modo claro u oscuro">
         <span class="tema-icon tema-icon-sun">☀️</span>
         <span class="tema-icon tema-icon-moon">🌙</span>
-        <span class="tema-texto" id="tema-texto">Oscuro</span>
+        <span class="tema-texto" id="tema-texto">Claro</span>
       </div>
 
       <span id="usuario-nombre"></span>
@@ -253,29 +257,40 @@
   </section>
 
   <nav class="pestanas" id="pestanas">
-    <button data-tab="facturas" class="activa">Facturas</button>
-    <button data-tab="vendedores" class="solo-admin">Por vendedor</button>
+    <button data-tab="facturas" class="activa">
+      <span>Sin Retención</span>
+      <span class="tab-badge" id="badge-sin-retencion">0</span>
+    </button>
+    <button data-tab="por-procesar">
+      <span>Pendiente por Procesar</span>
+      <span class="tab-badge badge-por-procesar" id="badge-por-procesar">0</span>
+    </button>
+    <button data-tab="vendedores" class="solo-admin">
+      <span>Por vendedor</span>
+    </button>
   </nav>
 
   <main>
     <section class="kpis">
-      <div class="kpi"><span>Facturas</span><strong id="k-facturas">0</strong></div>
+      <div class="kpi"><span>Sin Retención</span><strong id="k-facturas">0</strong></div>
+      <div class="kpi kpi-destacado-procesar"><span>Por Procesar (ERP)</span><strong id="k-por-procesar">0</strong></div>
       <div class="kpi"><span>Monto estimado USD</span><strong id="k-estimado">0</strong></div>
       <div class="kpi alerta"><span>Vencidas</span><strong id="k-vencidas">0</strong></div>
       <div class="kpi"><span>Clientes</span><strong id="k-clientes">0</strong></div>
     </section>
 
     <section class="filtros">
-      <label class="solo-admin">Vendedor<select id="f-vendedor"><option value="">Todos</option></select></label>
+      <label class="solo-admin">Vendedor<select id="f-vendedor"><option value="">Todos los vendedores</option></select></label>
+      <label>Analista<select id="f-analista"><option value="">Todos los analistas</option></select></label>
       <label>Zona<select id="f-zona"><option value="">Todas</option></select></label>
-      <label>Estado<select id="f-estado"><option value="">Todas</option><option value="vencidas">Vencidas</option><option value="sinvencer">Sin vencer</option></select></label>
-      <label class="crece">Buscar<input id="f-buscar" placeholder="Cliente, RIF, código o factura"></label>
+      <label>Vencimiento<select id="f-estado"><option value="">Todas</option><option value="vencidas">Vencidas</option><option value="sinvencer">Sin vencer (al día)</option></select></label>
+      <label class="crece">Buscar<input id="f-buscar" placeholder="Cliente, RIF, código, factura, comprobante o vendedor"></label>
       <label>Monto desde<input id="f-desde" type="number" step="0.01"></label>
       <label>Monto hasta<input id="f-hasta" type="number" step="0.01"></label>
       <button class="btn" id="btn-limpiar">Limpiar</button>
     </section>
 
-    <!-- Facturas -->
+    <!-- Facturas Sin Retención -->
     <section class="tab" id="tab-facturas">
       <div class="acciones">
         <span id="conteo"></span>
@@ -295,6 +310,31 @@
         <button class="btn" id="pag-ant">‹ Anterior</button>
         <span id="pag-info"></span>
         <button class="btn" id="pag-sig">Siguiente ›</button>
+      </div>
+    </section>
+
+    <!-- Tab Pendientes por procesar (Retención cargada en ERP pendiente de aplicar) -->
+    <section class="tab" id="tab-por-procesar" hidden>
+      <div class="acciones">
+        <div class="acciones-info-wrap">
+          <span id="conteo-por-procesar">0 facturas por procesar</span>
+          <span class="pista-procesar">💡 Retenciones ya cargadas en el ERP pendientes por procesar y aplicar</span>
+        </div>
+        <div class="acciones-botones">
+          <button class="btn" id="btn-copiar-procesar">📋 Copiar lista por procesar</button>
+          <button class="btn" id="btn-csv-procesar">📥 Descargar CSV</button>
+        </div>
+      </div>
+      <div class="tabla-wrap">
+        <table id="tabla-por-procesar" class="tabla-fija">
+          <thead></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="paginacion">
+        <button class="btn" id="pag-ant-proc">‹ Anterior</button>
+        <span id="pag-info-proc">Página 1 de 1</span>
+        <button class="btn" id="pag-sig-proc">Siguiente ›</button>
       </div>
     </section>
 
