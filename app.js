@@ -86,6 +86,7 @@
     perfil: null,
     facturas: [],
     vendedores: new Map(),
+    clavesExcel: new Map(),
     noEspeciales: new Set(),
     
     // Tab Sin Retención
@@ -120,6 +121,12 @@
     modoMasivo: "vencidas",
   };
 
+  // Pre-poblar estado.vendedores desde el inicio con el directorio base de C.VENDEDORES_DEFAULT
+  (C.VENDEDORES_DEFAULT || []).forEach((v) => {
+    if (v.codigo) estado.vendedores.set(String(v.codigo), v);
+    if (v.nombre) estado.vendedores.set(v.nombre.trim().toUpperCase(), v);
+  });
+
   // ---------- utilidades ----------
   const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const usd = (n) => (Number(n) || 0).toLocaleString("es-VE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -149,44 +156,88 @@
     return txt.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[.,\-_()]/g, " ").toUpperCase().replace(/\s+/g, " ").trim();
   }
 
-  // Buscador inteligente de asesor (por nombre completo, parcial, zona o código)
-  function buscarVendedor(nomOcodigo, dbList) {
-    if (!nomOcodigo) return { codigo: "", nombre: "", telefono: "" };
-    const k = String(nomOcodigo).trim().toUpperCase();
+  // Buscador inteligente de asesor (por nombre completo, parcial, zona, código o primer nombre)
+  function buscarVendedor(nomOcodigo, dbList, zonaOpcional) {
+    if (!nomOcodigo && !zonaOpcional) return { codigo: "", nombre: "", telefono: "" };
+    const k = String(nomOcodigo || "").trim().toUpperCase();
     
     // 0. Si tiene teléfono guardado manualmente en localStorage
     const telsCustom = cargarTelefonosCustom();
     const telCustom = telsCustom[k];
 
-    // 1. Si ya está en Map por clave exacta
+    const list = dbList || (estado.vendedores && estado.vendedores.size > 0 ? [...estado.vendedores.values()] : (C.VENDEDORES_DEFAULT || []));
+
+    // 1. Si ya está en Map por clave exacta y TIENE TELÉFONO
     if (estado.vendedores && estado.vendedores.has(k)) {
       const v = estado.vendedores.get(k);
-      return { ...v, telefono: telCustom || v.telefono || "" };
+      if (v.telefono || telCustom) {
+        return { ...v, telefono: telCustom || v.telefono || "" };
+      }
     }
 
-    const list = dbList || (estado.vendedores ? [...estado.vendedores.values()] : []);
-    const sClean = normalizarTexto(k);
-    const sWords = sClean.split(" ").filter((w) => w.length > 2);
+    // 2. Coincidencia por zona opcional (ej. Z054 -> Sócrates Aguilera)
+    if (zonaOpcional) {
+      const zNorm = String(zonaOpcional).replace(/^Z0*/, "").toUpperCase();
+      for (const v of list) {
+        const vZona = String(v.zona || "").replace(/^Z0*/, "").toUpperCase();
+        const vCod = String(v.codigo || "").replace(/^Z0*/, "").toUpperCase();
+        if ((vZona === zNorm || vCod === zNorm) && (v.telefono || telCustom)) {
+          return { ...v, telefono: telCustom || v.telefono || "" };
+        }
+      }
+    }
 
-    // 2. Coincidencia exacta limpia
+    const sClean = normalizarTexto(k);
+    const sWords = sClean.split(" ").filter((w) => w.length >= 2);
+
+    // 3. Coincidencia exacta limpia
     for (const v of list) {
       if (normalizarTexto(v.nombre) === sClean) {
         return { ...v, telefono: telCustom || v.telefono || "" };
       }
     }
 
-    // 3. Subconjuntos de palabras (ej. 'MIGUEL BARRERA' en 'MIGUEL ANGEL BARRERA BELLO')
-    for (const v of list) {
-      const vWords = normalizarTexto(v.nombre).split(" ").filter((w) => w.length > 2);
-      if (vWords.length >= 2 && vWords.every((w) => sWords.includes(w))) {
-        return { ...v, telefono: telCustom || v.telefono || "" };
-      }
-      if (sWords.length >= 2 && sWords.every((w) => vWords.includes(w))) {
-        return { ...v, telefono: telCustom || v.telefono || "" };
+    // 4. Coincidencia por código numérico de zona o vendedor (ej. Z075 -> 75, o 103)
+    const numZona = k.replace(/^Z0*/, "").trim();
+    if (numZona && /^\d+$/.test(numZona)) {
+      for (const v of list) {
+        const codLimpio = String(v.codigo || "").replace(/^Z0*/, "").trim();
+        const zonaLimpia = String(v.zona || "").replace(/^Z0*/, "").trim();
+        if (codLimpio === numZona || zonaLimpia === numZona) {
+          return { ...v, telefono: telCustom || v.telefono || "" };
+        }
       }
     }
 
-    // 4. Nombre y apellido principal
+    // 5. Coincidencia por PRIMER NOMBRE (ej. 'SOCRATES', 'ANGEL', 'RONNY', 'LISETH', 'MIGUEL')
+    if (sWords.length === 1 && sWords[0].length >= 3) {
+      const pNom = sWords[0];
+      for (const v of list) {
+        const vParts = normalizarTexto(v.nombre).split(" ");
+        if (vParts[0] === pNom && (v.telefono || telCustom)) {
+          return { ...v, telefono: telCustom || v.telefono || "" };
+        }
+      }
+      for (const v of list) {
+        const vParts = normalizarTexto(v.nombre).split(" ");
+        if (vParts[0] === pNom) {
+          return { ...v, telefono: telCustom || v.telefono || "" };
+        }
+      }
+    }
+
+    // 6. Subconjuntos de palabras (ej. 'SOCRATES AGUILERA' con 'SOCRATES AGUILERAS')
+    for (const v of list) {
+      const vWords = normalizarTexto(v.nombre).split(" ").filter((w) => w.length >= 2);
+      if (vWords.length >= 2 && sWords.length >= 2) {
+        const matchAll = sWords.every((w) => vWords.some((vw) => vw.includes(w) || w.includes(vw)));
+        if (matchAll) {
+          return { ...v, telefono: telCustom || v.telefono || "" };
+        }
+      }
+    }
+
+    // 7. Primer nombre y algún apellido
     for (const v of list) {
       const vParts = normalizarTexto(v.nombre).split(" ");
       const sParts = sClean.split(" ");
@@ -197,14 +248,10 @@
       }
     }
 
-    // 5. Coincidencia por código numérico de zona (ej. Z072 -> 72)
-    const numZona = k.replace(/^Z0*/, "").trim();
-    if (numZona) {
-      for (const v of list) {
-        if (String(v.codigo).trim() === numZona) {
-          return { ...v, telefono: telCustom || v.telefono || "" };
-        }
-      }
+    // 8. Fallback si estaba en Map (aunque no tuviera teléfono)
+    if (estado.vendedores && estado.vendedores.has(k)) {
+      const v = estado.vendedores.get(k);
+      return { ...v, telefono: telCustom || v.telefono || "" };
     }
 
     return { codigo: numZona || k, nombre: nomOcodigo, telefono: telCustom || "" };
@@ -291,6 +338,9 @@
       }
     } catch {}
 
+    // Precargar datos en segundo plano para tener el catálogo y las claves de Excel al instante
+    cargarDatos().catch((e) => console.warn("Precarga inicial:", e));
+
     mostrarLogin();
     $("cargando").hidden = true;
   }
@@ -313,10 +363,10 @@
 
     const passAceptadas = (C.CLAVES_ACEPTADAS || ["beval2026", "beval", "123456", "admin"]).map((x) => x.toLowerCase());
 
-    // 1. Acceso Administrador (admin, lolimar, carolina, gerencia, o correo @beval.biz)
+    // 1. Acceso Administrador (admin, lolimar, carolina, gerencia, cobranzas, sistemas o @beval.biz)
     const admins = ["admin", "lolimar", "carolina", "gerencia", "sistemas", "cobranzas"];
     if (admins.includes(userLower) || userInput.endsWith("@beval.biz")) {
-      if (passAceptadas.includes(passLower) || passInput === "admin" || passInput === "beval2026") {
+      if (passAceptadas.includes(passLower) || passInput === "admin" || passInput === "beval2026" || passInput === "beval") {
         if (btn) btn.disabled = false;
         await entrarConPerfil({
           rol: "admin",
@@ -329,21 +379,50 @@
 
     // 2. Acceso Asesor Comercial por Primer Nombre, Código, Zona o Correo
     const v = buscarVendedor(userInput);
-    const primerNombreV = v?.nombre ? v.nombre.split(" ")[0].toLowerCase() : "";
+    const primerNombreV = v?.nombre ? normalizarTexto(v.nombre).split(" ")[0].toLowerCase() : "";
+    const codV = String(v?.codigo || "").replace(/^Z0*/, "").toLowerCase();
 
-    const clavePersonalizada = (C.CLAVES_VENDEDORES && (C.CLAVES_VENDEDORES[userLower] || C.CLAVES_VENDEDORES[v?.codigo]));
-    const claveValida =
-      passAceptadas.includes(passLower) ||
-      (v?.codigo && passInput === v.codigo) ||
-      (primerNombreV && passLower === primerNombreV) ||
-      (clavePersonalizada && passInput === clavePersonalizada);
+    // 2.1 Clave personalizada editada en Excel / Google Sheets (columna 17 / Q)
+    const claveDeExcel = estado.clavesExcel?.get(v?.nombre?.toUpperCase()) ||
+                         estado.clavesExcel?.get(primerNombreV.toUpperCase()) ||
+                         estado.clavesExcel?.get(userLower.toUpperCase()) ||
+                         (codV && estado.clavesExcel?.get(codV));
+
+    // 2.2 Clave configurada en config.js (CLAVES_VENDEDORES)
+    const claveConfig = C.CLAVES_VENDEDORES && (
+      C.CLAVES_VENDEDORES[userLower] ||
+      C.CLAVES_VENDEDORES[primerNombreV] ||
+      C.CLAVES_VENDEDORES[codV] ||
+      C.CLAVES_VENDEDORES[v?.codigo]
+    );
+
+    // 2.3 Validación de contraseña ultra flexible y sencilla:
+    // - Si el usuario definió clave en Excel: la valida directamente
+    // - Si la configuró en config.js: la valida directamente
+    // - Si no la configuró: admite su PRIMER NOMBRE, su CÓDIGO, 'beval', 'beval2026', o '123456'
+    let claveValida = false;
+    if (claveDeExcel) {
+      claveValida = (passInput === claveDeExcel || passAceptadas.includes(passLower));
+    } else if (claveConfig) {
+      claveValida = (passInput === claveConfig || passAceptadas.includes(passLower));
+    } else {
+      claveValida =
+        passAceptadas.includes(passLower) ||
+        (primerNombreV && passLower === primerNombreV) ||
+        (userLower && passLower === userLower) ||
+        (codV && passLower === codV) ||
+        passLower === "beval" ||
+        passLower === "beval2026" ||
+        passLower === "123456";
+    }
 
     if (v && v.nombre && claveValida) {
       if (btn) btn.disabled = false;
       await entrarConPerfil({
         rol: "vendedor",
         nombre: v.nombre,
-        codigo_vendedor: v.codigo || userInput,
+        codigo_vendedor: v.nombre,
+        codigo_num: v.codigo || codV,
         zona: v.zona || null,
       });
       return;
@@ -362,7 +441,7 @@
     } catch {}
 
     if (btn) btn.disabled = false;
-    $("login-error").textContent = "Acceso incorrecto. Asesores: ingresa tu primer nombre (ej. edgar, ronny) o código y clave beval2026.";
+    $("login-error").textContent = "Acceso incorrecto. Asesor: escribe tu primer nombre (ej. angel, ronny) y tu contraseña (tu primer nombre o beval).";
     $("login-error").hidden = false;
   });
 
@@ -557,6 +636,16 @@
       const vendedorFinal = esInterno ? vendedorOriginal : activoDeZona;
       const esReasignado = (vendedorFinal !== vendedorOriginal);
 
+      // Columna 17 (índice 16 en base 0): si el usuario coloca una columna CLAVE en Excel o Google Sheets
+      const claveDesdeExcel = (r[16] || "").trim();
+      if (claveDesdeExcel && claveDesdeExcel.toUpperCase() !== "CLAVE" && claveDesdeExcel.toUpperCase() !== "PASSWORD") {
+        estado.clavesExcel.set(vendedorFinal.toUpperCase(), claveDesdeExcel);
+        estado.clavesExcel.set(vendedorOriginal.toUpperCase(), claveDesdeExcel);
+        const pNom = normalizarTexto(vendedorFinal).split(" ")[0].toLowerCase();
+        if (pNom) estado.clavesExcel.set(pNom, claveDesdeExcel);
+        if (zona) estado.clavesExcel.set(zona.replace(/^Z0*/, "").toLowerCase(), claveDesdeExcel);
+      }
+
       facturas.push({
         codigo_cliente: codCliente,
         razon_social: razonSocial,
@@ -617,13 +706,52 @@
         todo("facturas"),
         sb.from("cargas").select("fecha,facturas").order("fecha", { ascending: false }).limit(1),
       ]);
+
+      // Determinar mapa de vendedor activo por zona también en el respaldo de Supabase
+      const zonaStatsSb = new Map();
+      facturasSb.forEach((f) => {
+        const zona = (f.zona || "").trim();
+        const vend = (f.vendedor || "").trim();
+        const fEmision = f.fecha_emision || "";
+        if (!zona || !vend) return;
+        if (!zonaStatsSb.has(zona)) zonaStatsSb.set(zona, new Map());
+        const zMap = zonaStatsSb.get(zona);
+        const stat = zMap.get(vend) || { maxFecha: "", count: 0 };
+        stat.count++;
+        if (fEmision > stat.maxFecha) stat.maxFecha = fEmision;
+        zMap.set(vend, stat);
+      });
+
+      const mapaZonaActivoSb = new Map();
+      for (const [z, zMap] of zonaStatsSb.entries()) {
+        const cand = [...zMap.entries()].filter(([v]) => v !== "TRANSPORTE" && v !== "PROVEEDORES");
+        const listaCand = cand.length > 0 ? cand : [...zMap.entries()];
+        listaCand.sort((a, b) => {
+          const dComp = (b[1].maxFecha || "").localeCompare(a[1].maxFecha || "");
+          if (dComp !== 0) return dComp;
+          return b[1].count - a[1].count;
+        });
+        if (listaCand.length > 0) {
+          mapaZonaActivoSb.set(z, listaCand[0][0]);
+        }
+      }
+
       facturasCargadas = facturasSb.map((f) => {
         const montoDolar = Number(f.monto_dolar) || 0;
         const montoEst = Number(f.monto_estimado);
         const montoRet = Number(f.monto_retencion) || 0;
         const estimado = montoRet > 0 ? montoRet : (montoEst && !isNaN(montoEst) && montoEst > 0 ? montoEst : (montoDolar > 0 ? Math.round(montoDolar * (12.0 / 116.0) * 100) / 100 : 0));
+        const vendedorOrig = (f.vendedor || "").trim();
+        const activoZona = mapaZonaActivoSb.get(f.zona) || vendedorOrig;
+        const esInterno = (vendedorOrig === "TRANSPORTE" || vendedorOrig === "PROVEEDORES");
+        const vendedorFinal = esInterno ? vendedorOrig : activoZona;
+
         return {
           ...f,
+          vendedor: vendedorFinal,
+          vendedor_original: vendedorOrig,
+          es_reasignado: vendedorFinal !== vendedorOrig,
+          es_interno: esInterno,
           analista: f.analista || "Lolimar Oropeza",
           estado: f.estado || (f.retencion ? "RETENCION CARGADA NO APLICADA" : "SIN RETENCION"),
           monto_estimado: estimado,
@@ -659,13 +787,15 @@
     estado.facturas.forEach((f) => {
       const nom = (f.vendedor || "").trim();
       const nomKey = nom.toUpperCase();
-      if (nom && !estado.vendedores.has(nomKey)) {
-        const match = buscarVendedor(nom, vendedoresSb);
+      if (nom) {
+        const match = buscarVendedor(nom, vendedoresSb, f.zona);
+        const yaExistente = estado.vendedores.get(nomKey);
         const objVend = {
-          codigo: match.codigo || (f.zona ? f.zona.replace(/^Z0*/, "") : nomKey),
+          codigo: match.codigo || yaExistente?.codigo || (f.zona ? f.zona.replace(/^Z0*/, "") : nomKey),
           nombre: nom,
-          telefono: match.telefono || "",
-          correo: f.correo_vendedor || match.correo || ""
+          telefono: yaExistente?.telefono || match.telefono || "",
+          zona: f.zona || match.zona || yaExistente?.zona || "",
+          correo: f.correo_vendedor || match.correo || yaExistente?.correo || ""
         };
         estado.vendedores.set(nomKey, objVend);
         if (objVend.codigo && !estado.vendedores.has(objVend.codigo)) {
@@ -727,7 +857,16 @@
         const nomVend = (f.vendedor || "").trim().toUpperCase();
         const objVend = buscarVendedor(nomVend);
         const codZona = (f.zona || "").replace(/^Z0*/, "");
-        if (f.vendedor !== vendedorFijo && objVend?.codigo !== vendedorFijo && codZona !== vendedorFijo) {
+        const fijLimpio = normalizarTexto(vendedorFijo);
+        const nomLimpio = normalizarTexto(nomVend);
+        const matchNombre = nomLimpio === fijLimpio || nomLimpio.includes(fijLimpio) || fijLimpio.includes(nomLimpio);
+        if (
+          f.vendedor !== vendedorFijo &&
+          nomVend !== vendedorFijo.toUpperCase() &&
+          !matchNombre &&
+          objVend?.codigo !== vendedorFijo &&
+          codZona !== vendedorFijo
+        ) {
           return false;
         }
       }
@@ -1391,8 +1530,8 @@
     if (!tbody) return;
 
     tbody.innerHTML = listaMostrada.map(({ cod, fs, r, avancePct, zona, sem }) => {
-      const v = buscarVendedor(cod);
-      const codIdent = v.codigo || zona.replace(/^Z0*/, "") || cod;
+      const v = buscarVendedor(cod, null, zona);
+      const codIdent = v.codigo || (zona ? zona.replace(/^Z0*/, "") : cod);
       const yaEnviado = estado.wsEnviados.has(codIdent) || estado.wsEnviados.has(cod);
       const statusBadge = yaEnviado
         ? `<span class="badge-ws enviado">✅ Enviado</span>`
@@ -1604,38 +1743,42 @@
 
   // ---------- MENSAJES & WHATSAPP ----------
   function mensaje(cod, listaTotal, soloVencidas = false) {
-    const v = buscarVendedor(cod);
+    const zonaAsesor = listaTotal[0]?.zona || "";
+    const v = buscarVendedor(cod, null, zonaAsesor);
     const nombreAsesor = v?.nombre || cod || "Asesor Comercial";
-    const zonaAsesor = listaTotal[0]?.zona || v?.zona || "";
-
-    const facturasFiltradas = soloVencidas
-      ? listaTotal.filter((f) => f.dias_vencida > 0)
-      : listaTotal;
-
-    const cantFacturas = facturasFiltradas.length;
-    const totalEstimado = facturasFiltradas.reduce((s, f) => s + (Number(f.monto_estimado) || 0), 0);
-    const cantVencidasTotal = listaTotal.filter((f) => f.dias_vencida > 0).length;
-
-    // Detalle de TODAS las facturas sin límite ni cortes ("nada de y más 33")
-    const lineasDetalle = facturasFiltradas.map((f) => {
-      const diasV = Number(f.dias_vencida) || 0;
-      const estadoV = diasV > 0 ? ` ⚠️ (${diasV}d vencida)` : ` ⏳ (Al día)`;
-      return `• Fact. ${f.factura} | ${f.razon_social} | Estimado Ret: $${usd(f.monto_estimado)} USD${estadoV}`;
-    });
-
-    const detalleTexto = lineasDetalle.join("\n");
 
     if (soloVencidas) {
+      // Filtrar estricto: ÚNICAMENTE facturas vencidas (dias_vencida > 0)
+      const facturasVencidas = listaTotal.filter((f) => f.dias_vencida > 0);
+      const cantVencidas = facturasVencidas.length;
+      const totalEstimado = facturasVencidas.reduce((s, f) => s + (Number(f.monto_estimado) || 0), 0);
+
+      // Detalle exclusivo de vencidas: sin facturas al día ni texto de al día
+      const lineasDetalle = facturasVencidas.map((f) => {
+        const diasV = Number(f.dias_vencida) || 0;
+        return `• Fact. ${f.factura} | ${f.razon_social} | Estimado Ret: $${usd(f.monto_estimado)} USD (${diasV} días vencida)`;
+      });
+
       return `*DISTRIBUIDORA BEVAL, C.A.*\n` +
         `*RECORDATORIO DE RETENCIÓN DE IVA - FACTURAS VENCIDAS*\n\n` +
         `Estimado(a) *${nombreAsesor}*${zonaAsesor ? ` (Zona ${zonaAsesor})` : ""}:\n\n` +
-        `Presentas un total de *${cantFacturas} FACTURA(S) VENCIDA(S)* pendientes por comprobante de retención de IVA, con un monto estimado a recuperar de *${usd(totalEstimado)} USD*.\n\n` +
+        `Presentas un total de *${cantVencidas} FACTURA(S) VENCIDA(S)* pendientes de entrega de comprobante de retención de IVA, por un monto estimado a recuperar de *${usd(totalEstimado)} USD*.\n\n` +
         `*DETALLE DE FACTURAS VENCIDAS:*\n` +
-        `${detalleTexto}\n\n` +
-        `📌 _Te adjunto la imagen gráfica con el estado de cuenta oficial._\n` +
+        `${lineasDetalle.join("\n")}\n\n` +
+        `📌 _Te adjunto la imagen gráfica oficial con el estado de cuenta de las facturas vencidas._\n` +
         `Por favor gestionar los comprobantes con tus clientes a la brevedad posible.\n` +
         `¡Muchas gracias por tu apoyo!`;
     } else {
+      const cantFacturas = listaTotal.length;
+      const totalEstimado = listaTotal.reduce((s, f) => s + (Number(f.monto_estimado) || 0), 0);
+      const cantVencidasTotal = listaTotal.filter((f) => f.dias_vencida > 0).length;
+
+      const lineasDetalle = listaTotal.map((f) => {
+        const diasV = Number(f.dias_vencida) || 0;
+        const estadoV = diasV > 0 ? ` ⚠️ (${diasV}d vencida)` : ` ⏳ (Al día)`;
+        return `• Fact. ${f.factura} | ${f.razon_social} | Estimado Ret: $${usd(f.monto_estimado)} USD${estadoV}`;
+      });
+
       return `*DISTRIBUIDORA BEVAL, C.A.*\n` +
         `*ESTADO DE CUENTA DE RETENCIONES DE IVA - CARTERA COMPLETA*\n\n` +
         `Estimado(a) *${nombreAsesor}*${zonaAsesor ? ` (Zona ${zonaAsesor})` : ""}:\n\n` +
@@ -1644,7 +1787,7 @@
         `• De las cuales vencidas: *${cantVencidasTotal}*\n` +
         `• Monto estimado retención: *${usd(totalEstimado)} USD*\n\n` +
         `*DETALLE COMPLETO DE FACTURAS:*\n` +
-        `${detalleTexto}\n\n` +
+        `${lineasDetalle.join("\n")}\n\n` +
         `📌 _Te adjunto la imagen gráfica con el estado de cuenta oficial._\n` +
         `Agradecemos tu oportuna gestión con cada cliente.\n` +
         `¡Éxito en la cobranza!`;
@@ -1662,8 +1805,12 @@
 
   // Envío individual de WhatsApp con mensaje completo y descarga/copiado de imagen Canvas
   async function enviarWhatsAppVendedor(cod, soloVencidas = false) {
-    const v = buscarVendedor(cod);
-    const todasDelVendedor = estado.facturas.filter((f) => f.vendedor === cod && f.estado === "SIN RETENCION");
+    const todasDelVendedor = estado.facturas.filter((f) => {
+      const nomVend = (f.vendedor || "").trim().toUpperCase();
+      return (f.vendedor === cod || nomVend === cod.toUpperCase()) && f.estado === "SIN RETENCION";
+    });
+    const zonaV = todasDelVendedor[0]?.zona || "";
+    const v = buscarVendedor(cod, null, zonaV);
     const lista = soloVencidas
       ? todasDelVendedor.filter((f) => f.dias_vencida > 0)
       : todasDelVendedor;
@@ -1673,7 +1820,7 @@
       return;
     }
 
-    const textoMsg = mensaje(cod, todasDelVendedor, soloVencidas);
+    const textoMsg = mensaje(cod, lista, soloVencidas);
 
     // 1. Copiar texto al portapapeles garantizado
     try {
@@ -1705,6 +1852,10 @@
 
     // 3. Abrir WhatsApp Web
     let tel = (v?.telefono || "").replace(/\D/g, "");
+    if (!tel && zonaV) {
+      const fallbackV = buscarVendedor(zonaV, null, zonaV);
+      tel = (fallbackV?.telefono || "").replace(/\D/g, "");
+    }
     if (tel) {
       if (tel.startsWith("0")) tel = "58" + tel.slice(1);
       else if (!tel.startsWith("58")) tel = "58" + tel;
@@ -1794,7 +1945,7 @@
     const listaGrupos = grupos(sinRet);
     const total = listaGrupos.length;
     const enviados = listaGrupos.filter((g) => {
-      const v = buscarVendedor(g.cod);
+      const v = buscarVendedor(g.cod, null, g.zona);
       return estado.wsEnviados.has(g.cod) || (v?.codigo && estado.wsEnviados.has(v.codigo));
     }).length;
     const pct = total > 0 ? Math.round((enviados / total) * 100) : 0;
@@ -1805,13 +1956,13 @@
     if (progBar) progBar.style.width = `${pct}%`;
 
     const proximo = listaGrupos.find((g) => {
-      const v = buscarVendedor(g.cod);
+      const v = buscarVendedor(g.cod, null, g.zona);
       return !estado.wsEnviados.has(g.cod) && (!v?.codigo || !estado.wsEnviados.has(v.codigo));
     });
     const btnSiguiente = $("btn-enviar-siguiente");
 
     if (proximo) {
-      const v = buscarVendedor(proximo.cod);
+      const v = buscarVendedor(proximo.cod, null, proximo.zona);
       const tel = v.telefono;
       const cantFact = esModoVencidas ? proximo.r.vencidas : proximo.r.facturas;
       const montoEst = esModoVencidas ? proximo.r.estimadoVencidas : proximo.r.estimado;
