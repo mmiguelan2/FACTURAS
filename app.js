@@ -82,6 +82,104 @@
     }
   };
 
+  // ---------- GESTIÓN DE CREDENCIALES (USUARIOS Y CONTRASEÑAS) ----------
+  const STORAGE_KEY_CREDENCIALES = "beval_credenciales_vendedores";
+
+  const cargarCredencialesCustom = () => {
+    try {
+      const g = localStorage.getItem(STORAGE_KEY_CREDENCIALES);
+      return g ? JSON.parse(g) : {};
+    } catch {
+      return {};
+    }
+  };
+
+  const guardarCredencialCustom = (nomOcod, usuario, clave, asesorNom, zona) => {
+    try {
+      const g = cargarCredencialesCustom();
+      const k = String(nomOcod || "").trim().toUpperCase();
+      if (usuario && clave) {
+        const item = {
+          usuario: String(usuario).trim(),
+          clave: String(clave).trim(),
+          nombre: asesorNom || nomOcod,
+          zona: zona || "",
+          fecha: new Date().toISOString()
+        };
+        g[k] = item;
+        if (asesorNom && asesorNom.trim().toUpperCase() !== k) {
+          g[asesorNom.trim().toUpperCase()] = item;
+        }
+      } else {
+        delete g[k];
+        if (asesorNom) delete g[asesorNom.trim().toUpperCase()];
+      }
+      localStorage.setItem(STORAGE_KEY_CREDENCIALES, JSON.stringify(g));
+    } catch (e) {
+      console.warn("No se pudo guardar credencial en localStorage", e);
+    }
+  };
+
+  const eliminarCredencialCustom = (nomOcod, asesorNom) => {
+    try {
+      const g = cargarCredencialesCustom();
+      const k = String(nomOcod || "").trim().toUpperCase();
+      delete g[k];
+      if (asesorNom) delete g[asesorNom.trim().toUpperCase()];
+      localStorage.setItem(STORAGE_KEY_CREDENCIALES, JSON.stringify(g));
+    } catch (e) {
+      console.warn("No se pudo eliminar credencial de localStorage", e);
+    }
+  };
+
+  const obtenerCredencialVendedor = (nomOcod, zonaOpcional) => {
+    const k = String(nomOcod || "").trim().toUpperCase();
+    const v = buscarVendedor(nomOcod, null, zonaOpcional);
+    const nombreV = v?.nombre || nomOcod || "";
+    const pNom = normalizarTexto(nombreV).split(" ")[0].toLowerCase() || "asesor";
+    const codNum = String(v?.codigo || (zonaOpcional ? String(zonaOpcional).replace(/^Z0*/, "") : "")).toLowerCase();
+    const zonaNorm = String(v?.zona || zonaOpcional || "").toUpperCase();
+
+    // 1. Revisar si hay credencial personalizada guardada en localStorage
+    const creds = cargarCredencialesCustom();
+    const custom = creds[k] || creds[nombreV.toUpperCase()] || (v?.codigo && creds[String(v.codigo).toUpperCase()]) || (zonaNorm && creds[zonaNorm]);
+    if (custom && custom.usuario && custom.clave) {
+      return {
+        usuario: custom.usuario,
+        clave: custom.clave,
+        esPersonalizada: true,
+        nombre: nombreV,
+        zona: zonaNorm,
+        primerNombre: pNom,
+        codigo: codNum
+      };
+    }
+
+    // 2. Si no hay personalizada, calcular los datos por defecto (usuario = primer nombre, clave = primer nombre o excel/config)
+    const claveDeExcel = estado.clavesExcel?.get(nombreV.toUpperCase()) ||
+                         estado.clavesExcel?.get(pNom.toUpperCase()) ||
+                         (codNum && estado.clavesExcel?.get(codNum));
+
+    const claveConfig = C.CLAVES_VENDEDORES && (
+      C.CLAVES_VENDEDORES[pNom] ||
+      C.CLAVES_VENDEDORES[codNum] ||
+      C.CLAVES_VENDEDORES[v?.codigo]
+    );
+
+    const claveDefecto = claveDeExcel || claveConfig || pNom || "beval2026";
+    const usuarioDefecto = pNom;
+
+    return {
+      usuario: usuarioDefecto,
+      clave: claveDefecto,
+      esPersonalizada: false,
+      nombre: nombreV,
+      zona: zonaNorm,
+      primerNombre: pNom,
+      codigo: codNum
+    };
+  };
+
   const estado = {
     perfil: null,
     facturas: [],
@@ -377,55 +475,78 @@
       }
     }
 
-    // 2. Acceso Asesor Comercial por Primer Nombre, Código, Zona o Correo
-    const v = buscarVendedor(userInput);
-    const primerNombreV = v?.nombre ? normalizarTexto(v.nombre).split(" ")[0].toLowerCase() : "";
-    const codV = String(v?.codigo || "").replace(/^Z0*/, "").toLowerCase();
+    // 2. Acceso Asesor Comercial (usuario personalizado, primer nombre, código, zona o correo)
+    const credsCustom = cargarCredencialesCustom();
+    let asesorEncontrado = null;
+    let claveEsperadaCustom = null;
 
-    // 2.1 Clave personalizada editada en Excel / Google Sheets (columna 17 / Q)
-    const claveDeExcel = estado.clavesExcel?.get(v?.nombre?.toUpperCase()) ||
-                         estado.clavesExcel?.get(primerNombreV.toUpperCase()) ||
-                         estado.clavesExcel?.get(userLower.toUpperCase()) ||
-                         (codV && estado.clavesExcel?.get(codV));
+    // 2.0 Revisar si userInput coincide con algún nombre de usuario personalizado guardado
+    for (const [vKey, c] of Object.entries(credsCustom)) {
+      if (c && c.usuario && c.usuario.trim().toLowerCase() === userLower) {
+        asesorEncontrado = buscarVendedor(vKey);
+        claveEsperadaCustom = c.clave;
+        break;
+      }
+    }
 
-    // 2.2 Clave configurada en config.js (CLAVES_VENDEDORES)
-    const claveConfig = C.CLAVES_VENDEDORES && (
-      C.CLAVES_VENDEDORES[userLower] ||
-      C.CLAVES_VENDEDORES[primerNombreV] ||
-      C.CLAVES_VENDEDORES[codV] ||
-      C.CLAVES_VENDEDORES[v?.codigo]
-    );
+    // 2.1 Si no coincidió con usuario personalizado, buscar asesor por nombre, zona o código
+    if (!asesorEncontrado) {
+      asesorEncontrado = buscarVendedor(userInput);
+    }
 
-    // 2.3 Validación de contraseña ultra flexible y sencilla:
-    // - Si el usuario definió clave en Excel: la valida directamente
-    // - Si la configuró en config.js: la valida directamente
-    // - Si no la configuró: admite su PRIMER NOMBRE, su CÓDIGO, 'beval', 'beval2026', o '123456'
-    let claveValida = false;
-    if (claveDeExcel) {
-      claveValida = (passInput === claveDeExcel || passAceptadas.includes(passLower));
-    } else if (claveConfig) {
-      claveValida = (passInput === claveConfig || passAceptadas.includes(passLower));
-    } else {
-      claveValida =
+    if (asesorEncontrado && asesorEncontrado.nombre) {
+      const v = asesorEncontrado;
+      const cred = obtenerCredencialVendedor(v.nombre, v.zona);
+      const primerNombreV = v?.nombre ? normalizarTexto(v.nombre).split(" ")[0].toLowerCase() : "";
+      const codV = String(v?.codigo || "").replace(/^Z0*/, "").toLowerCase();
+
+      // Claves alternativas de Excel o config
+      const claveDeExcel = estado.clavesExcel?.get(v?.nombre?.toUpperCase()) ||
+                           estado.clavesExcel?.get(primerNombreV.toUpperCase()) ||
+                           estado.clavesExcel?.get(userLower.toUpperCase()) ||
+                           (codV && estado.clavesExcel?.get(codV));
+
+      const claveConfig = C.CLAVES_VENDEDORES && (
+        C.CLAVES_VENDEDORES[userLower] ||
+        C.CLAVES_VENDEDORES[primerNombreV] ||
+        C.CLAVES_VENDEDORES[codV] ||
+        C.CLAVES_VENDEDORES[v?.codigo]
+      );
+
+      // Validación de clave inteligente:
+      // Acepta la clave personalizada configurada en la página, la de Excel, la de config,
+      // o los comodines por defecto (primer nombre, código, beval2026, 123456)
+      let claveValida = false;
+      const passCorrecta = claveEsperadaCustom || cred.clave;
+      if (passCorrecta && (passInput === passCorrecta || passLower === passCorrecta.toLowerCase())) {
+        claveValida = true;
+      } else if (claveDeExcel && passInput === claveDeExcel) {
+        claveValida = true;
+      } else if (claveConfig && passInput === claveConfig) {
+        claveValida = true;
+      } else if (
         passAceptadas.includes(passLower) ||
         (primerNombreV && passLower === primerNombreV) ||
         (userLower && passLower === userLower) ||
         (codV && passLower === codV) ||
         passLower === "beval" ||
         passLower === "beval2026" ||
-        passLower === "123456";
-    }
+        passLower === "123456"
+      ) {
+        claveValida = true;
+      }
 
-    if (v && v.nombre && claveValida) {
-      if (btn) btn.disabled = false;
-      await entrarConPerfil({
-        rol: "vendedor",
-        nombre: v.nombre,
-        codigo_vendedor: v.nombre,
-        codigo_num: v.codigo || codV,
-        zona: v.zona || null,
-      });
-      return;
+      if (claveValida) {
+        if (btn) btn.disabled = false;
+        await entrarConPerfil({
+          rol: "vendedor",
+          nombre: v.nombre,
+          codigo_vendedor: v.nombre,
+          codigo_num: v.codigo || codV,
+          zona: v.zona || null,
+        });
+        return;
+      }
     }
 
     // 3. Fallback a Supabase Auth estándar si existiese cuenta registrada
@@ -1554,11 +1675,21 @@
         ? `<button type="button" class="btn-editar-tel" data-editar-tel="${esc(cod)}" title="Clic para editar número de WhatsApp">📱 ${esc(v.telefono)} ✏️</button>`
         : `<button type="button" class="btn-editar-tel sin-tel" data-editar-tel="${esc(cod)}" title="Clic para registrar número de WhatsApp">⚠️ Sin tel. ✏️ [+ Tel]</button>`;
 
+      const cred = obtenerCredencialVendedor(cod, zona);
+      const credBtnHtml = `
+        <button type="button" class="btn-editar-cred ${cred.esPersonalizada ? 'personalizada' : ''}" data-editar-cred="${esc(cod)}" title="Clic para ver o cambiar el usuario y la contraseña de este asesor">
+          <span class="icono-llave">🔑</span>
+          <span class="cred-detalle">User: <strong>${esc(cred.usuario)}</strong> &bull; Clave: <strong>${esc(cred.clave)}</strong></span>
+          ${cred.esPersonalizada ? '<span class="badge-personalizado" title="Clave personalizada">✓</span>' : ''}
+          <span class="cred-lapiz">✏️</span>
+        </button>`;
+
       const celdaVendedor = `
         <div style="display: flex; flex-direction: column;">
           <strong style="color: var(--texto);">${esc(nombreLimpio)}</strong>
           <small style="color: var(--suave); font-size: 11px;">Código: ${esc(codIdent)}</small>
           ${telBtnHtml}
+          ${credBtnHtml}
         </div>`;
 
       const waButtonsHtml = `
@@ -2513,6 +2644,226 @@
     pintarPorProcesar();
     cerrarModalComprobante();
     aviso(`💾 Comprobante ${numComp} guardado y asociado a ${facs.length} facturas`);
+  });
+
+  // ==========================================
+  // GESTIÓN DE ACCESOS Y CONTRASEÑAS DE ASESORES
+  // ==========================================
+  let asesorEditandoCred = null;
+
+  function abrirModalCredencial(cod) {
+    if (!cod) return;
+    const v = buscarVendedor(cod);
+    const zonaV = v.zona || (estado.facturas.find((f) => f.vendedor === cod || f.vendedor_original === cod)?.zona) || "";
+    const cred = obtenerCredencialVendedor(cod, zonaV);
+
+    asesorEditandoCred = { cod, v, cred, zona: zonaV };
+
+    $("mc-asesor-nombre").textContent = v.nombre || cod;
+    $("mc-asesor-zona").textContent = `Zona: ${zonaV || "S/Z"} · Código: ${v.codigo || "S/C"} · Tel: ${v.telefono || "Sin tel."}`;
+    $("mc-input-usuario").value = cred.usuario;
+    $("mc-input-clave").value = cred.clave;
+    $("mc-input-clave").type = "text";
+    $("mc-btn-ver-clave").textContent = "👁️";
+
+    $("modal-credencial").hidden = false;
+    $("mc-input-usuario").focus();
+  }
+
+  function cerrarModalCredencial() {
+    $("modal-credencial").hidden = true;
+    asesorEditandoCred = null;
+  }
+
+  // Sugerencias rápidas de usuario
+  $("mc-sug-pnombre")?.addEventListener("click", () => {
+    if (asesorEditandoCred?.cred?.primerNombre) {
+      $("mc-input-usuario").value = asesorEditandoCred.cred.primerNombre;
+    }
+  });
+
+  $("mc-sug-zona")?.addEventListener("click", () => {
+    const z = asesorEditandoCred?.zona || asesorEditandoCred?.v?.zona;
+    if (z) $("mc-input-usuario").value = z.toLowerCase();
+  });
+
+  $("mc-sug-cod")?.addEventListener("click", () => {
+    const c = asesorEditandoCred?.v?.codigo || asesorEditandoCred?.cred?.codigo;
+    if (c) $("mc-input-usuario").value = String(c).toLowerCase();
+  });
+
+  // Sugerencias rápidas de clave
+  $("mc-sug-clave-user")?.addEventListener("click", () => {
+    $("mc-input-clave").value = ($("mc-input-usuario").value || "").trim();
+  });
+
+  $("mc-sug-clave-beval")?.addEventListener("click", () => {
+    $("mc-input-clave").value = "beval2026";
+  });
+
+  $("mc-sug-clave-123")?.addEventListener("click", () => {
+    $("mc-input-clave").value = "123456";
+  });
+
+  // Toggle visibilidad de clave
+  $("mc-btn-ver-clave")?.addEventListener("click", () => {
+    const inp = $("mc-input-clave");
+    if (!inp) return;
+    if (inp.type === "password") {
+      inp.type = "text";
+      $("mc-btn-ver-clave").textContent = "👁️";
+    } else {
+      inp.type = "password";
+      $("mc-btn-ver-clave").textContent = "🙈";
+    }
+  });
+
+  // Guardar credencial
+  $("mc-btn-guardar")?.addEventListener("click", () => {
+    if (!asesorEditandoCred) return;
+    const u = ($("mc-input-usuario").value || "").trim();
+    const c = ($("mc-input-clave").value || "").trim();
+
+    if (!u || !c) {
+      aviso("⚠️ El usuario y la contraseña no pueden estar vacíos");
+      return;
+    }
+
+    guardarCredencialCustom(asesorEditandoCred.cod, u, c, asesorEditandoCred.v.nombre, asesorEditandoCred.zona);
+    cerrarModalCredencial();
+    pintarVendedores();
+    if (!$("modal-todos-accesos")?.hidden) pintarTablaTodosAccesos();
+    aviso(`✅ Acceso guardado para ${asesorEditandoCred.v.nombre || asesorEditandoCred.cod}: Usuario "${u}" | Clave "${c}"`);
+  });
+
+  // Restablecer por defecto
+  $("mc-btn-restablecer")?.addEventListener("click", () => {
+    if (!asesorEditandoCred) return;
+    const nom = asesorEditandoCred.v.nombre || asesorEditandoCred.cod;
+    if (confirm(`¿Restablecer el acceso por defecto para ${nom}?\n\nVolverá al primer nombre como usuario y contraseña.`)) {
+      eliminarCredencialCustom(asesorEditandoCred.cod, asesorEditandoCred.v.nombre);
+      cerrarModalCredencial();
+      pintarVendedores();
+      if (!$("modal-todos-accesos")?.hidden) pintarTablaTodosAccesos();
+      aviso(`Acceso restablecido por defecto para ${nom}`);
+    }
+  });
+
+  // Copiar mensaje listo para WhatsApp
+  $("mc-btn-copiar-ws")?.addEventListener("click", () => {
+    if (!asesorEditandoCred) return;
+    const u = ($("mc-input-usuario").value || "").trim();
+    const c = ($("mc-input-clave").value || "").trim();
+    const v = asesorEditandoCred.v;
+    const urlApp = window.location.href.split("?")[0].split("#")[0];
+
+    const texto = `*DISTRIBUIDORA BEVAL, C.A.*
+Hola *${v.nombre || asesorEditandoCred.cod}*, aquí tienes tus datos de acceso al sistema de cobranzas y retenciones:
+
+🌐 *Enlace:* ${urlApp}
+👤 *Usuario:* ${u}
+🔑 *Contraseña:* ${c}
+
+_Al ingresar podrás consultar tus clientes asignados y gestionar las facturas pendientes._`;
+
+    navigator.clipboard.writeText(texto).then(() => {
+      aviso("📋 Mensaje de acceso copiado al portapapeles listo para enviar por WhatsApp");
+    }).catch(() => {
+      prompt("Copia este mensaje para el asesor:", texto);
+    });
+  });
+
+  $("btn-cerrar-mc")?.addEventListener("click", cerrarModalCredencial);
+  $("mc-btn-cancelar")?.addEventListener("click", cerrarModalCredencial);
+  $("modal-credencial")?.addEventListener("click", (e) => {
+    if (e.target.id === "modal-credencial") cerrarModalCredencial();
+  });
+
+  // Listener delegado para los botones de editar credencial en la tabla
+  document.addEventListener("click", (e) => {
+    const btnCred = e.target.closest("[data-editar-cred]");
+    if (btnCred) {
+      e.stopPropagation();
+      e.preventDefault();
+      abrirModalCredencial(btnCred.dataset.editarCred);
+    }
+  });
+
+  // ------------------------------------------
+  // MODAL DE TODOS LOS ACCESOS Y CREDENCIALES
+  // ------------------------------------------
+  function abrirModalTodosAccesos() {
+    pintarTablaTodosAccesos();
+    $("modal-todos-accesos").hidden = false;
+  }
+
+  function cerrarModalTodosAccesos() {
+    $("modal-todos-accesos").hidden = true;
+  }
+
+  function pintarTablaTodosAccesos() {
+    const tbody = $("tabla-todos-accesos")?.querySelector("tbody");
+    if (!tbody) return;
+
+    const filtro = ($("mta-filtro")?.value || "").trim().toUpperCase();
+    const listaG = grupos(estado.facturas);
+
+    const filas = listaG.map((g) => {
+      const v = buscarVendedor(g.cod, null, g.zona);
+      const cred = obtenerCredencialVendedor(g.cod, g.zona);
+      return { g, v, cred };
+    }).filter(({ v, cred, g }) => {
+      if (!filtro) return true;
+      const s = `${v.nombre} ${v.zona} ${g.cod} ${cred.usuario} ${cred.clave}`.toUpperCase();
+      return s.includes(filtro);
+    });
+
+    tbody.innerHTML = filas.map(({ g, v, cred }) => {
+      return `<tr>
+        <td style="font-weight: 700; color: var(--suave);">${esc(g.zona || v.zona || "S/Z")}</td>
+        <td>
+          <strong>${esc(v.nombre || g.cod)}</strong><br>
+          <small style="color: var(--suave); font-size: 11px;">Tel: ${esc(v.telefono || "Sin tel.")}</small>
+        </td>
+        <td><strong style="color: var(--texto); font-family: monospace; font-size: 13px;">${esc(cred.usuario)}</strong></td>
+        <td>
+          <strong style="color: var(--beval-lime); font-family: monospace; font-size: 13px;">${esc(cred.clave)}</strong>
+          ${cred.esPersonalizada ? '<span class="badge-personalizado" style="margin-left: 6px;">Personalizada</span>' : ''}
+        </td>
+        <td style="text-align: center;">
+          <button type="button" class="btn btn-sm btn-secundario" data-editar-cred="${esc(g.cod)}" title="Editar usuario y clave">
+            ✏️ Cambiar
+          </button>
+        </td>
+      </tr>`;
+    }).join("") || `<tr><td colspan="5" style="text-align: center; padding: 20px; color: var(--suave);">No se encontraron asesores con ese filtro.</td></tr>`;
+  }
+
+  $("btn-gestionar-credenciales")?.addEventListener("click", abrirModalTodosAccesos);
+  $("btn-cerrar-mta")?.addEventListener("click", cerrarModalTodosAccesos);
+  $("modal-todos-accesos")?.addEventListener("click", (e) => {
+    if (e.target.id === "modal-todos-accesos") cerrarModalTodosAccesos();
+  });
+
+  $("mta-filtro")?.addEventListener("input", pintarTablaTodosAccesos);
+
+  // Exportar credenciales a CSV
+  $("mta-btn-exportar")?.addEventListener("click", () => {
+    const listaG = grupos(estado.facturas);
+    const lineas = ["Zona,Asesor Comercial,Telefono,Usuario Login,Contrasena,Tipo"];
+    listaG.forEach((g) => {
+      const v = buscarVendedor(g.cod, null, g.zona);
+      const cred = obtenerCredencialVendedor(g.cod, g.zona);
+      lineas.push(`"${g.zona || v.zona || ""}","${(v.nombre || g.cod).replace(/"/g, '""')}","${v.telefono || ""}","${cred.usuario}","${cred.clave}","${cred.esPersonalizada ? "Personalizada" : "Por defecto"}"`);
+    });
+    const blob = new Blob([lineas.join("\r\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `credenciales_asesores_beval_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    aviso("📥 Archivo CSV con los accesos descargado");
   });
 
   iniciar().catch((err) => {

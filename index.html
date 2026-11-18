@@ -382,6 +382,9 @@
           </div>
         </div>
         <div class="acciones-botones">
+          <button class="btn btn-secundario" id="btn-gestionar-credenciales" title="Ver y editar usuarios y contraseñas de todos los asesores">
+            🔑 Gestionar Accesos y Claves
+          </button>
           <button class="btn btn-masivo-accion" id="btn-masivo-vendedores">🚀 Mensajería Masiva a Asesores</button>
           <button class="btn" id="btn-reset-ws" title="Reiniciar estados de envío del día">🔄 Reiniciar Estados WhatsApp</button>
         </div>
@@ -392,7 +395,7 @@
             <tr>
               <th style="width: 48px; text-align: center;">Nivel</th>
               <th style="width: 60px;">Zona</th>
-              <th style="width: 240px;">Vendedor</th>
+              <th style="width: 275px;">Vendedor</th>
               <th class="num" style="width: 75px;">Facturas</th>
               <th class="num" style="width: 75px;">Vencidas</th>
               <th class="num" style="width: 105px;">Estimado USD</th>
@@ -562,6 +565,109 @@
           <button type="button" class="btn primario" id="btn-comp-filtrar-tabla">🔍 Filtrar en la Tabla</button>
           <button type="button" class="btn primario btn-exito-beval" id="btn-comp-guardar">💾 Guardar y Asociar</button>
         </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Editar Credencial Individual de Asesor -->
+<div id="modal-credencial" class="modal-backdrop" hidden>
+  <div class="modal-caja" style="max-width: 490px;">
+    <div class="modal-header">
+      <div class="modal-titulos">
+        <div class="badge-modal">Seguridad &bull; Acceso Asesor</div>
+        <h3 id="mc-asesor-nombre">Gestionar Acceso</h3>
+        <p id="mc-asesor-zona">Zona Z000 &bull; Código 00</p>
+      </div>
+      <button type="button" class="btn-cerrar-modal" id="btn-cerrar-mc" title="Cerrar ventana">✕</button>
+    </div>
+    <div class="modal-cuerpo" style="padding: 20px 24px;">
+      <div class="campo-grupo" style="margin-bottom: 16px;">
+        <label for="mc-input-usuario" style="display: block; font-size: 12px; font-weight: 700; color: var(--texto); margin-bottom: 6px;">
+          👤 Nombre de Usuario (Login):
+        </label>
+        <div style="display: flex; gap: 8px;">
+          <input type="text" id="mc-input-usuario" class="input-moderno" placeholder="ej. socrates" />
+        </div>
+        <div class="chips-sugerencias" style="display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap;">
+          <button type="button" class="chip-sug" id="mc-sug-pnombre" title="Usar primer nombre">⚡ Primer nombre</button>
+          <button type="button" class="chip-sug" id="mc-sug-zona" title="Usar zona">⚡ Zona</button>
+          <button type="button" class="chip-sug" id="mc-sug-cod" title="Usar código">⚡ Código</button>
+        </div>
+      </div>
+
+      <div class="campo-grupo" style="margin-bottom: 18px;">
+        <label for="mc-input-clave" style="display: block; font-size: 12px; font-weight: 700; color: var(--texto); margin-bottom: 6px;">
+          🔑 Contraseña de Acceso:
+        </label>
+        <div style="display: flex; gap: 8px; position: relative;">
+          <input type="text" id="mc-input-clave" class="input-moderno" placeholder="ej. socrates" />
+          <button type="button" id="mc-btn-ver-clave" class="btn btn-sm btn-secundario" style="padding: 0 12px;" title="Alternar visibilidad">👁️</button>
+        </div>
+        <div class="chips-sugerencias" style="display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap;">
+          <button type="button" class="chip-sug" id="mc-sug-clave-user" title="Poner la misma que el usuario">⚡ Igual a usuario</button>
+          <button type="button" class="chip-sug" id="mc-sug-clave-beval" title="Usar beval2026">⚡ beval2026</button>
+          <button type="button" class="chip-sug" id="mc-sug-clave-123" title="Usar 123456">⚡ 123456</button>
+        </div>
+      </div>
+
+      <div style="background: rgba(184, 201, 25, 0.08); border: 1px solid rgba(184, 201, 25, 0.25); border-radius: 10px; padding: 10px 14px; margin-bottom: 20px; font-size: 12px; color: var(--suave);">
+        ℹ️ <em>El asesor podrá ingresar con este usuario y contraseña en la pantalla inicial. Podrá ver únicamente sus clientes y facturas.</em>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <div style="display: flex; gap: 10px;">
+          <button type="button" id="mc-btn-guardar" class="btn primario btn-exito-beval" style="flex: 1; justify-content: center; font-weight: 700;">
+            💾 Guardar Acceso
+          </button>
+          <button type="button" id="mc-btn-cancelar" class="btn btn-secundario">
+            Cancelar
+          </button>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--borde); padding-top: 12px;">
+          <button type="button" id="mc-btn-restablecer" class="btn-link" style="color: #ef4444; font-size: 11px; background: none; border: none; cursor: pointer; text-decoration: underline;">
+            Restablecer por defecto
+          </button>
+          <button type="button" id="mc-btn-copiar-ws" class="btn btn-sm btn-secundario" style="font-size: 11px;">
+            📋 Copiar texto para WhatsApp
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Directorio Completo de Accesos y Claves -->
+<div id="modal-todos-accesos" class="modal-backdrop" hidden>
+  <div class="modal-caja" style="max-width: 820px; max-height: 90vh; display: flex; flex-direction: column;">
+    <div class="modal-header">
+      <div class="modal-titulos">
+        <div class="badge-modal">Directorio General de Asesores</div>
+        <h3>Gestión de Accesos y Contraseñas</h3>
+        <p>Listado de credenciales activas para el inicio de sesión de los asesores</p>
+      </div>
+      <button type="button" class="btn-cerrar-modal" id="btn-cerrar-mta" title="Cerrar">✕</button>
+    </div>
+    <div class="modal-cuerpo" style="padding: 16px 24px; overflow-y: auto; flex: 1;">
+      <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; flex-wrap: wrap;">
+        <input type="text" id="mta-filtro" class="input-moderno" placeholder="🔍 Buscar por nombre, zona o usuario..." style="max-width: 340px;" />
+        <div style="display: flex; gap: 8px;">
+          <button type="button" class="btn btn-sm btn-secundario" id="mta-btn-exportar">📥 Exportar Lista (CSV)</button>
+        </div>
+      </div>
+      <div style="border: 1px solid var(--borde); border-radius: 10px; overflow: hidden;">
+        <table class="tabla-credenciales" id="tabla-todos-accesos">
+          <thead>
+            <tr>
+              <th style="width: 70px;">Zona</th>
+              <th>Asesor Comercial</th>
+              <th>Usuario (Login)</th>
+              <th>Contraseña</th>
+              <th style="width: 120px; text-align: center;">Acción</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
       </div>
     </div>
   </div>
