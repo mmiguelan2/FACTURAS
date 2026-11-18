@@ -102,14 +102,14 @@
       <!-- Formulario de Ingreso -->
       <form id="form-login" class="login-form">
         <div class="campo">
-          <label for="login-correo">Código de vendedor o correo</label>
+          <label for="login-correo">Usuario, primer nombre o código</label>
           <div class="input-contenedor">
             <svg class="input-icono" viewBox="0 0 20 20" fill="currentColor">
               <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
             </svg>
-            <input type="text" id="login-correo" autocomplete="username" placeholder="Ej: 103 o usuario@beval.biz" required>
+            <input type="text" id="login-correo" autocomplete="username" placeholder="Ej: edgar, ronny, 103 o admin" required>
           </div>
-          <span class="pista">💡 Los asesores comerciales pueden ingresar solo con su código (ej. 103)</span>
+          <span class="pista">💡 Asesores: pueden ingresar con su <strong>primer nombre</strong> (ej. edgar, ronny) o su <strong>código</strong> (ej. 103)</span>
         </div>
 
         <div class="campo">
@@ -118,8 +118,9 @@
             <svg class="input-icono" viewBox="0 0 20 20" fill="currentColor">
               <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" />
             </svg>
-            <input type="password" id="login-clave" autocomplete="current-password" placeholder="••••••••" required>
+            <input type="password" id="login-clave" autocomplete="current-password" placeholder="beval2026" required>
           </div>
+          <span class="pista">🔑 Clave estándar para asesores: <strong>beval2026</strong> o su mismo primer nombre</span>
         </div>
 
         <button type="submit" class="btn primario btn-login" id="btn-entrar">
@@ -397,7 +398,7 @@
               <th class="num" style="width: 105px;">Estimado USD</th>
               <th style="width: 140px;">Avance Cobro</th>
               <th style="width: 110px; text-align: center;">Estado WS</th>
-              <th style="width: 105px; text-align: center;">Acción</th>
+              <th style="width: 175px; text-align: center;">Enviar WhatsApp</th>
             </tr>
           </thead>
           <tbody></tbody>
@@ -426,6 +427,15 @@
 
       <!-- Panel Masivo Vendedores -->
       <div id="mpanel-vendedores" class="modal-subpanel">
+        <!-- Selector de Modo de Cobro (Solo Vencidas vs Cartera Completa) -->
+        <div class="masivo-selector-modo">
+          <span class="modo-label">Modalidad de cobro a enviar:</span>
+          <div class="modo-pills-wrap">
+            <button type="button" class="btn-modo-pill activa" id="btn-modo-vencidas" data-modo="vencidas">🔴 Solo Facturas Vencidas</button>
+            <button type="button" class="btn-modo-pill" id="btn-modo-todas" data-modo="todas">📋 Cartera Completa (Todas)</button>
+          </div>
+        </div>
+
         <div class="masivo-progreso-card">
           <div class="masivo-progreso-info">
             <span>Progreso de envíos hoy:</span>

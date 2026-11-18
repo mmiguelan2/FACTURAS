@@ -5,7 +5,15 @@ window.APP_CONFIG = {
   GOOGLE_SHEET_CSV_URL: "https://docs.google.com/spreadsheets/d/1Jf5oSCIGX7wKNswlpsea8mWDRqa2DYgKYVuNN5sqH6w/export?format=csv&gid=0",
   GOOGLE_SHEET_URL: "https://docs.google.com/spreadsheets/d/1Jf5oSCIGX7wKNswlpsea8mWDRqa2DYgKYVuNN5sqH6w/edit?gid=0#gid=0",
   EMPRESA: "Beval",
-  // Los vendedores entran con su código; por dentro se usa v<código>@<este dominio>
+  // Contraseñas sencillas para el acceso de los asesores comerciales
+  CLAVE_DEFAULT: "beval2026",
+  CLAVES_ACEPTADAS: ["beval2026", "beval", "123456", "admin"],
+  // Diccionario para personalizar contraseñas individuales si el usuario lo desea:
+  CLAVES_VENDEDORES: {
+    // Ej: "edgar": "beval2026",
+    // Ej: "103": "liseth123",
+  },
+  // Los vendedores entran con su código o primer nombre; por dentro se usa v<código>@<este dominio>
   DOMINIO_VENDEDORES: "vendedores.beval.biz",
   MENSAJE: [
     "Buen día, {VENDEDOR}.",

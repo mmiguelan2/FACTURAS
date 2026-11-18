@@ -1613,7 +1613,111 @@ tbody tr:hover {
   color: #fbbf24;
 }
 
-/* Botones WhatsApp Activos */
+/* Botones WhatsApp Activos y Selectores de Modo */
+.acciones-wa-grupo {
+  display: flex;
+  gap: 5px;
+  justify-content: center;
+  align-items: center;
+}
+
+.btn-wa-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 8px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer !important;
+  transition: all 0.15s ease;
+  border: 1px solid;
+  white-space: nowrap;
+}
+
+.btn-wa-vencidas {
+  background: rgba(239, 68, 68, 0.1) !important;
+  color: #dc2626 !important;
+  border-color: rgba(239, 68, 68, 0.35) !important;
+}
+
+.btn-wa-vencidas:hover {
+  background: #dc2626 !important;
+  color: #ffffff !important;
+  border-color: #dc2626 !important;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(220, 38, 38, 0.3);
+}
+
+.btn-wa-todas {
+  background: rgba(0, 51, 160, 0.08) !important;
+  color: #0033a0 !important;
+  border-color: rgba(0, 51, 160, 0.3) !important;
+}
+
+.btn-wa-todas:hover {
+  background: #0033a0 !important;
+  color: #ffffff !important;
+  border-color: #0033a0 !important;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(0, 51, 160, 0.3);
+}
+
+:root[data-theme="dark"] .btn-wa-vencidas {
+  color: #f87171 !important;
+}
+
+:root[data-theme="dark"] .btn-wa-todas {
+  color: #38bdf8 !important;
+}
+
+.masivo-selector-modo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--fila);
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--borde);
+  margin-bottom: 12px;
+  gap: 10px;
+}
+
+.modo-label {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--suave);
+  text-transform: uppercase;
+}
+
+.modo-pills-wrap {
+  display: flex;
+  gap: 6px;
+}
+
+.btn-modo-pill {
+  background: var(--panel);
+  border: 1px solid var(--borde);
+  color: var(--texto);
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-modo-pill:hover {
+  border-color: var(--beval-blue);
+}
+
+.btn-modo-pill.activa {
+  background: var(--beval-blue);
+  color: #ffffff;
+  border-color: var(--beval-blue);
+  box-shadow: 0 2px 6px rgba(0, 51, 160, 0.25);
+}
+
 .btn-wa-individual {
   background: rgba(37, 211, 102, 0.12) !important;
   color: #128c7e !important;

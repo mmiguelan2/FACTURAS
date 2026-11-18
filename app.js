@@ -7,6 +7,21 @@
   const STORAGE_KEY_TEMA = "beval_tema";
   const STORAGE_KEY_TELS = "beval_telefonos_vendedores_custom";
   const STORAGE_KEY_COMPROBANTES = "beval_comprobantes_asociados_v1";
+  const STORAGE_KEY_SESION = "beval_sesion_local_v1";
+
+  // Cargar y guardar sesión local rápida (sin contraseña compleja)
+  const guardarSesionLocal = (p) => {
+    try { localStorage.setItem(STORAGE_KEY_SESION, JSON.stringify(p)); } catch (e) {}
+  };
+  const cargarSesionLocal = () => {
+    try {
+      const g = localStorage.getItem(STORAGE_KEY_SESION);
+      return g ? JSON.parse(g) : null;
+    } catch { return null; }
+  };
+  const limpiarSesionLocal = () => {
+    try { localStorage.removeItem(STORAGE_KEY_SESION); } catch (e) {}
+  };
 
   // Cargar comprobantes guardados asociados
   const cargarComprobantesGuardados = () => {
@@ -100,6 +115,9 @@
       cliente: "",
       facturas: new Map(),
     },
+
+    // Modalidad de cobro masivo (vencidas o todas)
+    modoMasivo: "vencidas",
   };
 
   // ---------- utilidades ----------
@@ -242,10 +260,38 @@
     { campo: "zona", titulo: "Zona", ancho: "50px" },
   ];
 
-  // ---------- sesión ----------
+  // ---------- sesión y autenticación simplificada ----------
+  async function entrarConPerfil(perfil) {
+    estado.perfil = perfil;
+    guardarSesionLocal(perfil);
+    $("usuario-nombre").textContent = perfil.nombre || "Usuario";
+    $("usuario-rol").textContent = perfil.rol === "admin" ? "Administrador" : `Asesor (${perfil.codigo_vendedor || ""})`;
+    document.querySelectorAll(".solo-admin").forEach((el) => (el.hidden = !esAdmin()));
+    await cargarDatos();
+    $("vista-login").hidden = true;
+    $("vista-app").hidden = false;
+  }
+
   async function iniciar() {
-    const { data } = await sb.auth.getSession();
-    if (data.session) await entrar(); else mostrarLogin();
+    // 1. Revisar si hay sesión local activa recordada
+    const sesionLocal = cargarSesionLocal();
+    if (sesionLocal) {
+      await entrarConPerfil(sesionLocal);
+      $("cargando").hidden = true;
+      return;
+    }
+
+    // 2. Revisar si hay sesión en Supabase Auth
+    try {
+      const { data } = await sb.auth.getSession();
+      if (data?.session) {
+        await entrar();
+        $("cargando").hidden = true;
+        return;
+      }
+    } catch {}
+
+    mostrarLogin();
     $("cargando").hidden = true;
   }
 
@@ -259,23 +305,70 @@
     const btn = $("btn-entrar");
     if (btn) btn.disabled = true;
     $("login-error").hidden = true;
-    let usuario = $("login-correo").value.trim().toLowerCase();
-    if (!usuario.includes("@")) usuario = `v${usuario}@${C.DOMINIO_VENDEDORES}`;
-    const { error } = await sb.auth.signInWithPassword({ email: usuario, password: $("login-clave").value });
-    if (btn) btn.disabled = false;
-    if (error) {
-      $("login-error").textContent = "Usuario o contraseña incorrectos.";
-      $("login-error").hidden = false;
+
+    const userInput = ($("login-correo")?.value || "").trim();
+    const passInput = ($("login-clave")?.value || "").trim();
+    const userLower = userInput.toLowerCase();
+    const passLower = passInput.toLowerCase();
+
+    const passAceptadas = (C.CLAVES_ACEPTADAS || ["beval2026", "beval", "123456", "admin"]).map((x) => x.toLowerCase());
+
+    // 1. Acceso Administrador (admin, lolimar, carolina, gerencia, o correo @beval.biz)
+    const admins = ["admin", "lolimar", "carolina", "gerencia", "sistemas", "cobranzas"];
+    if (admins.includes(userLower) || userInput.endsWith("@beval.biz")) {
+      if (passAceptadas.includes(passLower) || passInput === "admin" || passInput === "beval2026") {
+        if (btn) btn.disabled = false;
+        await entrarConPerfil({
+          rol: "admin",
+          nombre: userInput.includes("@") ? userInput.split("@")[0].toUpperCase() : userInput.toUpperCase(),
+          codigo_vendedor: null,
+        });
+        return;
+      }
+    }
+
+    // 2. Acceso Asesor Comercial por Primer Nombre, Código, Zona o Correo
+    const v = buscarVendedor(userInput);
+    const primerNombreV = v?.nombre ? v.nombre.split(" ")[0].toLowerCase() : "";
+
+    const clavePersonalizada = (C.CLAVES_VENDEDORES && (C.CLAVES_VENDEDORES[userLower] || C.CLAVES_VENDEDORES[v?.codigo]));
+    const claveValida =
+      passAceptadas.includes(passLower) ||
+      (v?.codigo && passInput === v.codigo) ||
+      (primerNombreV && passLower === primerNombreV) ||
+      (clavePersonalizada && passInput === clavePersonalizada);
+
+    if (v && v.nombre && claveValida) {
+      if (btn) btn.disabled = false;
+      await entrarConPerfil({
+        rol: "vendedor",
+        nombre: v.nombre,
+        codigo_vendedor: v.codigo || userInput,
+        zona: v.zona || null,
+      });
       return;
     }
-    $("login-clave").value = "";
-    $("cargando").hidden = false;
-    await entrar();
-    $("cargando").hidden = true;
+
+    // 3. Fallback a Supabase Auth estándar si existiese cuenta registrada
+    let usuarioSupa = userLower;
+    if (!usuarioSupa.includes("@")) usuarioSupa = `v${usuarioSupa}@${C.DOMINIO_VENDEDORES}`;
+    try {
+      const { error } = await sb.auth.signInWithPassword({ email: usuarioSupa, password: passInput });
+      if (!error) {
+        if (btn) btn.disabled = false;
+        await entrar();
+        return;
+      }
+    } catch {}
+
+    if (btn) btn.disabled = false;
+    $("login-error").textContent = "Acceso incorrecto. Asesores: ingresa tu primer nombre (ej. edgar, ronny) o código y clave beval2026.";
+    $("login-error").hidden = false;
   });
 
   $("btn-salir")?.addEventListener("click", async () => {
-    await sb.auth.signOut();
+    limpiarSesionLocal();
+    try { await sb.auth.signOut(); } catch {}
     location.reload();
   });
 
@@ -397,6 +490,40 @@
   function procesarCsvGoogleSheet(text) {
     const rows = parseCSV(text);
     if (!rows || rows.length < 2) return [];
+
+    // 1. Análisis de Zonas para determinar el VENDEDOR ACTIVO actual de cada zona
+    // (el que tenga facturas más recientes de noviembre 2026 y mayor volumen en esa zona)
+    const zonaStats = new Map();
+    for (let i = 1; i < rows.length; i++) {
+      const r = rows[i];
+      if (!r || r.length < 3 || !r[2]) continue;
+      const zona = (r[9] || "").trim();
+      const vend = (r[10] || "").trim();
+      const fEmision = parseFechaIso(r[3]);
+      if (!zona || !vend) continue;
+      if (!zonaStats.has(zona)) zonaStats.set(zona, new Map());
+      const zMap = zonaStats.get(zona);
+      const stat = zMap.get(vend) || { maxFecha: "", count: 0 };
+      stat.count++;
+      if (fEmision > stat.maxFecha) stat.maxFecha = fEmision;
+      zMap.set(vend, stat);
+    }
+
+    const mapaZonaActivo = new Map();
+    for (const [z, zMap] of zonaStats.entries()) {
+      // Filtrar cuentas internas que no son asesores como TRANSPORTE o PROVEEDORES
+      const cand = [...zMap.entries()].filter(([v]) => v !== "TRANSPORTE" && v !== "PROVEEDORES");
+      const listaCand = cand.length > 0 ? cand : [...zMap.entries()];
+      listaCand.sort((a, b) => {
+        const dComp = (b[1].maxFecha || "").localeCompare(a[1].maxFecha || "");
+        if (dComp !== 0) return dComp;
+        return b[1].count - a[1].count;
+      });
+      if (listaCand.length > 0) {
+        mapaZonaActivo.set(z, listaCand[0][0]);
+      }
+    }
+
     const facturas = [];
     for (let i = 1; i < rows.length; i++) {
       const r = rows[i];
@@ -412,7 +539,7 @@
       const retencion = (r[7] || "").trim();
       const montoRetencion = parseNum(r[8]);
       const zona = (r[9] || "").trim();
-      const vendedor = (r[10] || "").trim();
+      const vendedorOriginal = (r[10] || "").trim();
       const analista = (r[11] || "").trim();
       const estadoFila = (r[12] || "").trim().toUpperCase() || "SIN RETENCION";
       const correoCliente = (r[13] || "").trim();
@@ -423,6 +550,12 @@
       const estimado = montoRetencion > 0
         ? montoRetencion
         : (montoDolar > 0 ? Math.round(montoDolar * (12.0 / 116.0) * 100) / 100 : 0);
+
+      // Reasignación a vendedor activo de la zona
+      const activoDeZona = mapaZonaActivo.get(zona) || vendedorOriginal;
+      const esInterno = (vendedorOriginal === "TRANSPORTE" || vendedorOriginal === "PROVEEDORES");
+      const vendedorFinal = esInterno ? vendedorOriginal : activoDeZona;
+      const esReasignado = (vendedorFinal !== vendedorOriginal);
 
       facturas.push({
         codigo_cliente: codCliente,
@@ -438,8 +571,11 @@
         monto_retencion: montoRetencion,
         monto_estimado: estimado,
         zona: zona,
-        vendedor: vendedor,
-        vendedor_nombre: vendedor,
+        vendedor: vendedorFinal,
+        vendedor_original: vendedorOriginal,
+        es_reasignado: esReasignado,
+        es_interno: esInterno,
+        vendedor_nombre: vendedorFinal,
         analista: analista,
         estado: estadoFila,
         correo_cliente: correoCliente,
@@ -615,6 +751,7 @@
           f.retencion,
           f.analista,
           f.vendedor,
+          f.vendedor_original,
           f.zona
         ];
         if (!buscarCampos.some((x) => (x || "").toLowerCase().includes(q))) {
@@ -1196,6 +1333,8 @@
   function grupos(lista) {
     const m = new Map();
     lista.forEach((f) => {
+      // Excluir cuentas no comerciales o internas de la lista de cobranza a asesores
+      if (f.es_interno || f.vendedor === "TRANSPORTE" || f.vendedor === "PROVEEDORES") return;
       const vKey = f.vendedor || "Sin registrar";
       if (!m.has(vKey)) m.set(vKey, []);
       m.get(vKey).push(f);
@@ -1205,10 +1344,13 @@
       const saldoPend = fs.reduce((s, f) => s + (Number(f.saldo_usd) || 0), 0);
       const cobrado = Math.max(0, totalFact - saldoPend);
       const avancePct = totalFact > 0 ? Math.min(100, Math.round((cobrado / totalFact) * 100)) : 0;
+      const fsVencidas = fs.filter((f) => f.dias_vencida > 0);
       const r = {
         facturas: fs.length,
         estimado: fs.reduce((s, f) => s + (Number(f.monto_estimado) || 0), 0),
-        vencidas: fs.filter((f) => f.dias_vencida > 0).length,
+        vencidas: fsVencidas.length,
+        estimadoVencidas: fsVencidas.reduce((s, f) => s + (Number(f.monto_estimado) || 0), 0),
+        saldoVencido: fsVencidas.reduce((s, f) => s + (Number(f.saldo_usd) || 0), 0),
         clientes: new Set(fs.map((f) => f.codigo_cliente)).size,
       };
       return { cod: vendNom, vendNom, fs, r, avancePct, zona: fs[0]?.zona || "" };
@@ -1280,11 +1422,15 @@
           ${telBtnHtml}
         </div>`;
 
-      const waBtnClass = tieneTel ? "btn-wa-individual" : "btn-wa-individual sin-tel-wa";
-      const waBtnTitle = tieneTel
-        ? `Enviar listado directo a WhatsApp (${v.telefono})`
-        : "Abrir WhatsApp Web y seleccionar el contacto del asesor comercial";
-      const waBtnText = tieneTel ? "💬 WhatsApp directo" : "💬 WhatsApp (Abrir)";
+      const waButtonsHtml = `
+        <div class="acciones-wa-grupo">
+          <button type="button" class="btn btn-wa-pill btn-wa-vencidas" data-wa="${esc(cod)}" data-modo="vencidas" title="Enviar WhatsApp solo de facturas vencidas (${r.vencidas}) y generar imagen">
+            🔴 Vencidas (${r.vencidas})
+          </button>
+          <button type="button" class="btn btn-wa-pill btn-wa-todas" data-wa="${esc(cod)}" data-modo="todas" title="Enviar WhatsApp de cartera completa (${r.facturas}) y generar imagen">
+            📋 Todas (${r.facturas})
+          </button>
+        </div>`;
 
       return `<tr>
         <td style="text-align: center;">
@@ -1298,9 +1444,7 @@
         <td>${avanceHtml}</td>
         <td style="text-align: center;">${statusBadge}</td>
         <td style="text-align: center;">
-          <button class="btn ${waBtnClass}" data-wa="${esc(cod)}" title="${waBtnTitle}">
-            ${waBtnText}
-          </button>
+          ${waButtonsHtml}
         </td>
       </tr>`;
     }).join("") || `<tr><td colspan="9" style="text-align: center; padding: 24px;">No hay asesores en esta categoría del semáforo.</td></tr>`;
@@ -1327,23 +1471,184 @@
     aviso("🔄 Estados de WhatsApp reiniciados para hoy");
   });
 
-  // ---------- MENSAJES & WHATSAPP ----------
-  function mensaje(cod, lista) {
-    const v = buscarVendedor(cod);
-    const r = {
-      facturas: lista.length,
-      estimado: lista.reduce((s, f) => s + (Number(f.monto_estimado) || 0), 0)
-    };
-    const detalle = lista.slice(0, 40).map((f) =>
-      `• Fact. ${f.factura} | ${f.razon_social} | Estimado: $${usd(f.monto_estimado)} USD${f.dias_vencida > 0 ? ` (${f.dias_vencida} días vencida)` : ""}`
-    ).join("\n");
-    const masTexto = lista.length > 40 ? `\n... y ${lista.length - 40} facturas más.` : "";
+  // ---------- GENERADOR DE IMAGEN / TARJETA VISUAL DE COBRANZA (CANVAS PNG) ----------
+  async function generarImagenReporteCobranza(vendedorNom, listaFacturas, esSoloVencidas) {
+    const width = 840;
+    const padding = 28;
+    const rowHeight = 28;
+    const headerHeight = 150;
+    const totalRows = listaFacturas.length;
+    const height = Math.max(380, headerHeight + (totalRows * rowHeight) + 90);
 
-    return (C.MENSAJE || "Estimado(a) {VENDEDOR}, recordatorio de retención de IVA:\nFacturas: {FACTURAS}\nEstimado USD: ${ESTIMADO}\n\nDetalle:\n{DETALLE}")
-      .replace("{VENDEDOR}", v?.nombre || cod || "equipo")
-      .replace("{FACTURAS}", r.facturas)
-      .replace("{ESTIMADO}", usd(r.estimado))
-      .replace("{DETALLE}", detalle + masTexto);
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+
+    // Fondo general blanco
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, width, height);
+
+    // Cabecera superior Beval Blue (#0b2341)
+    ctx.fillStyle = "#0b2341";
+    ctx.fillRect(0, 0, width, 125);
+
+    // Línea de acento verde Beval (#84cc16)
+    ctx.fillStyle = "#84cc16";
+    ctx.fillRect(0, 125, width, 5);
+
+    // Título Principal
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 20px 'Inter', sans-serif, Arial";
+    ctx.fillText("DISTRIBUIDORA BEVAL, C.A.", padding, 38);
+
+    // Subtítulo según modo
+    ctx.fillStyle = esSoloVencidas ? "#f87171" : "#38bdf8";
+    ctx.font = "bold 13px 'Inter', sans-serif, Arial";
+    const subTit = esSoloVencidas
+      ? "🔴 REPORTE DE RETENCIONES DE IVA · SOLO FACTURAS VENCIDAS"
+      : "📋 ESTADO DE CUENTA DE RETENCIONES · CARTERA COMPLETA";
+    ctx.fillText(subTit, padding, 62);
+
+    // Datos del Asesor y Fecha
+    ctx.fillStyle = "#e2e8f0";
+    ctx.font = "13px 'Inter', sans-serif, Arial";
+    const hoyStr = new Date().toLocaleDateString("es-VE", { year: "numeric", month: "short", day: "numeric" });
+    const zonaTxt = listaFacturas[0]?.zona ? `Zona: ${listaFacturas[0].zona}   |   ` : "";
+    ctx.fillText(`Asesor Comercial: ${vendedorNom}   |   ${zonaTxt}Fecha de Corte: ${hoyStr}`, padding, 88);
+    ctx.fillText(`Total Facturas: ${totalRows} documento(s) en seguimiento`, padding, 108);
+
+    // Cabecera de la tabla
+    const tableY = 145;
+    ctx.fillStyle = "#f1f5f9";
+    ctx.fillRect(padding, tableY, width - (padding * 2), 30);
+
+    ctx.fillStyle = "#1e293b";
+    ctx.font = "bold 11px 'Inter', sans-serif, Arial";
+    ctx.fillText("FACTURA", padding + 10, tableY + 19);
+    ctx.fillText("CLIENTE / RAZÓN SOCIAL", padding + 95, tableY + 19);
+    ctx.fillText("VENCE", padding + 460, tableY + 19);
+    ctx.fillText("DÍAS", padding + 550, tableY + 19);
+    ctx.fillText("ESTIMADO RET.", width - padding - 115, tableY + 19);
+
+    // Filas de facturas
+    let curY = tableY + 30;
+    ctx.font = "11px 'Inter', sans-serif, Arial";
+
+    for (let i = 0; i < totalRows; i++) {
+      const f = listaFacturas[i];
+      if (i % 2 === 1) {
+        ctx.fillStyle = "#f8fafc";
+        ctx.fillRect(padding, curY, width - (padding * 2), rowHeight);
+      }
+
+      // Línea divisoria
+      ctx.fillStyle = "#e2e8f0";
+      ctx.fillRect(padding, curY + rowHeight - 1, width - (padding * 2), 1);
+
+      // Factura
+      ctx.fillStyle = "#0f172a";
+      ctx.font = "bold 11px 'Inter', sans-serif, Arial";
+      ctx.fillText(String(f.factura || ""), padding + 10, curY + 18);
+
+      // Cliente (truncado suave si es muy largo)
+      ctx.font = "11px 'Inter', sans-serif, Arial";
+      ctx.fillStyle = "#334155";
+      const nomCliente = (f.razon_social || f.codigo_cliente || "").substring(0, 48);
+      ctx.fillText(nomCliente, padding + 95, curY + 18);
+
+      // Vence
+      ctx.fillStyle = "#64748b";
+      ctx.fillText(fecha(f.fecha_vence) || "—", padding + 460, curY + 18);
+
+      // Días Vencida
+      const dias = Number(f.dias_vencida) || 0;
+      if (dias > 0) {
+        ctx.fillStyle = "#dc2626";
+        ctx.font = "bold 11px 'Inter', sans-serif, Arial";
+        ctx.fillText(`${dias}d`, padding + 550, curY + 18);
+      } else {
+        ctx.fillStyle = "#16a34a";
+        ctx.font = "11px 'Inter', sans-serif, Arial";
+        ctx.fillText("Al día", padding + 550, curY + 18);
+      }
+
+      // Estimado
+      ctx.fillStyle = "#15803d";
+      ctx.font = "bold 11px 'Inter', sans-serif, Arial";
+      const estTxt = `$${usd(f.monto_estimado)}`;
+      ctx.fillText(estTxt, width - padding - 115, curY + 18);
+
+      curY += rowHeight;
+    }
+
+    // Pie con totales y marca Beval
+    curY += 12;
+    ctx.fillStyle = "#0b2341";
+    ctx.fillRect(padding, curY, width - (padding * 2), 44);
+
+    const totalEstimado = listaFacturas.reduce((s, f) => s + (Number(f.monto_estimado) || 0), 0);
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 12px 'Inter', sans-serif, Arial";
+    ctx.fillText(`TOTAL: ${totalRows} FACTURAS`, padding + 16, curY + 27);
+
+    ctx.fillStyle = "#84cc16";
+    ctx.font = "bold 15px 'Inter', sans-serif, Arial";
+    ctx.fillText(`ESTIMADO TOTAL: $${usd(totalEstimado)} USD`, width - padding - 310, curY + 27);
+
+    return new Promise((resolve) => {
+      canvas.toBlob((blob) => resolve(blob), "image/png");
+    });
+  }
+
+  // ---------- MENSAJES & WHATSAPP ----------
+  function mensaje(cod, listaTotal, soloVencidas = false) {
+    const v = buscarVendedor(cod);
+    const nombreAsesor = v?.nombre || cod || "Asesor Comercial";
+    const zonaAsesor = listaTotal[0]?.zona || v?.zona || "";
+
+    const facturasFiltradas = soloVencidas
+      ? listaTotal.filter((f) => f.dias_vencida > 0)
+      : listaTotal;
+
+    const cantFacturas = facturasFiltradas.length;
+    const totalEstimado = facturasFiltradas.reduce((s, f) => s + (Number(f.monto_estimado) || 0), 0);
+    const cantVencidasTotal = listaTotal.filter((f) => f.dias_vencida > 0).length;
+
+    // Detalle de TODAS las facturas sin límite ni cortes ("nada de y más 33")
+    const lineasDetalle = facturasFiltradas.map((f) => {
+      const diasV = Number(f.dias_vencida) || 0;
+      const estadoV = diasV > 0 ? ` ⚠️ (${diasV}d vencida)` : ` ⏳ (Al día)`;
+      return `• Fact. ${f.factura} | ${f.razon_social} | Estimado Ret: $${usd(f.monto_estimado)} USD${estadoV}`;
+    });
+
+    const detalleTexto = lineasDetalle.join("\n");
+
+    if (soloVencidas) {
+      return `*DISTRIBUIDORA BEVAL, C.A.*\n` +
+        `*RECORDATORIO DE RETENCIÓN DE IVA - FACTURAS VENCIDAS*\n\n` +
+        `Estimado(a) *${nombreAsesor}*${zonaAsesor ? ` (Zona ${zonaAsesor})` : ""}:\n\n` +
+        `Presentas un total de *${cantFacturas} FACTURA(S) VENCIDA(S)* pendientes por comprobante de retención de IVA, con un monto estimado a recuperar de *${usd(totalEstimado)} USD*.\n\n` +
+        `*DETALLE DE FACTURAS VENCIDAS:*\n` +
+        `${detalleTexto}\n\n` +
+        `📌 _Te adjunto la imagen gráfica con el estado de cuenta oficial._\n` +
+        `Por favor gestionar los comprobantes con tus clientes a la brevedad posible.\n` +
+        `¡Muchas gracias por tu apoyo!`;
+    } else {
+      return `*DISTRIBUIDORA BEVAL, C.A.*\n` +
+        `*ESTADO DE CUENTA DE RETENCIONES DE IVA - CARTERA COMPLETA*\n\n` +
+        `Estimado(a) *${nombreAsesor}*${zonaAsesor ? ` (Zona ${zonaAsesor})` : ""}:\n\n` +
+        `Compartimos el resumen de tu cartera de retenciones de IVA pendientes:\n` +
+        `• Facturas pendientes: *${cantFacturas}*\n` +
+        `• De las cuales vencidas: *${cantVencidasTotal}*\n` +
+        `• Monto estimado retención: *${usd(totalEstimado)} USD*\n\n` +
+        `*DETALLE COMPLETO DE FACTURAS:*\n` +
+        `${detalleTexto}\n\n` +
+        `📌 _Te adjunto la imagen gráfica con el estado de cuenta oficial._\n` +
+        `Agradecemos tu oportuna gestión con cada cliente.\n` +
+        `¡Éxito en la cobranza!`;
+    }
   }
 
   function marcarWsEnviado(cod) {
@@ -1355,20 +1660,50 @@
     pintarVendedores();
   }
 
-  // Envío individual de WhatsApp (100% operativo sin importar si tiene teléfono registrado)
-  document.addEventListener("click", async (e) => {
-    const b = e.target.closest("[data-wa]");
-    if (!b) return;
-    const cod = b.dataset.wa;
+  // Envío individual de WhatsApp con mensaje completo y descarga/copiado de imagen Canvas
+  async function enviarWhatsAppVendedor(cod, soloVencidas = false) {
     const v = buscarVendedor(cod);
-    const lista = estado.facturas.filter((f) => f.vendedor === cod && f.estado === "SIN RETENCION");
-    const textoMsg = mensaje(cod, lista);
-    
-    // Respaldo garantizado al portapapeles
+    const todasDelVendedor = estado.facturas.filter((f) => f.vendedor === cod && f.estado === "SIN RETENCION");
+    const lista = soloVencidas
+      ? todasDelVendedor.filter((f) => f.dias_vencida > 0)
+      : todasDelVendedor;
+
+    if (lista.length === 0) {
+      aviso(soloVencidas ? `ℹ️ ${v.nombre || cod} no tiene facturas vencidas` : `ℹ️ ${v.nombre || cod} no tiene facturas pendientes`);
+      return;
+    }
+
+    const textoMsg = mensaje(cod, todasDelVendedor, soloVencidas);
+
+    // 1. Copiar texto al portapapeles garantizado
     try {
       await navigator.clipboard.writeText(textoMsg);
     } catch (err) {}
 
+    // 2. Generar imagen canvas y preparar descarga / copiado
+    try {
+      const blob = await generarImagenReporteCobranza(v.nombre || cod, lista, soloVencidas);
+      if (blob) {
+        if (navigator.clipboard && window.ClipboardItem) {
+          try {
+            await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+          } catch (eClip) {}
+        }
+        const nombreLimpio = (v.nombre || cod).replace(/[^a-zA-Z0-9_-]/g, "_");
+        const urlImg = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = urlImg;
+        a.download = `Reporte_${nombreLimpio}_${soloVencidas ? "Vencidas" : "Todas"}.png`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(urlImg), 25000);
+      }
+    } catch (errImg) {
+      console.warn("Error al generar imagen de cobranza:", errImg);
+    }
+
+    // 3. Abrir WhatsApp Web
     let tel = (v?.telefono || "").replace(/\D/g, "");
     if (tel) {
       if (tel.startsWith("0")) tel = "58" + tel.slice(1);
@@ -1376,19 +1711,29 @@
       const url = `https://api.whatsapp.com/send?phone=${tel}&text=${encodeURIComponent(textoMsg)}`;
       window.open(url, "_blank", "noopener");
       marcarWsEnviado(cod);
-      aviso(`✅ WhatsApp directo abierto para ${v.nombre || cod}`);
+      aviso(`✅ WhatsApp abierto para ${v.nombre || cod} con ${lista.length} facturas ${soloVencidas ? "vencidas" : "totales"}. ¡Imagen descargada lista para adjuntar!`);
     } else {
-      // Abre WhatsApp Web para seleccionar contacto y ya lleva el texto listo
       const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(textoMsg)}`;
       window.open(url, "_blank", "noopener");
       marcarWsEnviado(cod);
-      aviso(`📋 Mensaje copiado y WhatsApp abierto. Elige el contacto de ${v.nombre || cod}`);
+      aviso(`📋 Mensaje copiado e imagen descargada. Elige a ${v.nombre || cod} en WhatsApp`);
     }
+  }
+
+  // Delegación de clic para botones WhatsApp de cada fila
+  document.addEventListener("click", async (e) => {
+    const b = e.target.closest("[data-wa]");
+    if (!b) return;
+    const cod = b.dataset.wa;
+    const modo = b.dataset.modo || "vencidas";
+    const soloVencidas = modo === "vencidas";
+    await enviarWhatsAppVendedor(cod, soloVencidas);
   });
 
   $("btn-mensaje")?.addEventListener("click", async () => {
     const cod = $("f-vendedor")?.value || (esAdmin() ? "" : estado.perfil?.codigo_vendedor);
-    await navigator.clipboard.writeText(mensaje(cod, estado.filtradas));
+    const soloVencidas = $("f-estado")?.value === "vencidas";
+    await navigator.clipboard.writeText(mensaje(cod, estado.filtradas, soloVencidas));
     aviso("📋 Mensaje copiado al portapapeles");
   });
 
@@ -1426,8 +1771,26 @@
   $("mtab-vendedores")?.addEventListener("click", () => activarTabModal("vendedores"));
   $("mtab-clientes")?.addEventListener("click", () => activarTabModal("clientes"));
 
+  // Selector de Modalidad en el Modal Masivo (Solo Vencidas vs Cartera Completa)
+  $("btn-modo-vencidas")?.addEventListener("click", () => {
+    estado.modoMasivo = "vencidas";
+    $("btn-modo-vencidas")?.classList.add("activa");
+    $("btn-modo-todas")?.classList.remove("activa");
+    actualizarModalMasivo();
+    aviso("Modo de envío masivo: Solo Facturas Vencidas");
+  });
+
+  $("btn-modo-todas")?.addEventListener("click", () => {
+    estado.modoMasivo = "todas";
+    $("btn-modo-todas")?.classList.add("activa");
+    $("btn-modo-vencidas")?.classList.remove("activa");
+    actualizarModalMasivo();
+    aviso("Modo de envío masivo: Cartera Completa");
+  });
+
   function actualizarModalMasivo() {
     const sinRet = estado.facturas.filter((f) => f.estado === "SIN RETENCION");
+    const esModoVencidas = estado.modoMasivo !== "todas";
     const listaGrupos = grupos(sinRet);
     const total = listaGrupos.length;
     const enviados = listaGrupos.filter((g) => {
@@ -1450,14 +1813,18 @@
     if (proximo) {
       const v = buscarVendedor(proximo.cod);
       const tel = v.telefono;
+      const cantFact = esModoVencidas ? proximo.r.vencidas : proximo.r.facturas;
+      const montoEst = esModoVencidas ? proximo.r.estimadoVencidas : proximo.r.estimado;
+      const modoLabel = esModoVencidas ? "vencidas" : "totales";
+
       $("masivo-proximo-nombre").textContent = v.nombre || proximo.cod;
-      $("masivo-proximo-detalles").textContent = `Zona ${proximo.zona || "—"} · ${ent(proximo.r.facturas)} facturas · $${usd(proximo.r.estimado)} USD ${tel ? `· 📱 ${tel}` : "· ℹ️ Se abrirá WhatsApp para seleccionar contacto"}`;
+      $("masivo-proximo-detalles").textContent = `Zona ${proximo.zona || "—"} · ${ent(cantFact)} facturas ${modoLabel} · $${usd(montoEst)} USD ${tel ? `· 📱 ${tel}` : "· ℹ️ Se abrirá WhatsApp para seleccionar contacto"}`;
       if (btnSiguiente) {
-        btnSiguiente.disabled = false; // ¡NUNCA BLOQUEADO!
+        btnSiguiente.disabled = false;
         btnSiguiente.dataset.codProximo = proximo.cod;
         btnSiguiente.innerHTML = tel
-          ? `<span>▶ Enviar a WhatsApp de ${esc(v.nombre || proximo.cod)}</span>`
-          : `<span>▶ Abrir WhatsApp para ${esc(v.nombre || proximo.cod)} (Elegir chat)</span>`;
+          ? `<span>▶ Enviar a WhatsApp de ${esc(v.nombre || proximo.cod)} (${cantFact} ${modoLabel})</span>`
+          : `<span>▶ Abrir WhatsApp para ${esc(v.nombre || proximo.cod)} (${cantFact} ${modoLabel})</span>`;
       }
     } else {
       $("masivo-proximo-nombre").textContent = "🎉 ¡Todos los asesores han sido contactados hoy!";
@@ -1474,38 +1841,19 @@
   $("btn-enviar-siguiente")?.addEventListener("click", async () => {
     const cod = $("btn-enviar-siguiente")?.dataset.codProximo;
     if (!cod) return;
-    const v = buscarVendedor(cod);
-    const lista = estado.facturas.filter((f) => f.vendedor === cod && f.estado === "SIN RETENCION");
-    const textoMsg = mensaje(cod, lista);
-    
-    try {
-      await navigator.clipboard.writeText(textoMsg);
-    } catch (err) {}
-
-    let tel = (v?.telefono || "").replace(/\D/g, "");
-    if (tel) {
-      if (tel.startsWith("0")) tel = "58" + tel.slice(1);
-      else if (!tel.startsWith("58")) tel = "58" + tel;
-      const url = `https://api.whatsapp.com/send?phone=${tel}&text=${encodeURIComponent(textoMsg)}`;
-      window.open(url, "_blank", "noopener");
-      marcarWsEnviado(cod);
-      aviso(`✅ WhatsApp directo abierto para ${v.nombre || cod}`);
-    } else {
-      const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(textoMsg)}`;
-      window.open(url, "_blank", "noopener");
-      marcarWsEnviado(cod);
-      aviso(`📋 Mensaje copiado y WhatsApp abierto. Elige a ${v.nombre || cod}`);
-    }
+    const esModoVencidas = estado.modoMasivo !== "todas";
+    await enviarWhatsAppVendedor(cod, esModoVencidas);
     actualizarModalMasivo();
   });
 
   $("btn-copiar-todos-ws")?.addEventListener("click", async () => {
     const sinRet = estado.facturas.filter((f) => f.estado === "SIN RETENCION");
+    const esModoVencidas = estado.modoMasivo !== "todas";
     const listaGrupos = grupos(sinRet);
     const separador = "\n" + "=".repeat(45) + "\n\n";
-    const textoCompleto = listaGrupos.map(({ cod, fs }) => mensaje(cod, fs)).join(separador);
+    const textoCompleto = listaGrupos.map(({ cod, fs }) => mensaje(cod, fs, esModoVencidas)).join(separador);
     await navigator.clipboard.writeText(textoCompleto);
-    aviso("📋 Se han copiado todos los mensajes al portapapeles");
+    aviso(`📋 Se han copiado todos los mensajes (${esModoVencidas ? "Solo Vencidas" : "Cartera Completa"}) al portapapeles`);
   });
 
   $("btn-copiar-clientes-sel")?.addEventListener("click", async () => {
