@@ -43,6 +43,16 @@
     }
   };
 
+  const eliminarComprobanteDeStorage = (num) => {
+    try {
+      const g = cargarComprobantesGuardados();
+      delete g[num];
+      localStorage.setItem(STORAGE_KEY_COMPROBANTES, JSON.stringify(g));
+    } catch (e) {
+      console.warn("No se pudo eliminar comprobante de localStorage", e);
+    }
+  };
+
   // Cargar estado de envíos de WhatsApp del día
   const cargarWsEnviados = () => {
     try {
@@ -1258,7 +1268,7 @@
       }
     }
     const badgeComprobante = compAsociado
-      ? `<span class="badge-comprobante-cargado" title="Comprobante digital cargado: ${esc(compAsociado)}">📄 ${esc(compAsociado)}</span>`
+      ? `<span class="badge-comprobante-cargado" data-ver-detalle-comp="${esc(compAsociado)}" title="Comprobante digital cargado: ${esc(compAsociado)}. Clic para ver">📄 #${esc(compAsociado)}</span>`
       : "";
 
     const clienteHtml = `
@@ -1390,12 +1400,23 @@
         ${badgeDias}
       </div>`;
 
+    let compAsociado = "";
+    for (const [cNum, cData] of Object.entries(estado.comprobantesAsociados || {})) {
+      if (cData.facturas && cData.facturas.includes(String(f.factura).trim())) {
+        compAsociado = cNum;
+        break;
+      }
+    }
+    const badgeCompMontado = compAsociado
+      ? `<span class="badge-comprobante-cargado" data-ver-detalle-comp="${esc(compAsociado)}" title="Comprobante digital cargado: ${esc(compAsociado)}. Clic para ver">📄 #${esc(compAsociado)}</span>`
+      : "";
+
     const comprobanteHtml = f.retencion
       ? `<button type="button" class="btn-copiar-comprobante" data-copiar-codigo="${esc(f.retencion)}" title="Toca para copiar comprobante ${esc(f.retencion)}">
           <span class="cod-icono">📑</span>
           <span class="cod-txt" style="font-family: monospace; font-weight: 700;">${esc(f.retencion)}</span>
-        </button>`
-      : `<span style="color: var(--suave);">—</span>`;
+        </button> ${badgeCompMontado}`
+      : (badgeCompMontado || `<span style="color: var(--suave);">—</span>`);
 
     return `<tr data-fac="${esc(f.factura)}">
       <td style="width: 34px; text-align: center;">
@@ -2175,6 +2196,9 @@
     estado.tabActiva = tab;
     document.querySelectorAll("#pestanas button").forEach((x) => x.classList.toggle("activa", x === b));
     document.querySelectorAll(".tab").forEach((t) => (t.hidden = t.id !== "tab-" + tab));
+    if (tab === "comprobantes") {
+      pintarComprobantesMontados();
+    }
   });
 
   // ========================================================
@@ -2264,23 +2288,97 @@
     if (procesandoComp) procesandoComp.hidden = false;
     if (resultadosComp) resultadosComp.hidden = true;
 
-    let textoExtraido = "";
+    const textoProgreso = procesandoComp?.querySelector("p") || $("comp-ocr-progreso");
+    if (textoProgreso) textoProgreso.textContent = "Extrayendo texto del comprobante...";
 
-    try {
-      if (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")) {
-        if (window.pdfjsLib) {
+    let textoExtraido = "";
+    const imagenesParaOcr = [];
+
+    // 1. Si es archivo PDF
+    if (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")) {
+      if (window.pdfjsLib) {
+        try {
           pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
           const buffer = await file.arrayBuffer();
           const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
-          for (let i = 1; i <= pdf.numPages; i++) {
+          
+          for (let i = 1; i <= Math.min(pdf.numPages, 4); i++) {
             const page = await pdf.getPage(i);
             const content = await page.getTextContent();
-            textoExtraido += content.items.map((it) => it.str).join(" ") + "\n";
+            
+            // Unir texto estructurado preservando saltos de línea por coordenadas verticales
+            let pageText = "";
+            let lastY = null;
+            content.items.forEach((item) => {
+              const y = item.transform ? Math.round(item.transform[5]) : null;
+              if (lastY !== null && y !== null && Math.abs(y - lastY) > 5) {
+                pageText += "\n";
+              } else if (pageText && !pageText.endsWith(" ") && !pageText.endsWith("\n")) {
+                pageText += " ";
+              }
+              pageText += item.str;
+              lastY = y;
+            });
+            textoExtraido += pageText + "\n";
+
+            // Si la página tiene poco texto (< 35 caracteres), es un PDF escaneado (imagen)
+            if (pageText.trim().length < 35) {
+              const viewport = page.getViewport({ scale: 2.0 });
+              const canvas = document.createElement("canvas");
+              canvas.width = viewport.width;
+              canvas.height = viewport.height;
+              const ctx = canvas.getContext("2d");
+              await page.render({ canvasContext: ctx, viewport }).promise;
+              imagenesParaOcr.push(canvas);
+            }
           }
+        } catch (err) {
+          console.warn("No se pudo extraer texto directo del PDF con pdf.js:", err);
         }
       }
-    } catch (err) {
-      console.warn("No se pudo extraer texto directo del PDF:", err);
+    } 
+    // 2. Si es imagen directa (JPG, PNG, WEBP)
+    else if (file.type.startsWith("image/") || /\.(jpg|jpeg|png|webp|bmp)$/i.test(file.name)) {
+      try {
+        const img = new Image();
+        const imgLoaded = new Promise((resolve, reject) => {
+          img.onload = () => resolve(img);
+          img.onerror = reject;
+          img.src = URL.createObjectURL(file);
+        });
+        await imgLoaded;
+        const canvas = document.createElement("canvas");
+        canvas.width = img.naturalWidth || img.width;
+        canvas.height = img.naturalHeight || img.height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0);
+        imagenesParaOcr.push(canvas);
+      } catch (errImg) {
+        console.warn("No se pudo cargar imagen para análisis:", errImg);
+      }
+    }
+
+    // 3. Procesamiento OCR óptico si hay imágenes escaneadas y Tesseract está disponible
+    if (imagenesParaOcr.length > 0 && window.Tesseract) {
+      for (let idx = 0; idx < imagenesParaOcr.length; idx++) {
+        if (textoProgreso) {
+          textoProgreso.textContent = `Analizando imagen con OCR óptico de alta precisión (página ${idx + 1}/${imagenesParaOcr.length})...`;
+        }
+        try {
+          const resOcr = await Tesseract.recognize(imagenesParaOcr[idx], "spa", {
+            logger: (m) => {
+              if (m.status === "recognizing text" && textoProgreso) {
+                textoProgreso.textContent = `Reconociendo texto óptico... ${Math.round((m.progress || 0) * 100)}%`;
+              }
+            }
+          });
+          if (resOcr?.data?.text) {
+            textoExtraido += "\n" + resOcr.data.text;
+          }
+        } catch (errOcr) {
+          console.warn("Fallo OCR Tesseract:", errOcr);
+        }
+      }
     }
 
     analizarTextoComprobante(textoExtraido, file.name);
@@ -2290,32 +2388,59 @@
     if (procesandoComp) procesandoComp.hidden = true;
     if (resultadosComp) resultadosComp.hidden = false;
 
-    // 1. Extraer número de comprobante (14 dígitos SENIAT o similar)
+    const textoLimpio = String(texto || "").replace(/\r/g, " ");
+
+    // 1. Extraer número correlativo del comprobante
+    // En Venezuela suelen ser de 14 dígitos (ej: 20261100012345), con o sin espacios/guiones,
+    // o con etiquetas como N° Comprobante, Correlativo, Retención N°, etc.
     let numComp = "";
-    const mSeniat = texto.match(/\b(202[0-9]{11})\b/);
+
+    // 1.1) 14 dígitos continuos SENIAT (2020 al 2029)
+    const mSeniat = textoLimpio.match(/\b(202[0-9]{11})\b/);
     if (mSeniat) {
       numComp = mSeniat[1];
-    } else {
-      const mRet = texto.match(/(?:COMPROBANTE|RETENCI[OÓ]N|N[°º.]*)[\s:]*([A-Z0-9\-_]{6,25})/i);
-      if (mRet) numComp = mRet[1];
     }
+
+    // 1.2) 14 dígitos separados por guiones o espacios (ej. 2026-11-00012345 o 2026 11 00012345)
+    if (!numComp) {
+      const mSeniatSep = textoLimpio.match(/\b(202[0-9])[\s\-_]?([0-9]{2})[\s\-_]?([0-9]{8})\b/);
+      if (mSeniatSep) {
+        numComp = `${mSeniatSep[1]}${mSeniatSep[2]}${mSeniatSep[3]}`;
+      }
+    }
+
+    // 1.3) Por etiqueta explícita (N° Comprobante, Correlativo, etc.)
+    if (!numComp) {
+      const mEtiqueta = textoLimpio.match(/(?:comprobante[\s]+(?:n[°º.o\s]*|de[\s]+retenci[oó]n[\s]+n[°º.o\s]*)?|n[°º.o\s]*comprobante|correlativo[\s:]*|retenci[oó]n[\s]+n[°º.o\s]*)[\s:#]*([a-z0-9\-_/]{4,25})/i);
+      if (mEtiqueta && mEtiqueta[1]) {
+        numComp = mEtiqueta[1].replace(/^[#№Nn°º.:\s]+/, "").trim();
+      }
+    }
+
+    // 1.4) Números largos con ceros a la izquierda (ej. 0000012345)
+    if (!numComp) {
+      const mCeros = textoLimpio.match(/\b(0000[0-9]{4,10})\b/);
+      if (mCeros) numComp = mCeros[1];
+    }
+
+    // 1.5) A partir del nombre del archivo
     if (!numComp && fileName) {
       const mFile = fileName.match(/(202\d{11}|\d{6,14})/);
       if (mFile) numComp = mFile[1];
     }
 
-    // 2. Extraer fecha
+    // 2. Extraer fecha del comprobante (opcional)
     let fechaComp = "";
-    const mFecha = texto.match(/\b([0-3]?[0-9][\/\-][0-1]?[0-9][\/\-]202[0-9])\b/);
+    const mFecha = textoLimpio.match(/\b([0-3]?[0-9][\/\-][0-1]?[0-9][\/\-]202[0-9])\b/);
     if (mFecha) fechaComp = mFecha[1].replace(/-/g, "/");
     else fechaComp = new Date().toLocaleDateString("es-VE");
 
-    // 3. Extraer RIF
+    // 3. Extraer RIF del Agente de Retención / Cliente (opcional)
     let rifComp = "";
-    const mRif = texto.match(/\b([JVEGP][\- ]?[0-9]{8,9}[\- ]?[0-9])\b/i);
+    const mRif = textoLimpio.match(/\b([JVEGP][\- ]?[0-9]{7,9}[\- ]?[0-9]?)\b/i);
     if (mRif) rifComp = mRif[1].replace(/\s+/g, "-").toUpperCase();
 
-    // 4. Buscar facturas coincidentes en la base de datos de Beval
+    // 4. Búsqueda inteligente de Facturas de Beval presentes en el comprobante
     const facturasDetectadas = new Map();
     const mapaFacturas = new Map();
 
@@ -2323,12 +2448,22 @@
       const facLimpia = String(f.factura).trim();
       mapaFacturas.set(facLimpia, f);
       mapaFacturas.set(facLimpia.padStart(8, "0"), f);
+      mapaFacturas.set(facLimpia.replace(/^0+/, ""), f);
     });
 
-    if (texto) {
-      const numeros = texto.match(/\b\d{6,9}\b/g) || [];
-      const unicos = [...new Set(numeros)];
-      for (const num of unicos) {
+    if (textoLimpio) {
+      // 4.1 Facturas de 7 dígitos estándar de Beval (3XXXXXX)
+      const facs7Digitos = textoLimpio.match(/\b(3\d{6})\b/g) || [];
+      // 4.2 Facturas con formato con puntos (ej. 3.394.686)
+      const facsPuntos = (textoLimpio.match(/\b3\.\d{3}\.\d{3}\b/g) || []).map((x) => x.replace(/\./g, ""));
+      // 4.3 Números generales de 5 a 9 dígitos
+      const otrosNums = textoLimpio.match(/\b\d{5,9}\b/g) || [];
+      // 4.4 Números tras palabras clave como Factura, Fact, Doc, Control
+      const mNear = [...textoLimpio.matchAll(/(?:factura|fact\.?|doc\.?|control|afectad[ao]|n[°º.]?)[\s:#]*([0-9]{5,9})/gi)].map((m) => m[1]);
+
+      const todosCandidatos = [...new Set([...facs7Digitos, ...facsPuntos, ...mNear, ...otrosNums])];
+
+      for (const num of todosCandidatos) {
         const sinCeros = num.replace(/^0+/, "");
         if (mapaFacturas.has(num)) {
           const f = mapaFacturas.get(num);
@@ -2340,13 +2475,23 @@
       }
     }
 
+    // 5. Detectar Cliente y sugerir facturas del mismo cliente
     let clienteNombre = "";
     if (facturasDetectadas.size > 0) {
       const primera = [...facturasDetectadas.values()][0];
       clienteNombre = primera.razon_social || primera.codigo_cliente;
     } else if (rifComp) {
-      const matchRif = estado.facturas.find((f) => (f.rif || "").replace(/\D/g, "") === rifComp.replace(/\D/g, ""));
-      if (matchRif) clienteNombre = matchRif.razon_social || matchRif.codigo_cliente;
+      const rifDigitos = rifComp.replace(/\D/g, "");
+      const matchRif = estado.facturas.find((f) => (f.rif || f.codigo_cliente || "").replace(/\D/g, "") === rifDigitos);
+      if (matchRif) {
+        clienteNombre = matchRif.razon_social || matchRif.codigo_cliente;
+        // Si encontramos el cliente por RIF, buscar si alguna de sus facturas aparece en el comprobante
+        estado.facturas.filter((f) => (f.rif || f.codigo_cliente || "").replace(/\D/g, "") === rifDigitos).forEach((fCli) => {
+          if (textoLimpio.includes(String(fCli.factura))) {
+            facturasDetectadas.set(String(fCli.factura).trim(), fCli);
+          }
+        });
+      }
     }
 
     estado.comprobanteActivo = {
@@ -2364,9 +2509,9 @@
     actualizarOtrasFacturasCliente();
 
     if (facturasDetectadas.size > 0) {
-      aviso(`✅ ¡Lectura exitosa! Se detectaron ${facturasDetectadas.size} facturas automáticamente.`);
+      aviso(`✅ ¡Lectura exitosa! Se detectaron ${facturasDetectadas.size} factura(s) automáticamente.`);
     } else {
-      aviso("ℹ️ Documento cargado. Usa el asistente abajo para asociar las facturas.");
+      aviso("ℹ️ Documento leído. Puedes ingresar el correlativo y asociar tus facturas abajo.");
     }
   }
 
@@ -2611,23 +2756,60 @@
     aviso("📋 Resumen para WhatsApp copiado al portapapeles con éxito");
   });
 
-  // 3. Guardar Comprobante Asociado
+  // Permitir agregar factura pulsando Enter en el buscador del asistente
+  inputAsistente?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const val = (inputAsistente.value || "").trim();
+      if (!val) return;
+      const valLimpio = val.replace(/\D/g, "");
+      const f = estado.facturas.find((x) => String(x.factura).trim() === val || (valLimpio && String(x.factura).trim() === valLimpio));
+      if (f) {
+        estado.comprobanteActivo.facturas.set(String(f.factura).trim(), f);
+        if (!$("comp-input-cliente")?.value) {
+          $("comp-input-cliente").value = f.razon_social || f.codigo_cliente;
+          estado.comprobanteActivo.cliente = f.razon_social || f.codigo_cliente;
+        }
+      } else {
+        // Permitir asociar la factura manual directamente sin bloqueos
+        const facManual = {
+          factura: val,
+          razon_social: $("comp-input-cliente")?.value || "Factura asociada manualmente",
+          codigo_cliente: "COMPROBANTE",
+          monto_dolar: 0,
+          monto_estimado: 0,
+          zona: "N/A",
+          vendedor: "N/A",
+          fecha_vence: new Date().toISOString().slice(0, 10)
+        };
+        estado.comprobanteActivo.facturas.set(val, facManual);
+      }
+      pintarListaFacturasComprobante();
+      actualizarOtrasFacturasCliente();
+      inputAsistente.value = "";
+      if (dropdownSugerencias) dropdownSugerencias.hidden = true;
+    }
+  });
+
+  // 3. Guardar Comprobante Asociado (Requisitos únicos: correlativo del comprobante y al menos una factura)
   $("btn-comp-guardar")?.addEventListener("click", () => {
-    const numComp = $("comp-input-numero")?.value.trim();
+    const numComp = ($("comp-input-numero")?.value || "").trim();
     if (!numComp) {
-      aviso("⚠️ Por favor ingresa el número del comprobante");
+      aviso("⚠️ El único requisito obligatorio es el número correlativo del comprobante");
       $("comp-input-numero")?.focus();
       return;
     }
 
     const facs = [...estado.comprobanteActivo.facturas.keys()];
     if (facs.length === 0) {
-      aviso("⚠️ Asocia al menos una factura al comprobante");
+      aviso("⚠️ Debe asociar al menos una factura al comprobante");
+      $("comp-buscador-asistente")?.focus();
       return;
     }
 
-    const fechaComp = $("comp-input-fecha")?.value.trim() || fecha(new Date().toISOString().slice(0, 10));
-    const clienteComp = $("comp-input-cliente")?.value.trim() || "";
+    const fechaComp = ($("comp-input-fecha")?.value || "").trim() || fecha(new Date().toISOString().slice(0, 10));
+    const primeraFac = estado.comprobanteActivo.facturas.values().next().value;
+    const clienteComp = ($("comp-input-cliente")?.value || "").trim() || (primeraFac?.razon_social || primeraFac?.codigo_cliente || "Cliente asociado");
 
     const dataComp = {
       numero: numComp,
@@ -2640,10 +2822,212 @@
     guardarComprobanteEnStorage(dataComp);
     estado.comprobantesAsociados[numComp] = dataComp;
 
+    actualizarBadgesComprobantes();
     pintarFacturas();
     pintarPorProcesar();
+    pintarComprobantesMontados();
     cerrarModalComprobante();
-    aviso(`💾 Comprobante ${numComp} guardado y asociado a ${facs.length} facturas`);
+    aviso(`💾 Comprobante #${numComp} guardado con éxito (${facs.length} factura(s) asociadas)`);
+  });
+
+  // ==============================================
+  // GESTIÓN Y FILTRADO DE COMPROBANTES MONTADOS
+  // ==============================================
+  function actualizarBadgesComprobantes() {
+    const total = Object.keys(estado.comprobantesAsociados || {}).length;
+    const elBadge = $("badge-comprobantes-montados");
+    if (elBadge) elBadge.textContent = total;
+    const elKpi = $("k-comprobantes-montados");
+    if (elKpi) elKpi.textContent = total;
+    const elConteo = $("conteo-comprobantes");
+    if (elConteo) elConteo.textContent = `${total} comprobante(s) montado(s)`;
+  }
+
+  function pintarComprobantesMontados() {
+    actualizarBadgesComprobantes();
+    const tbody = $("tabla-comprobantes-guardados")?.querySelector("tbody");
+    if (!tbody) return;
+
+    const filtro = ($("filtro-comprobantes")?.value || "").trim().toLowerCase();
+    const comps = Object.values(estado.comprobantesAsociados || {});
+
+    // Filtrado ágil por correlativo, por número de factura asociada, por cliente o por fecha
+    const filtrados = comps.filter((c) => {
+      if (!filtro) return true;
+      const numC = String(c.numero || "").toLowerCase();
+      const cli = String(c.cliente || "").toLowerCase();
+      const facsStr = (c.facturas || []).join(" ").toLowerCase();
+      const fechaC = String(c.fecha || "").toLowerCase();
+      return numC.includes(filtro) || cli.includes(filtro) || facsStr.includes(filtro) || fechaC.includes(filtro);
+    });
+
+    if (filtrados.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 36px 16px; color: var(--suave);">
+        ${comps.length === 0
+          ? "No has montado ningún comprobante todavía.<br><br><button type='button' class='btn primario btn-exito-beval' onclick='document.getElementById(\"btn-nuevo-comprobante-tab\")?.click()'>📄 + Montar Primer Comprobante</button>"
+          : "🔍 No se encontraron comprobantes que coincidan con la búsqueda."}
+      </td></tr>`;
+      return;
+    }
+
+    filtrados.sort((a, b) => (b.timestamp || b.numero || "").localeCompare(a.timestamp || a.numero || ""));
+
+    tbody.innerHTML = filtrados.map((c) => {
+      let montoTotalFacturas = 0;
+      let montoTotalRetenido = 0;
+      const chipsFacturas = (c.facturas || []).map((facNum) => {
+        const f = estado.facturas.find((item) => String(item.factura).trim() === String(facNum).trim());
+        if (f) {
+          montoTotalFacturas += Number(f.monto_dolar) || 0;
+          montoTotalRetenido += Number(f.monto_estimado) || 0;
+        }
+        return `<span class="chip-fac-link" data-filtrar-fac="${esc(facNum)}" title="Ver factura #${esc(facNum)} en la tabla">#${esc(facNum)}</span>`;
+      }).join(" ");
+
+      return `<tr>
+        <td>
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <strong style="font-family: monospace; font-size: 13.5px; color: var(--texto);">${esc(c.numero)}</strong>
+            <button type="button" class="btn-copiar-mini" data-copiar-txt="${esc(c.numero)}" title="Copiar correlativo">📋</button>
+          </div>
+          <small style="color: var(--suave); font-size: 10px;">${c.timestamp ? new Date(c.timestamp).toLocaleDateString("es-VE") : ""}</small>
+        </td>
+        <td>${esc(c.fecha || "-")}</td>
+        <td>
+          <strong style="color: var(--texto);">${esc(c.cliente || "Cliente no especificado")}</strong>
+        </td>
+        <td>
+          <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+            ${chipsFacturas || '<em style="color: var(--suave); font-size: 11px;">Sin facturas</em>'}
+          </div>
+        </td>
+        <td class="num" style="font-weight: 700;">${(c.facturas || []).length}</td>
+        <td class="num" style="color: var(--beval-lime); font-weight: 700;">$${usd(montoTotalFacturas)}</td>
+        <td style="text-align: center;">
+          <div style="display: flex; justify-content: center; gap: 6px;">
+            <button type="button" class="btn btn-sm btn-secundario" data-ver-detalle-comp="${esc(c.numero)}" title="Ver y editar facturas de este comprobante">
+              🔍 Ver
+            </button>
+            <button type="button" class="btn btn-sm btn-secundario" data-eliminar-comp="${esc(c.numero)}" title="Eliminar comprobante" style="color: #ef4444;">
+              🗑️
+            </button>
+          </div>
+        </td>
+      </tr>`;
+    }).join("");
+  }
+
+  function abrirDetalleComprobante(numComp) {
+    const comp = estado.comprobantesAsociados[numComp];
+    if (!comp) return;
+
+    limpiarModalComprobante();
+    if (dropzoneComp) dropzoneComp.hidden = true;
+    if (procesandoComp) procesandoComp.hidden = true;
+    if (resultadosComp) resultadosComp.hidden = false;
+
+    estado.comprobanteActivo.numero = comp.numero;
+    estado.comprobanteActivo.fecha = comp.fecha || "";
+    estado.comprobanteActivo.cliente = comp.cliente || "";
+
+    (comp.facturas || []).forEach((facNum) => {
+      const f = estado.facturas.find((item) => String(item.factura).trim() === String(facNum).trim());
+      if (f) {
+        estado.comprobanteActivo.facturas.set(String(facNum).trim(), f);
+      } else {
+        estado.comprobanteActivo.facturas.set(String(facNum).trim(), {
+          factura: facNum,
+          razon_social: comp.cliente || "Factura asociada",
+          codigo_cliente: "COMPROBANTE",
+          monto_dolar: 0,
+          monto_estimado: 0,
+          zona: "N/A",
+          vendedor: "N/A",
+          fecha_vence: new Date().toISOString().slice(0, 10)
+        });
+      }
+    });
+
+    if ($("comp-input-numero")) $("comp-input-numero").value = comp.numero;
+    if ($("comp-input-fecha")) $("comp-input-fecha").value = comp.fecha || "";
+    if ($("comp-input-cliente")) $("comp-input-cliente").value = comp.cliente || "";
+
+    pintarListaFacturasComprobante();
+    actualizarOtrasFacturasCliente();
+    abrirModalComprobante();
+  }
+
+  // Eventos de gestión de comprobantes montados
+  $("filtro-comprobantes")?.addEventListener("input", pintarComprobantesMontados);
+  $("btn-nuevo-comprobante-tab")?.addEventListener("click", () => {
+    limpiarModalComprobante();
+    abrirModalComprobante();
+  });
+  $("kpi-card-comprobantes")?.addEventListener("click", () => {
+    document.querySelector("#pestanas button[data-tab='comprobantes']")?.click();
+  });
+
+  // Delegación de eventos para comprobantes
+  document.addEventListener("click", (e) => {
+    // Ver detalle de comprobante
+    const btnVer = e.target.closest("[data-ver-detalle-comp]");
+    if (btnVer) {
+      e.stopPropagation();
+      e.preventDefault();
+      abrirDetalleComprobante(btnVer.dataset.verDetalleComp);
+      return;
+    }
+
+    // Eliminar comprobante
+    const btnElim = e.target.closest("[data-eliminar-comp]");
+    if (btnElim) {
+      e.stopPropagation();
+      e.preventDefault();
+      const numC = btnElim.dataset.eliminarComp;
+      const c = estado.comprobantesAsociados[numC];
+      if (confirm(`¿Eliminar el comprobante #${numC} y desasociar sus ${(c?.facturas || []).length} factura(s)?`)) {
+        eliminarComprobanteDeStorage(numC);
+        delete estado.comprobantesAsociados[numC];
+        actualizarBadgesComprobantes();
+        pintarFacturas();
+        pintarPorProcesar();
+        pintarComprobantesMontados();
+        aviso(`🗑️ Comprobante #${numC} eliminado`);
+      }
+      return;
+    }
+
+    // Filtrar factura en la tabla principal
+    const chipFac = e.target.closest("[data-filtrar-fac]");
+    if (chipFac) {
+      e.stopPropagation();
+      e.preventDefault();
+      const facNum = chipFac.dataset.filtrarFac;
+      const btnTab = document.querySelector("#pestanas button[data-tab='facturas']");
+      if (btnTab) btnTab.click();
+      const buscadorFac = $("buscar-factura");
+      if (buscadorFac) {
+        buscadorFac.value = facNum;
+        buscadorFac.dispatchEvent(new Event("input"));
+      }
+      return;
+    }
+
+    // Copiar texto genérico (ej: correlativo comprobante)
+    const btnCopiar = e.target.closest("[data-copiar-txt]");
+    if (btnCopiar) {
+      e.stopPropagation();
+      e.preventDefault();
+      const txt = btnCopiar.dataset.copiarTxt;
+      if (txt && navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(txt).then(() => {
+          aviso(`📋 Correlativo #${txt} copiado al portapapeles`);
+        }).catch(() => {
+          aviso(`📋 ${txt}`);
+        });
+      }
+      return;
+    }
   });
 
   // ==========================================
