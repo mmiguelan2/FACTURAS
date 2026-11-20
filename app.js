@@ -944,6 +944,7 @@
     actualizarOpcionesVendedores("");
     actualizarOpcionesZonas("");
     inicializarComboboxVendedor();
+    inicializarComboboxBuscar();
 
     aplicarFiltros();
   }
@@ -1022,10 +1023,15 @@
     const listDiv = $("combo-vendedor-list");
     const clearBtn = $("btn-clear-vendedor");
     if (!input || !listDiv) return;
+    if (input.dataset.comboInited) return;
+    input.dataset.comboInited = "1";
+
+    let vActiveIndex = -1;
 
     function renderOpciones(query = "") {
       const q = normalizarTexto(query);
       const selVal = selectOculto?.value || "";
+      vActiveIndex = -1;
 
       let filtrados = vendedoresDisponiblesCombo;
       if (q) {
@@ -1105,13 +1111,33 @@
     });
 
     input.addEventListener("keydown", (e) => {
+      const items = [...listDiv.querySelectorAll(".combo-item")];
       if (e.key === "Escape") {
         listDiv.hidden = true;
+      } else if (e.key === "ArrowDown") {
+        e.preventDefault();
+        if (listDiv.hidden) {
+          renderOpciones(input.value);
+          return;
+        }
+        vActiveIndex = (vActiveIndex + 1) % items.length;
+        items.forEach((it, idx) => it.classList.toggle("active", idx === vActiveIndex));
+        items[vActiveIndex]?.scrollIntoView({ block: "nearest" });
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        if (listDiv.hidden) return;
+        vActiveIndex = (vActiveIndex - 1 + items.length) % items.length;
+        items.forEach((it, idx) => it.classList.toggle("active", idx === vActiveIndex));
+        items[vActiveIndex]?.scrollIntoView({ block: "nearest" });
       } else if (e.key === "Enter") {
         e.preventDefault();
-        const primerItem = listDiv.querySelector(".combo-item");
-        if (primerItem) {
-          seleccionarVendedorDirecto(primerItem.dataset.val || "", true);
+        if (vActiveIndex >= 0 && items[vActiveIndex]) {
+          seleccionarVendedorDirecto(items[vActiveIndex].dataset.val || "", true);
+        } else {
+          const primerItem = listDiv.querySelector(".combo-item");
+          if (primerItem) {
+            seleccionarVendedorDirecto(primerItem.dataset.val || "", true);
+          }
         }
       }
     });
@@ -1133,6 +1159,402 @@
     if (dispararCascada) {
       onVendedorChange(vNom);
     }
+  }
+
+  // ========================================================
+  // COMBOBOX DEL BUSCADOR GENERAL CON DESGLOSE INTELIGENTE
+  // (Igual a la lista de vendedor: desglose por facturas,
+  // clientes, asesores, analistas y montos)
+  // ========================================================
+  function inicializarComboboxBuscar() {
+    const input = $("f-buscar");
+    const listDiv = $("combo-buscar-list");
+    const clearBtn = $("btn-clear-buscar");
+    if (!input || !listDiv) return;
+    if (input.dataset.comboInited) return;
+    input.dataset.comboInited = "1";
+
+    let activeIndex = -1;
+
+    function renderOpciones(query = "") {
+      const q = normalizarTexto(query);
+      activeIndex = -1;
+
+      // Si query está vacío, mostrar clientes con mayor saldo pendiente como sugerencia rápida
+      if (!q) {
+        const clientesMap = new Map();
+        (estado.facturas || []).forEach((f) => {
+          if (!f.razon_social) return;
+          const cNom = f.razon_social.trim();
+          if (!clientesMap.has(cNom)) {
+            clientesMap.set(cNom, {
+              nombre: cNom,
+              codigo: f.codigo_cliente || f.rif || "",
+              vendedor: f.vendedor || "",
+              zona: f.zona || "",
+              facturas: 0,
+              saldo: 0
+            });
+          }
+          const c = clientesMap.get(cNom);
+          c.facturas++;
+          c.saldo += Number(f.saldo_usd) || 0;
+        });
+
+        const topClientes = [...clientesMap.values()]
+          .sort((a, b) => b.saldo - a.saldo)
+          .slice(0, 5);
+
+        if (topClientes.length === 0) {
+          listDiv.innerHTML = `<div class="combo-desglose-empty">Escribe N° de factura, cliente, RIF o asesor para buscar</div>`;
+          listDiv.hidden = false;
+          return;
+        }
+
+        let html = `<div class="combo-desglose-section">
+          <div class="combo-desglose-header">
+            <span>⭐</span> Clientes con mayor saldo sin retención
+          </div>`;
+
+        html += topClientes.map((c) => `
+          <div class="combo-desglose-item" data-tipo="cliente" data-val="${esc(c.nombre)}">
+            <div class="combo-desglose-principal">
+              <div class="combo-desglose-titulo">
+                <span class="combo-item-badge-pill pill-cliente">Cliente</span>
+                <strong>${esc(c.nombre)}</strong>
+              </div>
+              <div class="combo-desglose-sub">
+                <span>Cód: ${esc(c.codigo)}</span>
+                ${c.vendedor ? `<span>· Asesor: ${esc(c.vendedor)}</span>` : ""}
+              </div>
+            </div>
+            <div class="combo-desglose-lateral">
+              <span class="combo-desglose-monto">$${usd(c.saldo)} USD</span>
+              <span class="combo-cant-pill">${c.facturas} facturas</span>
+            </div>
+          </div>
+        `).join("");
+        html += `</div>`;
+
+        html += `<div class="combo-desglose-section">
+          <div class="combo-desglose-tip">
+            💡 Escribe un <strong>N° de factura</strong>, <strong>cliente</strong>, <strong>RIF</strong> o <strong>asesor</strong> para desglosar resultados al instante.
+          </div>
+        </div>`;
+
+        listDiv.innerHTML = html;
+        listDiv.hidden = false;
+        return;
+      }
+
+      // 1. Facturas coincidentes
+      const facturasCoinciden = (estado.facturas || []).filter((f) => {
+        const numF = String(f.factura || "").toLowerCase();
+        return numF.includes(q);
+      }).slice(0, 6);
+
+      // 2. Clientes coincidentes (agrupados por razón social / código)
+      const clientesCoincidenMap = new Map();
+      (estado.facturas || []).forEach((f) => {
+        const rSocial = (f.razon_social || "").trim();
+        const codCli = (f.codigo_cliente || "").trim();
+        const rif = (f.rif || "").trim();
+        const s1 = normalizarTexto(rSocial);
+        const s2 = normalizarTexto(codCli);
+        const s3 = normalizarTexto(rif);
+        if (s1.includes(q) || s2.includes(q) || s3.includes(q)) {
+          if (!clientesCoincidenMap.has(rSocial)) {
+            clientesCoincidenMap.set(rSocial, {
+              nombre: rSocial,
+              codigo: codCli || rif,
+              vendedor: f.vendedor || "",
+              zona: f.zona || "",
+              facturas: 0,
+              saldo: 0
+            });
+          }
+          const c = clientesCoincidenMap.get(rSocial);
+          c.facturas++;
+          c.saldo += Number(f.saldo_usd) || 0;
+        }
+      });
+      const clientesCoinciden = [...clientesCoincidenMap.values()].slice(0, 5);
+
+      // 3. Vendedores / Asesores coincidentes
+      const vendedoresCoinciden = [];
+      if (estado.catalogoVendedores) {
+        for (const [vNom, vObj] of estado.catalogoVendedores.entries()) {
+          const s1 = normalizarTexto(vNom);
+          const s2 = normalizarTexto(vObj.codigo || "");
+          const s3 = normalizarTexto([...(vObj.zonas || [])].join(" "));
+          if (s1.includes(q) || s2.includes(q) || s3.includes(q)) {
+            vendedoresCoinciden.push({
+              nombre: vNom,
+              codigo: vObj.codigo || "",
+              zonas: [...(vObj.zonas || [])].sort().join(", ")
+            });
+            if (vendedoresCoinciden.length >= 4) break;
+          }
+        }
+      }
+
+      // 4. Analistas coincidentes
+      const analistasCoinciden = [];
+      if (estado.catalogoAnalistas) {
+        for (const [aNom, aObj] of estado.catalogoAnalistas.entries()) {
+          const s1 = normalizarTexto(aNom);
+          if (s1.includes(q)) {
+            analistasCoinciden.push({
+              nombre: aNom,
+              zonas: [...(aObj.zonas || [])].sort().join(", ")
+            });
+            if (analistasCoinciden.length >= 3) break;
+          }
+        }
+      }
+
+      // 5. Total de facturas que coinciden con la búsqueda
+      const totalCoincidencias = (estado.facturas || []).filter((f) => {
+        const campos = [f.razon_social, f.codigo_cliente, f.rif, f.factura, f.retencion, f.analista, f.vendedor, f.zona];
+        return campos.some((x) => (x || "").toLowerCase().includes(q));
+      }).length;
+
+      let html = "";
+
+      // Sección Facturas
+      if (facturasCoinciden.length > 0) {
+        html += `<div class="combo-desglose-section">
+          <div class="combo-desglose-header">
+            <span>📄</span> Facturas coincidentes (${facturasCoinciden.length})
+          </div>`;
+        html += facturasCoinciden.map((f) => {
+          const dias = Number(f.dias_vencida) || 0;
+          const badgeV = dias > 0
+            ? `<span class="combo-desglose-badge combo-badge-vencida">${dias >= 45 ? "45+ días" : `${dias}d`}</span>`
+            : `<span class="combo-desglose-badge combo-badge-aldia">Al día</span>`;
+          return `
+            <div class="combo-desglose-item" data-tipo="factura" data-val="${esc(f.factura)}">
+              <div class="combo-desglose-principal">
+                <div class="combo-desglose-titulo">
+                  <span class="combo-item-badge-pill">Factura</span>
+                  <strong>#${esc(f.factura)}</strong>
+                </div>
+                <div class="combo-desglose-sub">
+                  <span>${esc(f.razon_social)}</span>
+                  <span>· Zona ${esc(f.zona || "—")}</span>
+                  <span>· Vence: ${fecha(f.fecha_vence)}</span>
+                </div>
+              </div>
+              <div class="combo-desglose-lateral">
+                <span class="combo-desglose-monto">$${usd(f.saldo_usd)} USD</span>
+                ${badgeV}
+              </div>
+            </div>
+          `;
+        }).join("");
+        html += `</div>`;
+      }
+
+      // Sección Clientes
+      if (clientesCoinciden.length > 0) {
+        html += `<div class="combo-desglose-section">
+          <div class="combo-desglose-header">
+            <span>🏢</span> Clientes / Razón Social (${clientesCoinciden.length})
+          </div>`;
+        html += clientesCoinciden.map((c) => `
+          <div class="combo-desglose-item" data-tipo="cliente" data-val="${esc(c.nombre)}">
+            <div class="combo-desglose-principal">
+              <div class="combo-desglose-titulo">
+                <span class="combo-item-badge-pill pill-cliente">Cliente</span>
+                <strong>${esc(c.nombre)}</strong>
+              </div>
+              <div class="combo-desglose-sub">
+                <span>Cód: ${esc(c.codigo)}</span>
+                ${c.vendedor ? `<span>· Asesor: ${esc(c.vendedor)}</span>` : ""}
+              </div>
+            </div>
+            <div class="combo-desglose-lateral">
+              <span class="combo-desglose-monto">$${usd(c.saldo)} USD</span>
+              <span class="combo-cant-pill">${c.facturas} facturas</span>
+            </div>
+          </div>
+        `).join("");
+        html += `</div>`;
+      }
+
+      // Sección Asesores
+      if (vendedoresCoinciden.length > 0) {
+        html += `<div class="combo-desglose-section">
+          <div class="combo-desglose-header">
+            <span>👤</span> Asesores Comerciales (${vendedoresCoinciden.length})
+          </div>`;
+        html += vendedoresCoinciden.map((v) => `
+          <div class="combo-desglose-item" data-tipo="vendedor" data-val="${esc(v.nombre)}">
+            <div class="combo-desglose-principal">
+              <div class="combo-desglose-titulo">
+                <span class="combo-item-badge-pill pill-vendedor">Asesor</span>
+                <strong>${esc((v.codigo ? v.codigo + " · " : "") + v.nombre)}</strong>
+              </div>
+              <div class="combo-desglose-sub">
+                <span>Zona(s): ${esc(v.zonas || "Sin zona")}</span>
+              </div>
+            </div>
+            <div class="combo-desglose-lateral">
+              <span class="combo-action-pill">Filtrar asesor →</span>
+            </div>
+          </div>
+        `).join("");
+        html += `</div>`;
+      }
+
+      // Sección Analistas
+      if (analistasCoinciden.length > 0) {
+        html += `<div class="combo-desglose-section">
+          <div class="combo-desglose-header">
+            <span>👔</span> Analistas de Crédito (${analistasCoinciden.length})
+          </div>`;
+        html += analistasCoinciden.map((a) => `
+          <div class="combo-desglose-item" data-tipo="analista" data-val="${esc(a.nombre)}">
+            <div class="combo-desglose-principal">
+              <div class="combo-desglose-titulo">
+                <span class="combo-item-badge-pill pill-analista">Analista</span>
+                <strong>${esc(a.nombre)}</strong>
+              </div>
+              <div class="combo-desglose-sub">
+                <span>Analista de Crédito</span>
+              </div>
+            </div>
+            <div class="combo-desglose-lateral">
+              <span class="combo-action-pill">Filtrar analista →</span>
+            </div>
+          </div>
+        `).join("");
+        html += `</div>`;
+      }
+
+      // Fila de búsqueda general
+      html += `<div class="combo-desglose-section">
+        <div class="combo-desglose-item" data-tipo="texto" data-val="${esc(query)}">
+          <div class="combo-desglose-principal">
+            <div class="combo-desglose-titulo">
+              🔍 <strong>Buscar "${esc(query)}" en toda la tabla</strong>
+            </div>
+            <div class="combo-desglose-sub">
+              ${totalCoincidencias} facturas coinciden con este criterio
+            </div>
+          </div>
+          <div class="combo-desglose-lateral">
+            <span class="combo-action-pill pill-destacado">Ver tabla →</span>
+          </div>
+        </div>
+      </div>`;
+
+      listDiv.innerHTML = html;
+      listDiv.hidden = false;
+    }
+
+    function seleccionarItem(item) {
+      if (!item) return;
+      const tipo = item.dataset.tipo;
+      const val = item.dataset.val || "";
+
+      if (tipo === "factura") {
+        input.value = val;
+        if (clearBtn) clearBtn.hidden = false;
+        listDiv.hidden = true;
+        aplicarFiltros();
+      } else if (tipo === "cliente") {
+        input.value = val;
+        if (clearBtn) clearBtn.hidden = false;
+        listDiv.hidden = true;
+        aplicarFiltros();
+      } else if (tipo === "vendedor") {
+        input.value = "";
+        if (clearBtn) clearBtn.hidden = true;
+        listDiv.hidden = true;
+        seleccionarVendedorDirecto(val, true);
+      } else if (tipo === "analista") {
+        input.value = "";
+        if (clearBtn) clearBtn.hidden = true;
+        listDiv.hidden = true;
+        if ($("f-analista")) {
+          $("f-analista").value = val;
+          onAnalistaChange();
+        }
+      } else {
+        input.value = val;
+        if (clearBtn) clearBtn.hidden = !val;
+        listDiv.hidden = true;
+        aplicarFiltros();
+      }
+    }
+
+    input.addEventListener("focus", () => {
+      renderOpciones(input.value);
+    });
+
+    input.addEventListener("input", () => {
+      const q = input.value;
+      if (clearBtn) clearBtn.hidden = !q;
+      renderOpciones(q);
+      clearTimeout(aplicarFiltros.t);
+      aplicarFiltros.t = setTimeout(aplicarFiltros, 200);
+    });
+
+    listDiv.addEventListener("mousedown", (e) => {
+      const item = e.target.closest(".combo-desglose-item");
+      if (!item) return;
+      e.preventDefault();
+      seleccionarItem(item);
+    });
+
+    if (clearBtn) {
+      clearBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        input.value = "";
+        clearBtn.hidden = true;
+        listDiv.hidden = true;
+        aplicarFiltros();
+        input.focus();
+      });
+    }
+
+    document.addEventListener("click", (e) => {
+      if (!e.target.closest(".combo-buscar-wrap")) {
+        listDiv.hidden = true;
+      }
+    });
+
+    input.addEventListener("keydown", (e) => {
+      const items = [...listDiv.querySelectorAll(".combo-desglose-item")];
+      if (e.key === "Escape") {
+        listDiv.hidden = true;
+      } else if (e.key === "ArrowDown") {
+        e.preventDefault();
+        if (listDiv.hidden) {
+          renderOpciones(input.value);
+          return;
+        }
+        activeIndex = (activeIndex + 1) % items.length;
+        items.forEach((it, idx) => it.classList.toggle("active", idx === activeIndex));
+        items[activeIndex]?.scrollIntoView({ block: "nearest" });
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        if (listDiv.hidden) return;
+        activeIndex = (activeIndex - 1 + items.length) % items.length;
+        items.forEach((it, idx) => it.classList.toggle("active", idx === activeIndex));
+        items[activeIndex]?.scrollIntoView({ block: "nearest" });
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        if (activeIndex >= 0 && items[activeIndex]) {
+          seleccionarItem(items[activeIndex]);
+        } else {
+          listDiv.hidden = true;
+          aplicarFiltros();
+        }
+      }
+    });
   }
 
   // Cascada Inteligente de Filtros Conectados (Vendedor <-> Analista <-> Zona)
@@ -1356,7 +1778,7 @@
   $("f-analista")?.addEventListener("change", onAnalistaChange);
   $("f-zona")?.addEventListener("change", onZonaChange);
   $("f-estado")?.addEventListener("change", aplicarFiltros);
-  ["f-buscar", "f-desde", "f-hasta"].forEach((id) => $(id)?.addEventListener("input", () => {
+  ["f-desde", "f-hasta"].forEach((id) => $(id)?.addEventListener("input", () => {
     clearTimeout(aplicarFiltros.t);
     aplicarFiltros.t = setTimeout(aplicarFiltros, 200);
   }));
@@ -1367,6 +1789,8 @@
     if ($("f-zona")) $("f-zona").value = "";
     if ($("f-estado")) $("f-estado").value = "";
     if ($("f-buscar")) $("f-buscar").value = "";
+    if ($("btn-clear-buscar")) $("btn-clear-buscar").hidden = true;
+    if ($("combo-buscar-list")) $("combo-buscar-list").hidden = true;
     if ($("f-desde")) $("f-desde").value = "";
     if ($("f-hasta")) $("f-hasta").value = "";
 
@@ -1594,7 +2018,7 @@
       <td style="width: 50px; text-align: center;">${esc(f.zona)}</td>
       <td class="num" style="width: 86px;">${usd(f.monto_dolar)}</td>
       <td class="num" style="width: 86px;">${usd(f.saldo_usd)}</td>
-      <td class="num" style="width: 92px; font-weight: 700; color: var(--beval-lime);">${usd(f.monto_estimado)}</td>
+      <td class="num celda-estimado" style="width: 92px;">${usd(f.monto_estimado)}</td>
     </tr>`;
   }
 
@@ -2038,7 +2462,7 @@
         <td>${celdaVendedor}</td>
         <td class="num">${ent(r.facturas)}</td>
         <td class="num">${r.vencidas > 0 ? `<span class="vencida">${ent(r.vencidas)}</span>` : "0"}</td>
-        <td class="num" style="color: var(--beval-lime); font-weight: 700;">$${usd(r.estimado)}</td>
+        <td class="num celda-estimado">$${usd(r.estimado)}</td>
         <td>${avanceHtml}</td>
         <td style="text-align: center;">${statusBadge}</td>
         <td style="text-align: center;">
@@ -3209,7 +3633,7 @@
           </div>
         </td>
         <td class="num" style="font-weight: 700;">${(c.facturas || []).length}</td>
-        <td class="num" style="color: var(--beval-lime); font-weight: 700;">$${usd(montoTotalFacturas)}</td>
+        <td class="num celda-estimado">$${usd(montoTotalFacturas)}</td>
         <td style="text-align: center;">
           <div style="display: flex; justify-content: center; gap: 6px;">
             <button type="button" class="btn btn-sm btn-secundario" data-ver-detalle-comp="${esc(c.numero)}" title="Ver y editar facturas de este comprobante">
@@ -3518,7 +3942,7 @@ _Al ingresar podrás consultar tus clientes asignados y gestionar las facturas p
         </td>
         <td><strong style="color: var(--texto); font-family: monospace; font-size: 13px;">${esc(cred.usuario)}</strong></td>
         <td>
-          <strong style="color: var(--beval-lime); font-family: monospace; font-size: 13px;">${esc(cred.clave)}</strong>
+          <strong style="color: var(--primario); font-family: monospace; font-size: 13px;">${esc(cred.clave)}</strong>
           ${cred.esPersonalizada ? '<span class="badge-personalizado" style="margin-left: 6px;">Personalizada</span>' : ''}
         </td>
         <td style="text-align: center;">
