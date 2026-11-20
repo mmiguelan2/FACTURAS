@@ -386,7 +386,7 @@
   // Definición de Columnas para Sin Retención
   const COLUMNAS = [
     { campo: "sel", titulo: "", ancho: "34px", noSort: true },
-    { campo: "factura", titulo: "Factura", ancho: "85px" },
+    { campo: "factura", titulo: "Factura", ancho: "105px" },
     { campo: "fecha_emision", titulo: "Emisión", ancho: "94px", fmt: fecha },
     { campo: "fecha_vence", titulo: "Vence", ancho: "94px", fmt: fecha },
     { campo: "dias_vencida", titulo: "Días V.", ancho: "62px", num: true, fmt: (v) => (v > 0 ? `<span class="vencida">${ent(v)}</span>` : ent(v)), html: true },
@@ -402,7 +402,7 @@
   // Definición de Columnas para Pendiente por Procesar
   const COLUMNAS_POR_PROCESAR = [
     { campo: "sel", titulo: "", ancho: "34px", noSort: true },
-    { campo: "factura", titulo: "Factura", ancho: "85px" },
+    { campo: "factura", titulo: "Factura", ancho: "105px" },
     { campo: "fecha_emision", titulo: "Emisión", ancho: "94px", fmt: fecha },
     { campo: "fecha_vence", titulo: "Vence", ancho: "94px", fmt: fecha },
     { campo: "dias_vencida", titulo: "Días V.", ancho: "62px", num: true, fmt: (v) => (v > 0 ? `<span class="vencida">${ent(v)}</span>` : ent(v)), html: true },
@@ -935,20 +935,298 @@
       }
     });
 
-    // 3. Poblar selectores de filtros dinámicos
-    const listaAnalistas = [...new Set(estado.facturas.map((f) => f.analista))].filter(Boolean);
+    // 3. Poblar selectores de filtros dinámicos e interconectados
+    construirCatalogoFiltros();
+
+    const listaAnalistas = [...(estado.catalogoAnalistas?.keys() || [])].sort((a, b) => a.localeCompare(b, "es"));
     llenarSelect("f-analista", listaAnalistas);
 
-    const listaVendedores = [...new Set(estado.facturas.map((f) => f.vendedor))].filter(Boolean);
-    llenarSelect("f-vendedor", listaVendedores, (v) => {
-      const obj = buscarVendedor(v);
-      return obj?.codigo ? `${obj.codigo} · ${v}` : v;
-    });
-
-    const listaZonas = [...new Set(estado.facturas.map((f) => f.zona))].filter(Boolean);
-    llenarSelect("f-zona", listaZonas);
+    actualizarOpcionesVendedores("");
+    actualizarOpcionesZonas("");
+    inicializarComboboxVendedor();
 
     aplicarFiltros();
+  }
+
+  // Catálogo inteligente de Filtros Cruzados (Vendedor, Analista, Zona)
+  function construirCatalogoFiltros() {
+    const vendsMap = new Map();
+    const analistasMap = new Map();
+    const zonasMap = new Map();
+
+    estado.facturas.forEach((f) => {
+      const v = (f.vendedor || "").trim();
+      const a = (f.analista || "").trim();
+      const z = (f.zona || "").trim();
+
+      if (v) {
+        if (!vendsMap.has(v)) {
+          const match = buscarVendedor(v, null, z);
+          let cod = "";
+          const codCand = String(match?.codigo || "").trim();
+          if (codCand && codCand !== v && !v.includes(codCand) && /^\d+$/.test(codCand)) {
+            cod = codCand;
+          } else if (z && /^Z0*(\d+)$/i.test(z)) {
+            cod = z.replace(/^Z0*/i, "");
+          }
+          vendsMap.set(v, {
+            nombre: v,
+            codigo: cod,
+            zonas: new Set(),
+            analistas: new Set(),
+            count: 0
+          });
+        }
+        const vObj = vendsMap.get(v);
+        if (z) vObj.zonas.add(z);
+        if (a) vObj.analistas.add(a);
+        vObj.count++;
+      }
+
+      if (a) {
+        if (!analistasMap.has(a)) analistasMap.set(a, { nombre: a, vendedores: new Set(), zonas: new Set() });
+        const aObj = analistasMap.get(a);
+        if (v) aObj.vendedores.add(v);
+        if (z) aObj.zonas.add(z);
+      }
+
+      if (z) {
+        if (!zonasMap.has(z)) zonasMap.set(z, { zona: z, vendedores: new Set(), analistas: new Set() });
+        const zObj = zonasMap.get(z);
+        if (v) zObj.vendedores.add(v);
+        if (a) zObj.analistas.add(a);
+      }
+    });
+
+    estado.catalogoVendedores = vendsMap;
+    estado.catalogoAnalistas = analistasMap;
+    estado.catalogoZonas = zonasMap;
+  }
+
+  function etiquetaVendedorFormato(vNombre) {
+    const vObj = estado.catalogoVendedores?.get(vNombre);
+    if (!vObj) return vNombre;
+    const zonasStr = [...vObj.zonas].sort().join(", ");
+    const zonaPart = zonasStr ? ` [${zonasStr}]` : "";
+    if (vObj.codigo && vObj.codigo !== vNombre && !vNombre.includes(vObj.codigo)) {
+      return `${vObj.codigo} · ${vObj.nombre}${zonaPart}`;
+    }
+    return `${vObj.nombre}${zonaPart}`;
+  }
+
+  let vendedoresDisponiblesCombo = [];
+
+  function inicializarComboboxVendedor() {
+    const input = $("f-vendedor-input");
+    const selectOculto = $("f-vendedor");
+    const listDiv = $("combo-vendedor-list");
+    const clearBtn = $("btn-clear-vendedor");
+    if (!input || !listDiv) return;
+
+    function renderOpciones(query = "") {
+      const q = normalizarTexto(query);
+      const selVal = selectOculto?.value || "";
+
+      let filtrados = vendedoresDisponiblesCombo;
+      if (q) {
+        filtrados = vendedoresDisponiblesCombo.filter((vNom) => {
+          const vObj = estado.catalogoVendedores?.get(vNom);
+          const s1 = normalizarTexto(vNom);
+          const s2 = normalizarTexto(vObj?.codigo || "");
+          const s3 = normalizarTexto([...(vObj?.zonas || [])].join(" "));
+          return s1.includes(q) || s2.includes(q) || s3.includes(q);
+        });
+      }
+
+      if (filtrados.length === 0) {
+        listDiv.innerHTML = `<div style="padding: 10px 14px; font-size: 12px; color: var(--suave); text-align: center;">No se encontraron asesores</div>`;
+        listDiv.hidden = false;
+        return;
+      }
+
+      let html = "";
+      if (!q) {
+        html += `<div class="combo-item ${!selVal ? "selected" : ""}" data-val="">
+          <span class="combo-item-nom">Todos los vendedores</span>
+        </div>`;
+      }
+
+      html += filtrados.map((vNom) => {
+        const vObj = estado.catalogoVendedores?.get(vNom);
+        const zonasStr = [...(vObj?.zonas || [])].sort().join(", ");
+        const codPart = (vObj?.codigo && vObj.codigo !== vNom && !vNom.includes(vObj.codigo)) ? `${vObj.codigo} · ` : "";
+        const isSelected = vNom === selVal;
+        return `
+          <div class="combo-item ${isSelected ? "selected" : ""}" data-val="${esc(vNom)}">
+            <span class="combo-item-nom">${esc(codPart + vNom)}</span>
+            ${zonasStr ? `<span class="combo-item-zona">${esc(zonasStr)}</span>` : ""}
+          </div>
+        `;
+      }).join("");
+
+      listDiv.innerHTML = html;
+      listDiv.hidden = false;
+    }
+
+    input.addEventListener("focus", () => {
+      renderOpciones(input.value && input.value !== "Todos los vendedores" ? "" : "");
+    });
+
+    input.addEventListener("input", () => {
+      const query = input.value;
+      if (clearBtn) clearBtn.hidden = !query;
+      renderOpciones(query);
+      if (!query.trim()) {
+        seleccionarVendedorDirecto("", false);
+      }
+    });
+
+    listDiv.addEventListener("mousedown", (e) => {
+      const item = e.target.closest(".combo-item");
+      if (!item) return;
+      e.preventDefault();
+      const val = item.dataset.val || "";
+      seleccionarVendedorDirecto(val, true);
+    });
+
+    if (clearBtn) {
+      clearBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        seleccionarVendedorDirecto("", true);
+        input.focus();
+      });
+    }
+
+    document.addEventListener("click", (e) => {
+      if (!e.target.closest(".combo-vendedor-wrap")) {
+        listDiv.hidden = true;
+      }
+    });
+
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        listDiv.hidden = true;
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        const primerItem = listDiv.querySelector(".combo-item");
+        if (primerItem) {
+          seleccionarVendedorDirecto(primerItem.dataset.val || "", true);
+        }
+      }
+    });
+  }
+
+  function seleccionarVendedorDirecto(vNom, dispararCascada = true) {
+    const input = $("f-vendedor-input");
+    const selectOculto = $("f-vendedor");
+    const listDiv = $("combo-vendedor-list");
+    const clearBtn = $("btn-clear-vendedor");
+
+    if (selectOculto) selectOculto.value = vNom;
+    if (input) {
+      input.value = vNom ? etiquetaVendedorFormato(vNom) : "";
+      if (clearBtn) clearBtn.hidden = !vNom;
+    }
+    if (listDiv) listDiv.hidden = true;
+
+    if (dispararCascada) {
+      onVendedorChange(vNom);
+    }
+  }
+
+  // Cascada Inteligente de Filtros Conectados (Vendedor <-> Analista <-> Zona)
+  function onVendedorChange(vNom) {
+    if (vNom) {
+      const vObj = estado.catalogoVendedores?.get(vNom);
+      if (vObj) {
+        // Conectar Analista
+        const analistasVend = [...vObj.analistas];
+        if (analistasVend.length === 1) {
+          if ($("f-analista")) $("f-analista").value = analistasVend[0];
+        } else if (analistasVend.length > 1) {
+          const aActual = $("f-analista")?.value;
+          if (!aActual || !analistasVend.includes(aActual)) {
+            if ($("f-analista")) $("f-analista").value = analistasVend[0];
+          }
+        }
+
+        // Conectar Zona
+        const zonasVend = [...vObj.zonas];
+        if (zonasVend.length === 1) {
+          if ($("f-zona")) $("f-zona").value = zonasVend[0];
+        } else if (zonasVend.length > 1) {
+          const zActual = $("f-zona")?.value;
+          if (!zActual || !zonasVend.includes(zActual)) {
+            if ($("f-zona")) $("f-zona").value = zonasVend[0];
+          }
+        }
+      }
+    }
+    aplicarFiltros();
+  }
+
+  function onAnalistaChange() {
+    const aSel = $("f-analista")?.value || "";
+    actualizarOpcionesVendedores(aSel);
+    actualizarOpcionesZonas(aSel);
+    aplicarFiltros();
+  }
+
+  function onZonaChange() {
+    const zSel = $("f-zona")?.value || "";
+    if (zSel) {
+      const zObj = estado.catalogoZonas?.get(zSel);
+      if (zObj) {
+        // Si la zona pertenece a un solo analista, auto-seleccionar
+        const analistasZona = [...zObj.analistas];
+        if (analistasZona.length === 1) {
+          if ($("f-analista")) $("f-analista").value = analistasZona[0];
+        }
+        // Si la zona tiene un solo vendedor, auto-seleccionar
+        const vendsZona = [...zObj.vendedores];
+        if (vendsZona.length === 1) {
+          seleccionarVendedorDirecto(vendsZona[0], false);
+        }
+      }
+    }
+    aplicarFiltros();
+  }
+
+  function actualizarOpcionesVendedores(analistaFiltro = "") {
+    let lista = [];
+    if (analistaFiltro) {
+      const aObj = estado.catalogoAnalistas?.get(analistaFiltro);
+      lista = aObj ? [...aObj.vendedores] : [];
+    } else {
+      lista = [...(estado.catalogoVendedores?.keys() || [])];
+    }
+    lista = lista.filter(Boolean).sort((a, b) => a.localeCompare(b, "es", { numeric: true }));
+    vendedoresDisponiblesCombo = lista;
+
+    llenarSelect("f-vendedor", lista, (v) => etiquetaVendedorFormato(v));
+
+    const vActual = $("f-vendedor")?.value;
+    if (vActual && !lista.includes(vActual)) {
+      seleccionarVendedorDirecto("", false);
+    }
+  }
+
+  function actualizarOpcionesZonas(analistaFiltro = "") {
+    let lista = [];
+    if (analistaFiltro) {
+      const aObj = estado.catalogoAnalistas?.get(analistaFiltro);
+      lista = aObj ? [...aObj.zonas] : [];
+    } else {
+      lista = [...(estado.catalogoZonas?.keys() || [])];
+    }
+    lista = lista.filter(Boolean).sort((a, b) => a.localeCompare(b, "es", { numeric: true }));
+    llenarSelect("f-zona", lista);
+
+    const zActual = $("f-zona")?.value;
+    if (zActual && !lista.includes(zActual)) {
+      if ($("f-zona")) $("f-zona").value = "";
+    }
   }
 
   function llenarSelect(id, valores, etiqueta = (v) => v) {
@@ -1074,14 +1352,26 @@
     pintarVendedores();
   }
 
-  ["f-vendedor", "f-analista", "f-zona", "f-estado"].forEach((id) => $(id)?.addEventListener("change", aplicarFiltros));
+  $("f-vendedor")?.addEventListener("change", () => onVendedorChange($("f-vendedor").value));
+  $("f-analista")?.addEventListener("change", onAnalistaChange);
+  $("f-zona")?.addEventListener("change", onZonaChange);
+  $("f-estado")?.addEventListener("change", aplicarFiltros);
   ["f-buscar", "f-desde", "f-hasta"].forEach((id) => $(id)?.addEventListener("input", () => {
     clearTimeout(aplicarFiltros.t);
     aplicarFiltros.t = setTimeout(aplicarFiltros, 200);
   }));
 
   $("btn-limpiar")?.addEventListener("click", () => {
-    document.querySelectorAll(".filtros input, .filtros select").forEach((el) => (el.value = ""));
+    seleccionarVendedorDirecto("", false);
+    if ($("f-analista")) $("f-analista").value = "";
+    if ($("f-zona")) $("f-zona").value = "";
+    if ($("f-estado")) $("f-estado").value = "";
+    if ($("f-buscar")) $("f-buscar").value = "";
+    if ($("f-desde")) $("f-desde").value = "";
+    if ($("f-hasta")) $("f-hasta").value = "";
+
+    actualizarOpcionesVendedores("");
+    actualizarOpcionesZonas("");
     aplicarFiltros();
   });
 
@@ -1273,8 +1563,11 @@
 
     const clienteHtml = `
       <div class="cliente-consolidado" title="${esc(f.razon_social)} · ${esc(f.codigo_cliente)}">
-        <span class="cliente-nombre">${esc(f.razon_social || "Sin nombre")}</span>
-        <button type="button" class="cliente-codigo-btn" data-copiar-codigo="${esc(f.codigo_cliente)}" title="Toca para copiar código ${esc(f.codigo_cliente)}">
+        <button type="button" class="btn-copiar-razon" data-copiar-codigo="${esc(f.razon_social)}" data-tipo="Razón Social" title="Clic para copiar razón social: ${esc(f.razon_social)}">
+          <span class="cliente-nombre">${esc(f.razon_social || "Sin nombre")}</span>
+          <span class="cod-icono-inline">📋</span>
+        </button>
+        <button type="button" class="cliente-codigo-btn" data-copiar-codigo="${esc(f.codigo_cliente)}" data-tipo="Código Cliente" title="Toca para copiar código ${esc(f.codigo_cliente)}">
           <span class="cod-icono">📋</span>
           <span class="cod-txt">${esc(f.codigo_cliente || "")}</span>
         </button>
@@ -1286,7 +1579,12 @@
       <td style="width: 34px; text-align: center;">
         <input type="checkbox" class="chk-factura" data-factura="${esc(f.factura)}" ${isChecked ? "checked" : ""}>
       </td>
-      <td style="width: 85px; font-weight: 700;">${esc(f.factura)}</td>
+      <td style="width: 105px;">
+        <button type="button" class="btn-copiar-factura" data-copiar-codigo="${esc(f.factura)}" data-tipo="Factura" title="Clic para copiar factura #${esc(f.factura)}">
+          <span class="cod-txt">#${esc(f.factura)}</span>
+          <span class="cod-icono">📋</span>
+        </button>
+      </td>
       <td class="celda-fecha" style="width: 94px;">${fecha(f.fecha_emision)}</td>
       <td class="celda-fecha" style="width: 94px;">${fecha(f.fecha_vence)}</td>
       <td class="num" style="width: 62px;">${diasV > 0 ? `<span class="vencida">${ent(diasV)}</span>` : ent(diasV)}</td>
@@ -1392,8 +1690,11 @@
 
     const clienteHtml = `
       <div class="cliente-consolidado" title="${esc(f.razon_social)} · ${esc(f.codigo_cliente)}">
-        <span class="cliente-nombre">${esc(f.razon_social || "Sin nombre")}</span>
-        <button type="button" class="cliente-codigo-btn" data-copiar-codigo="${esc(f.codigo_cliente)}" title="Toca para copiar código ${esc(f.codigo_cliente)}">
+        <button type="button" class="btn-copiar-razon" data-copiar-codigo="${esc(f.razon_social)}" data-tipo="Razón Social" title="Clic para copiar razón social: ${esc(f.razon_social)}">
+          <span class="cliente-nombre">${esc(f.razon_social || "Sin nombre")}</span>
+          <span class="cod-icono-inline">📋</span>
+        </button>
+        <button type="button" class="cliente-codigo-btn" data-copiar-codigo="${esc(f.codigo_cliente)}" data-tipo="Código Cliente" title="Toca para copiar código ${esc(f.codigo_cliente)}">
           <span class="cod-icono">📋</span>
           <span class="cod-txt">${esc(f.codigo_cliente || "")}</span>
         </button>
@@ -1422,7 +1723,12 @@
       <td style="width: 34px; text-align: center;">
         <input type="checkbox" class="chk-factura-proc" data-factura="${esc(f.factura)}" ${isChecked ? "checked" : ""}>
       </td>
-      <td style="width: 85px; font-weight: 700;">${esc(f.factura)}</td>
+      <td style="width: 105px;">
+        <button type="button" class="btn-copiar-factura" data-copiar-codigo="${esc(f.factura)}" data-tipo="Factura" title="Clic para copiar factura #${esc(f.factura)}">
+          <span class="cod-txt">#${esc(f.factura)}</span>
+          <span class="cod-icono">📋</span>
+        </button>
+      </td>
       <td class="celda-fecha" style="width: 94px;">${fecha(f.fecha_emision)}</td>
       <td class="celda-fecha" style="width: 94px;">${fecha(f.fecha_vence)}</td>
       <td class="num" style="width: 62px;">${diasV > 0 ? `<span class="vencida">${ent(diasV)}</span>` : ent(diasV)}</td>
@@ -1548,6 +1854,7 @@
     e.preventDefault();
     const cod = btn.dataset.copiarCodigo;
     if (!cod) return;
+    const tipo = btn.dataset.tipo || "Dato";
 
     let copiado = false;
     try {
@@ -1579,14 +1886,14 @@
     }
 
     btn.classList.add("copiado");
-    const icono = btn.querySelector(".cod-icono");
+    const icono = btn.querySelector(".cod-icono") || btn.querySelector(".cod-icono-inline");
     const txtOrig = icono ? icono.textContent : "";
     if (icono) icono.textContent = "✓";
     setTimeout(() => {
       btn.classList.remove("copiado");
       if (icono) icono.textContent = txtOrig || "📋";
     }, 1200);
-    aviso(`📋 Copiado al portapapeles: ${cod}`);
+    aviso(`📋 ${tipo} copiado al portapapeles: ${cod}`);
   });
 
   // Listener para editar / guardar teléfono de asesor comercial

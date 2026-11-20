@@ -297,7 +297,16 @@
     </section>
 
     <section class="filtros">
-      <label class="solo-admin">Vendedor<select id="f-vendedor"><option value="">Todos los vendedores</option></select></label>
+      <div class="filtro-campo solo-admin combo-vendedor-wrap" id="wrap-f-vendedor">
+        <label for="f-vendedor-input">Vendedor</label>
+        <div class="combo-box">
+          <input type="text" id="f-vendedor-input" class="combo-input" placeholder="Buscar asesor, código o zona..." autocomplete="off">
+          <select id="f-vendedor" style="display:none;"><option value="">Todos los vendedores</option></select>
+          <button type="button" id="btn-clear-vendedor" class="combo-clear" title="Limpiar asesor" hidden>&times;</button>
+          <span class="combo-arrow">&#9662;</span>
+        </div>
+        <div id="combo-vendedor-list" class="combo-list" hidden></div>
+      </div>
       <label>Analista<select id="f-analista"><option value="">Todos los analistas</option></select></label>
       <label>Zona<select id="f-zona"><option value="">Todas</option></select></label>
       <label>Vencimiento<select id="f-estado"><option value="">Todas</option><option value="vencidas">Vencidas</option><option value="sinvencer">Sin vencer (al día)</option></select></label>

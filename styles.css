@@ -1324,6 +1324,210 @@ main {
   box-shadow: 0 0 0 3px rgba(197, 224, 27, 0.25);
 }
 
+/* Combobox estilizado y accesible para Asesor/Vendedor */
+.filtros .combo-vendedor-wrap {
+  position: relative;
+  display: grid;
+  gap: 4px;
+  min-width: 250px;
+  flex: 1 1 250px;
+}
+
+.filtros .combo-vendedor-wrap label {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--suave);
+  min-width: 0;
+}
+
+.combo-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.combo-input {
+  width: 100%;
+  font: inherit;
+  padding: 8px 32px 8px 10px;
+  border: 1.5px solid var(--borde);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--texto);
+  font-size: 12.5px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.combo-input:focus {
+  outline: none;
+  border-color: var(--beval-lime);
+  box-shadow: 0 0 0 3px rgba(197, 224, 27, 0.25);
+}
+
+.combo-clear {
+  position: absolute;
+  right: 22px;
+  background: transparent;
+  border: none;
+  color: var(--suave);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  line-height: 1;
+}
+
+.combo-clear:hover {
+  color: #ef4444;
+}
+
+.combo-arrow {
+  position: absolute;
+  right: 8px;
+  pointer-events: none;
+  font-size: 11px;
+  color: var(--suave);
+}
+
+.combo-list {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--panel);
+  border: 1.5px solid var(--borde);
+  border-radius: 10px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.2);
+  max-height: 280px;
+  overflow-y: auto;
+  z-index: 1050;
+  padding: 4px 0;
+}
+
+.combo-item {
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--texto);
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  transition: background 0.15s;
+}
+
+.combo-item:hover, .combo-item.active {
+  background: rgba(197, 224, 27, 0.15);
+  color: var(--beval-lime);
+}
+
+.combo-item.selected {
+  font-weight: 700;
+  background: rgba(197, 224, 27, 0.2);
+  color: var(--beval-lime);
+}
+
+.combo-item-nom {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.combo-item-zona {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1.5px 6px;
+  border-radius: 4px;
+  background: var(--fondo);
+  color: var(--suave);
+  flex-shrink: 0;
+}
+
+.combo-item.selected .combo-item-zona {
+  background: rgba(197, 224, 27, 0.25);
+  color: var(--beval-lime);
+}
+
+/* Botón copiar Factura y Razón Social */
+.btn-copiar-factura {
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--texto);
+  background: var(--fila);
+  border: 1px solid var(--borde);
+  padding: 2.5px 7px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.15s ease;
+  user-select: none;
+  line-height: 1.2;
+}
+
+.btn-copiar-factura:hover {
+  border-color: var(--beval-lime);
+  background: rgba(197, 224, 27, 0.15);
+  color: var(--beval-lime);
+  transform: translateY(-1px);
+}
+
+.btn-copiar-factura.copiado {
+  background: var(--exito) !important;
+  color: #fff !important;
+  border-color: var(--exito) !important;
+  box-shadow: 0 0 10px rgba(0, 168, 133, 0.6) !important;
+}
+
+.btn-copiar-razon {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  transition: color 0.15s ease;
+}
+
+.btn-copiar-razon:hover .cliente-nombre {
+  color: var(--beval-lime);
+  text-decoration: underline;
+}
+
+.btn-copiar-razon .cod-icono-inline {
+  font-size: 10.5px;
+  opacity: 0.45;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  flex-shrink: 0;
+}
+
+.btn-copiar-razon:hover .cod-icono-inline {
+  opacity: 1;
+  color: var(--beval-lime);
+  transform: scale(1.15);
+}
+
+.btn-copiar-razon.copiado .cliente-nombre {
+  color: var(--exito) !important;
+  font-weight: 700;
+}
+
+.btn-copiar-razon.copiado .cod-icono-inline {
+  opacity: 1;
+  color: var(--exito) !important;
+}
+
 /* ========================================================
    TABLAS Y CONTROL DE SCROLL HORIZONTAL
    ======================================================== */
