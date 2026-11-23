@@ -91,7 +91,7 @@
       <!-- Logo Beval Oficial -->
       <div class="login-header">
         <div class="beval-logo-box">
-          <img src="logo_beval_transparent.png" alt="Comercializadora Beval" class="beval-logo">
+          <img src="logo_beval_lime.png" alt="Comercializadora Beval" class="beval-logo">
         </div>
         <div class="login-titulos">
           <h1>Facturas sin Retención</h1>
@@ -148,7 +148,7 @@
   <header class="barra">
     <div class="marca">
       <div class="beval-logo-nav">
-        <img src="logo_beval_transparent.png" alt="Beval" class="logo-mini">
+        <img src="logo_beval_lime.png" alt="Beval" class="logo-mini">
       </div>
       <div>
         <div class="marca-titulo-wrap">
@@ -310,15 +310,7 @@
       <label>Analista<select id="f-analista"><option value="">Todos los analistas</option></select></label>
       <label>Zona<select id="f-zona"><option value="">Todas</option></select></label>
       <label>Vencimiento<select id="f-estado"><option value="">Todas</option><option value="vencidas">Vencidas</option><option value="sinvencer">Sin vencer (al día)</option></select></label>
-      <div class="filtro-campo crece combo-buscar-wrap" id="wrap-f-buscar">
-        <label for="f-buscar">Buscar</label>
-        <div class="combo-box">
-          <input type="text" id="f-buscar" class="combo-input" placeholder="Cliente, RIF, código, factura, comprobante o asesor..." autocomplete="off">
-          <button type="button" id="btn-clear-buscar" class="combo-clear" title="Limpiar búsqueda" hidden>&times;</button>
-          <span class="combo-arrow">&#128269;</span>
-        </div>
-        <div id="combo-buscar-list" class="combo-list combo-list-desglose" hidden></div>
-      </div>
+      <label class="crece">Buscar<input id="f-buscar" placeholder="Cliente, RIF, código, factura, comprobante o vendedor"></label>
       <label>Monto desde<input id="f-desde" type="number" step="0.01"></label>
       <label>Monto hasta<input id="f-hasta" type="number" step="0.01"></label>
       <button class="btn" id="btn-limpiar">Limpiar</button>
