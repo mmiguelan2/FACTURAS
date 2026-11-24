@@ -353,9 +353,64 @@
     }
   });
 
-  // El selector de tema también responde a Enter / Espacio
+  // Módulo de avance: reparte el texto de app.js ("20% (Proy. Cierre 70%)") en cifras grandes
+  var avTxt = $("vh-avance-txt");
+  if (avTxt) {
+    var avNum = $("av-num"), avEtq = $("av-etq"), avProy = $("av-proy"),
+        avProyNum = $("av-proy-num"), avProyFill = $("av-proy-fill");
+    var avPrevio = 0, avAnim = 0;
+    var pintarAvance = function () {
+      var t = avTxt.textContent || "";
+      var m = t.match(/(\d+)\s*%/);
+      var avance = m ? parseInt(m[1], 10) : 0;
+      var p = t.match(/Proy[^\d]*(\d+)\s*%/i);
+      var recuperado = /recuperad/i.test(t);
+      if (avEtq) avEtq.textContent = recuperado ? "recuperado" : "cobrado";
+      if (avProy) avProy.hidden = !p;
+      if (avProyNum && p) avProyNum.textContent = p[1] + "%";
+      if (avProyFill) avProyFill.style.width = (p ? Math.min(100, parseInt(p[1], 10)) : 0) + "%";
+      if (!avNum) return;
+      var desde = avPrevio, id = ++avAnim, t0 = performance.now();
+      avPrevio = avance;
+      if (reducirMov || document.hidden || desde === avance) { avNum.textContent = avance; return; }
+      requestAnimationFrame(function paso(ahora) {
+        if (id !== avAnim) return;
+        var k = Math.min(1, Math.max(0, (ahora - t0) / 800));
+        avNum.textContent = Math.round(desde + (avance - desde) * (1 - Math.pow(1 - k, 3)));
+        if (k < 1) requestAnimationFrame(paso);
+      });
+    };
+    new MutationObserver(pintarAvance).observe(avTxt, { childList: true, characterData: true, subtree: true });
+    pintarAvance();
+  }
+
+  // Cambio de tema animado: un círculo que se expande desde el botón
   var tema = $("btn-tema");
   if (tema) {
+    var enTransicion = false;
+    tema.addEventListener("click", function (e) {
+      if (enTransicion) return;              // el clic re-emitido pasa directo a app.js
+      e.stopImmediatePropagation();
+      var r = tema.getBoundingClientRect();
+      var x = r.left + r.width / 2, y = r.top + r.height / 2;
+      var radio = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
+      var cambiar = function () { enTransicion = true; tema.click(); enTransicion = false; };
+      tema.classList.remove("girando-tema"); void tema.offsetWidth; tema.classList.add("girando-tema");
+
+      if (!document.startViewTransition || reducirMov) {
+        document.documentElement.classList.add("tema-transicion");
+        cambiar();
+        setTimeout(function () { document.documentElement.classList.remove("tema-transicion"); }, 600);
+        return;
+      }
+      var vt = document.startViewTransition(cambiar);
+      vt.ready.then(function () {
+        document.documentElement.animate(
+          { clipPath: ["circle(0px at " + x + "px " + y + "px)", "circle(" + radio + "px at " + x + "px " + y + "px)"] },
+          { duration: 650, easing: "cubic-bezier(0.22, 1, 0.36, 1)", pseudoElement: "::view-transition-new(root)" }
+        );
+      }).catch(function () {});
+    }, true);   // fase de captura: se ejecuta antes que el manejador de app.js
     tema.addEventListener("keydown", function (e) {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); tema.click(); }
     });

@@ -61,25 +61,27 @@
   --lima-100: rgba(204, 219, 42, 0.13);
   --lima-200: rgba(204, 219, 42, 0.24);
 
-  --fondo: #0e0f0c;
-  --sup: #171814;
-  --sup-2: #1c1d18;
-  --sup-hundida: #12130f;
-  --linea: #272922;
-  --linea-fuerte: #36392f;
-  --tx: #f3f4ee;
-  --tx-2: #b4b7ab;
-  --tx-3: #7f8277;
+  --fondo: #0d0e0b;
+  --sup: #181a14;
+  --sup-2: #20231b;
+  --sup-hundida: #111310;
+  --linea: #2d3127;
+  --linea-fuerte: #41463a;
+  --tx: #f7f8f2;
+  --tx-2: #cdd0c3;
+  --tx-3: #9da194;
 
-  --ok: #3fcf9f;
-  --ok-suave: rgba(63, 207, 159, 0.12);
-  --peligro: #ff7a6e;
-  --peligro-suave: rgba(255, 122, 110, 0.12);
-  --aviso-c: #f4b350;
-  --aviso-suave: rgba(244, 179, 80, 0.12);
+  --ok: #4fe0ad;
+  --ok-suave: rgba(79, 224, 173, 0.14);
+  --peligro: #ff8476;
+  --peligro-suave: rgba(255, 132, 118, 0.15);
+  --aviso-c: #ffc25e;
+  --aviso-suave: rgba(255, 194, 94, 0.15);
 
-  --sb-fondo: #0a0b08;
-  --sb-hover: #1a1b16;
+  --sb-fondo: #13150f;
+  --sb-tx-2: #a9ad9f;
+  --sb-hover: #20231b;
+  --anillo: 0 0 0 4px rgba(204, 219, 42, 0.3);
 
   --sombra-1: 0 1px 2px rgba(0, 0, 0, 0.4);
   --sombra-2: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 30px -12px rgba(0, 0, 0, 0.6);
@@ -472,6 +474,10 @@ svg { flex-shrink: 0; }
   background: var(--fondo);
 }
 #vista-app.shell[hidden] { display: none !important; }
+/* styles.css ponía overflow-x:hidden en #vista-app y en html/body: eso rompe position:sticky
+   (la barra lateral y la superior se iban con el scroll). "clip" recorta sin crear contenedor de scroll. */
+html, body { overflow-x: clip !important; }
+#vista-app.shell { overflow: visible !important; max-width: none !important; }
 
 .sb {
   --logo-tinta: #ffffff;
@@ -740,8 +746,11 @@ svg { flex-shrink: 0; }
   content: ""; width: 8px; height: 8px; border-radius: 50%;
   background: var(--linea-fuerte); flex-shrink: 0;
 }
+#vista-app .kpi { container-type: inline-size; }
+#vista-app .kpi span { white-space: normal; line-height: 1.3; }
 #vista-app .kpi strong {
-  font-size: clamp(26px, 2.4vw, 34px); font-weight: 800; letter-spacing: -0.04em; line-height: 1;
+  font-size: clamp(20px, 15cqi, 34px); font-weight: 800; letter-spacing: -0.04em; line-height: 1;
+  white-space: nowrap;
   color: var(--tx) !important;
 }
 #vista-app .kpi strong.destello { animation: destello .8s var(--curva); }
@@ -767,27 +776,46 @@ svg { flex-shrink: 0; }
 #vista-app .kpi.kpi-clic:hover::before { opacity: 1; transform: none; }
 
 /* --- Filtros --- */
+/* Cuadrícula de 12 columnas:
+   fila 1 → Vendedor · Analista · Zona · Vencimiento
+   fila 2 → Buscar (ancho) · Monto desde · Monto hasta · Limpiar */
 #vista-app .filtros {
-  display: flex !important;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 12px;
-  padding: 16px;
+  display: grid !important;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  align-items: end;
+  gap: 14px 12px;
+  padding: 16px 18px 18px;
   border-radius: var(--r-lg);
   background: var(--sup);
   border: 1px solid var(--linea);
   box-shadow: var(--sombra-1);
 }
+#vista-app .filtros > * { min-width: 0 !important; max-width: none !important; width: auto !important; margin: 0 !important; flex: none !important; }
+#vista-app .filtros > #wrap-f-vendedor { grid-column: span 4; }
+#vista-app .filtros > label:nth-of-type(1) { grid-column: span 3; }   /* Analista */
+#vista-app .filtros > label:nth-of-type(2) { grid-column: span 2; }   /* Zona */
+#vista-app .filtros > label:nth-of-type(3) { grid-column: span 3; }   /* Vencimiento */
+#vista-app .filtros > #wrap-f-buscar { grid-column: span 6; }
+#vista-app .filtros > label:nth-of-type(4),
+#vista-app .filtros > label:nth-of-type(5) { grid-column: span 2; }   /* Montos */
+#vista-app .filtros > #btn-limpiar { grid-column: span 2; height: 42px; width: 100% !important; }
+/* Asesor (sin filtro de vendedor): la primera fila se reparte en 3 */
+#vista-app .filtros:has(> #wrap-f-vendedor[hidden]) > label:nth-of-type(1),
+#vista-app .filtros:has(> #wrap-f-vendedor[hidden]) > label:nth-of-type(2),
+#vista-app .filtros:has(> #wrap-f-vendedor[hidden]) > label:nth-of-type(3) { grid-column: span 4; }
+
 #vista-app .filtros > label,
 #vista-app .filtros .filtro-campo > label {
-  display: flex; flex-direction: column; gap: 6px;
+  display: flex; flex-direction: column; gap: 7px;
   font-size: 11.5px; font-weight: 700; color: var(--tx-2);
   text-transform: none; letter-spacing: 0;
-  min-width: 130px; flex: 1 1 130px;
+  white-space: nowrap;
+  min-width: 0 !important;
 }
-#vista-app .filtros .filtro-campo { display: flex; flex-direction: column; gap: 6px; flex: 1 1 200px; min-width: 180px; position: relative; }
-#vista-app .filtros .filtro-campo.crece { flex: 3 1 300px; }
-#vista-app .filtros .filtro-campo > label { flex: 0 0 auto; min-width: 0; }
+#vista-app .filtros .filtro-campo > label { flex: none !important; }
+#vista-app .filtros .filtro-campo { display: flex; flex-direction: column; gap: 7px; position: relative; }
+#vista-app .filtros input::placeholder { color: var(--tx-3); opacity: 1; }
+#vista-app .filtros select { text-overflow: ellipsis; }
 #vista-app .filtros input,
 #vista-app .filtros select,
 .input-moderno,
@@ -1010,65 +1038,160 @@ svg { flex-shrink: 0; }
 #vista-app .paginacion { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 16px 0 0; }
 #vista-app .paginacion span { font-size: 12.5px; font-weight: 600; color: var(--tx-2); padding: 6px 12px; border-radius: 99px; background: var(--sup); border: 1px solid var(--linea); }
 
-/* --- Tarjeta del asesor (vendor hero) --- */
+/* --- Tarjeta del asesor / consolidado (vendor hero) --- */
 #vista-app .vendor-hero {
-  --logo-tinta: var(--tinta);
   margin: 0 clamp(16px, 3vw, 36px) 18px;
-  padding: clamp(20px, 2.4vw, 28px);
+  padding: clamp(18px, 2vw, 24px);
   border-radius: var(--r-xl);
   background: var(--lima) !important;
   color: var(--tinta);
   border: 0;
-  box-shadow: 0 20px 50px -24px rgba(169, 182, 22, .9);
+  box-shadow: 0 20px 50px -26px rgba(169, 182, 22, .9);
   position: relative;
   overflow: hidden;
   animation: subir .6s var(--curva) both;
 }
 #vista-app .vendor-hero::before {
   content: "" !important;
-  position: absolute; right: -80px; top: -120px;
-  width: 360px; height: 360px; border-radius: 50%;
-  border: 54px solid rgba(255, 255, 255, .25);
+  position: absolute; left: -90px; bottom: -190px; top: auto; right: auto;
+  width: 380px; height: 380px; border-radius: 50%;
+  border: 56px solid rgba(255, 255, 255, .22);
   background: none !important;
   pointer-events: none;
 }
-#vista-app .vendor-hero-grid { position: relative; display: grid; grid-template-columns: 1.1fr 1.4fr 1.3fr; gap: 22px; align-items: stretch; }
-#vista-app .vendor-hero-pill { background: rgba(22, 22, 21, .1) !important; color: var(--tinta) !important; border: 0 !important; border-radius: 99px; font-weight: 700; }
-#vista-app .punto-verde-pulsante { background: var(--tinta) !important; box-shadow: none !important; }
-#vista-app .vendor-hero-nombre { color: var(--tinta) !important; font-size: clamp(22px, 2.2vw, 30px); font-weight: 800; letter-spacing: -.035em; line-height: 1.1; }
-#vista-app .vendor-hero-sub { color: rgba(22, 22, 21, .68) !important; font-weight: 600; }
-#vista-app .vendor-hero-metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-#vista-app .vh-metric {
-  padding: 14px; border-radius: var(--r);
-  background: rgba(255, 255, 255, .42) !important;
-  border: 1px solid rgba(255, 255, 255, .55) !important;
-  backdrop-filter: blur(8px);
-  transition: transform .3s var(--curva), background .3s;
+#vista-app .vendor-hero-grid {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) minmax(300px, 1.15fr) minmax(300px, 1.05fr);
+  gap: 16px;
+  align-items: stretch;
 }
-#vista-app .vh-metric:hover { transform: translateY(-2px); background: rgba(255, 255, 255, .62) !important; }
-#vista-app .vh-metric-lbl { color: rgba(22, 22, 21, .62) !important; font-weight: 700; font-size: 11.5px; }
-#vista-app .vh-metric-val { color: var(--tinta) !important; font-weight: 800; letter-spacing: -.03em; }
+#vista-app .vendor-hero-perfil { display: flex; flex-direction: column; justify-content: center; gap: 6px; padding: 4px 6px; }
+#vista-app .vendor-hero-pill {
+  align-self: flex-start;
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 5px 11px;
+  background: rgba(22, 22, 21, .1) !important; color: var(--tinta) !important;
+  border: 0 !important; border-radius: 99px;
+  font-size: 10.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+}
+#vista-app .punto-verde-pulsante { width: 7px; height: 7px; background: var(--tinta) !important; box-shadow: none !important; animation: latido 2s infinite; }
+#vista-app .vendor-hero-nombre { margin: 6px 0 0; color: var(--tinta) !important; font-size: clamp(22px, 2.1vw, 30px); font-weight: 800; letter-spacing: -.035em; line-height: 1.08; }
+#vista-app .vendor-hero-sub { color: rgba(22, 22, 21, .66) !important; font-weight: 600; font-size: 13px; }
+#vista-app .vh-semaforo-wrap { margin-top: 6px; }
+#vista-app .vendor-hero .badge-semaforo { background: var(--tinta) !important; color: var(--lima) !important; border: 0 !important; padding: 5px 11px; font-size: 11px; letter-spacing: .04em; }
+
+/* Tarjetas internas: misma superficie para métricas y avance */
+#vista-app .vendor-hero-metrics,
 #vista-app .vendor-hero-avance-box {
-  padding: 16px; border-radius: var(--r-lg);
-  background: var(--tinta) !important; color: #fff !important;
+  background: var(--sup) !important;
   border: 0 !important;
+  border-radius: var(--r-lg) !important;
+  box-shadow: 0 1px 2px rgba(22, 22, 21, .06), 0 10px 30px -18px rgba(22, 22, 21, .5);
+  color: var(--tx) !important;
 }
-#vista-app .vh-avance-header, #vista-app .vh-avance-header * { color: #fff !important; }
-#vista-app .vh-avance-header strong { color: var(--lima) !important; }
-#vista-app .vh-gauge-track { background: rgba(255, 255, 255, .1) !important; border-radius: 99px; }
-#vista-app .vh-gauge-fill { background: var(--lima) !important; border-radius: 99px; transition: width 1s var(--curva); }
-#vista-app .vh-switch-lbl { color: rgba(255, 255, 255, .55) !important; }
-#vista-app .vh-switch-pills { background: rgba(255, 255, 255, .07) !important; border-radius: 99px; padding: 3px; border: 0 !important; }
-#vista-app .vh-pill-btn { border-radius: 99px !important; color: rgba(255, 255, 255, .7) !important; background: transparent !important; border: 0 !important; transition: all .25s; }
-#vista-app .vh-pill-btn:hover { color: #fff !important; }
-#vista-app .vh-pill-btn.activa { background: var(--lima) !important; color: var(--tinta) !important; }
-#vista-app .vh-distribucion-bar { border-radius: 99px; overflow: hidden; background: rgba(255, 255, 255, .08) !important; }
-#vista-app .vh-dist-seg { transition: width 1s var(--curva); }
-#vista-app .seg-cobrado, #vista-app .dot-cobrado { background: var(--lima) !important; }
-#vista-app .seg-aldia, #vista-app .dot-aldia { background: #8fd3b9 !important; }
-#vista-app .seg-vencido, #vista-app .dot-vencido { background: #ff8a7e !important; }
-#vista-app .vh-leg-item { color: rgba(255, 255, 255, .7) !important; }
-#vista-app .vh-leg-item strong { color: #fff !important; }
+#vista-app .vendor-hero-metrics {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 0;
+  padding: 6px;
+}
+#vista-app .vh-metric {
+  display: flex; flex-direction: column; justify-content: center; gap: 6px;
+  padding: 14px 16px; border-radius: 14px;
+  background: transparent !important; border: 0 !important;
+  transition: background .25s;
+}
+#vista-app .vh-metric:hover { background: var(--sup-2) !important; }
+#vista-app .vh-metric-lbl { color: var(--tx-3) !important; font-weight: 700; font-size: 10.5px; letter-spacing: .07em; text-transform: uppercase; }
+#vista-app .vh-metric-val { color: var(--tx) !important; font-size: 19px; font-weight: 800; letter-spacing: -.03em; }
+#vista-app .vh-metric-val.vh-verde { color: var(--ok) !important; }
+#vista-app .vh-metric-val.vh-ambar { color: var(--aviso-c) !important; }
+#vista-app .vh-metric-val.vh-lima { color: var(--lima-texto) !important; }
+
+/* --- Módulo de avance --- */
+#vista-app .av {
+  display: flex; flex-direction: column; gap: 14px;
+  padding: 18px 18px 16px !important;
+}
+.av-cabeza { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.av-titulo { font-size: 10.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--tx-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.av-oculto { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+.av-cifras { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-top: -4px; }
+.av-principal { display: flex; align-items: baseline; gap: 8px; }
+.av-num { display: inline-flex; align-items: baseline; font-size: 40px; font-weight: 800; letter-spacing: -.05em; line-height: 1; color: var(--tx); font-variant-numeric: tabular-nums; }
+.av-num i { font-style: normal; font-size: 20px; margin-left: 2px; color: var(--tx-3); letter-spacing: 0; }
+.av-etq { font-size: 13px; font-weight: 600; color: var(--tx-2); }
+.av-proy {
+  display: flex; flex-direction: column; align-items: flex-end; gap: 2px;
+  padding: 7px 11px; border-radius: 12px;
+  background: var(--lima-50); border: 1px solid var(--lima-100);
+  transition: opacity .3s, transform .3s var(--curva);
+}
+.av-proy span { font-size: 10.5px; font-weight: 700; color: var(--tx-3); white-space: nowrap; }
+.av-proy b { font-size: 16px; font-weight: 800; color: var(--lima-texto); letter-spacing: -.02em; }
+.av-proy[hidden] { display: none !important; }
+
+/* Medidor: avance real (sólido) + proyección (rayado) + meta */
+#vista-app .av-medidor { padding: 0; margin-bottom: 4px; }
+#vista-app .av .vh-gauge-track {
+  position: relative; height: 10px; border-radius: 99px;
+  background: var(--sup-hundida) !important; overflow: visible;
+}
+#vista-app .av .vh-gauge-fill {
+  position: relative; z-index: 2; height: 100%;
+  background: var(--tinta) !important;
+  border-radius: 99px;
+  transition: width 1s var(--curva);
+}
+:root[data-theme="dark"] #vista-app .av .vh-gauge-fill { background: var(--lima) !important; }
+.av-proy-fill {
+  position: absolute; left: 0; top: 0; bottom: 0; z-index: 1;
+  border-radius: 99px;
+  background: repeating-linear-gradient(-45deg, var(--lima) 0 5px, var(--lima-200) 5px 10px);
+  transition: width 1.2s var(--curva) .1s;
+}
+#vista-app .av .vh-gauge-target-tick {
+  position: absolute; z-index: 3; left: 65%; top: -4px; bottom: -4px;
+  width: 2px; border-radius: 2px;
+  background: var(--tx) !important; box-shadow: 0 0 0 2px var(--sup) !important;
+}
+#vista-app .av .vh-gauge-target-tick span {
+  position: absolute; top: calc(100% + 4px); left: 50%; transform: translateX(-50%);
+  font-size: 9.5px; font-weight: 700; color: var(--tx-3); letter-spacing: .04em; text-transform: uppercase;
+}
+
+/* Selector de vista: control segmentado a todo el ancho */
+#vista-app .av-switch {
+  display: grid !important; grid-template-columns: repeat(3, 1fr);
+  margin-top: 6px; padding: 3px; gap: 2px;
+  border-radius: 11px !important;
+  background: var(--sup-hundida) !important; border: 0 !important;
+}
+#vista-app .av-switch .vh-pill-btn {
+  height: 30px; padding: 0 6px;
+  border-radius: 9px !important; border: 0 !important;
+  background: transparent !important; color: var(--tx-2) !important;
+  font-size: 12px; font-weight: 700;
+  box-shadow: none !important;
+  transition: background .25s, color .25s, box-shadow .25s;
+}
+#vista-app .av-switch .vh-pill-btn:hover { color: var(--tx) !important; }
+#vista-app .av-switch .vh-pill-btn.activa { background: var(--sup) !important; color: var(--tx) !important; box-shadow: 0 1px 3px rgba(22, 22, 21, .14) !important; }
+:root[data-theme="dark"] #vista-app .av-switch .vh-pill-btn.activa { background: var(--lima) !important; color: var(--tinta) !important; }
+
+/* Distribución */
+#vista-app .av-dist { display: grid; gap: 10px; margin: 0; }
+#vista-app .av .vh-distribucion-bar { display: flex; gap: 3px; height: 6px; border-radius: 99px; overflow: hidden; background: transparent !important; }
+#vista-app .av .vh-dist-seg { border-radius: 99px; transition: width 1s var(--curva); }
+#vista-app .av .seg-cobrado, #vista-app .av .dot-cobrado { background: var(--tinta) !important; }
+:root[data-theme="dark"] #vista-app .av .seg-cobrado, :root[data-theme="dark"] #vista-app .av .dot-cobrado { background: var(--lima) !important; }
+#vista-app .av .seg-aldia, #vista-app .av .dot-aldia { background: var(--ok) !important; }
+#vista-app .av .seg-vencido, #vista-app .av .dot-vencido { background: var(--peligro) !important; }
+#vista-app .av-leyenda { display: grid !important; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+#vista-app .av-leyenda .vh-leg-item { display: flex; flex-direction: column; gap: 2px; color: var(--tx-3) !important; font-size: 11.5px; font-weight: 600; }
+#vista-app .av-leyenda .vh-leg-item span { display: inline-flex; align-items: center; gap: 6px; }
+#vista-app .av-leyenda .dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+#vista-app .av-leyenda strong { color: var(--tx) !important; font-size: 15px; font-weight: 800; letter-spacing: -.02em; padding-left: 13px; }
 
 /* =====================================================================
    6. MODALES, AVISOS, CARGA
@@ -1173,6 +1296,86 @@ svg { flex-shrink: 0; }
 }
 
 /* =====================================================================
+   6b. MODO OSCURO con contraste y vida
+   ===================================================================== */
+:root[data-theme="dark"] body {
+  background:
+    radial-gradient(1100px 620px at 100% -12%, rgba(204, 219, 42, 0.12), transparent 60%),
+    radial-gradient(900px 520px at -5% 110%, rgba(79, 224, 173, 0.05), transparent 60%),
+    var(--fondo);
+  background-attachment: fixed;
+}
+:root[data-theme="dark"] .sb { border-right: 1px solid rgba(204, 219, 42, 0.14); }
+:root[data-theme="dark"] .sb-nav button.activa { box-shadow: 0 0 0 1px rgba(204, 219, 42, .4), 0 10px 30px -8px rgba(204, 219, 42, .55); }
+:root[data-theme="dark"] .topbar { background: color-mix(in srgb, var(--fondo) 70%, transparent); }
+:root[data-theme="dark"] .topbar.con-sombra { border-bottom-color: var(--linea); }
+
+/* Superficies con relieve: degradado sutil + filo de luz superior */
+:root[data-theme="dark"] #vista-app .kpi,
+:root[data-theme="dark"] #vista-app .filtros,
+:root[data-theme="dark"] #vista-app .tabla-wrap,
+:root[data-theme="dark"] #vista-app .vendor-hero-metrics,
+:root[data-theme="dark"] #vista-app .vendor-hero-avance-box,
+:root[data-theme="dark"] .modal-backdrop .modal-caja {
+  background: linear-gradient(180deg, var(--sup-2), var(--sup)) !important;
+  border: 1px solid var(--linea) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 18px 40px -24px rgba(0, 0, 0, 0.9) !important;
+}
+:root[data-theme="dark"] #vista-app .kpi:hover { border-color: rgba(204, 219, 42, .35) !important; }
+:root[data-theme="dark"] #vista-app .kpi:first-child {
+  background: var(--lima) !important;
+  border-color: var(--lima) !important;
+  box-shadow: 0 16px 40px -18px rgba(204, 219, 42, .6) !important;
+}
+:root[data-theme="dark"] #vista-app .kpi.kpi-destacado-procesar span::after,
+:root[data-theme="dark"] #vista-app .kpi.kpi-exito span::after,
+:root[data-theme="dark"] #vista-app .kpi.alerta span::after { box-shadow: 0 0 10px 1px currentColor; }
+:root[data-theme="dark"] #vista-app .kpi.kpi-destacado-procesar span::after { background: var(--aviso-c); color: var(--aviso-c); }
+:root[data-theme="dark"] #vista-app .kpi.kpi-exito span::after { background: var(--ok); color: var(--ok); }
+:root[data-theme="dark"] #vista-app .kpi.alerta span::after { background: var(--peligro); color: var(--peligro); }
+:root[data-theme="dark"] #vista-app .kpi:first-child span::after { box-shadow: none; }
+:root[data-theme="dark"] #vista-app .kpi.kpi-destacado-procesar strong { color: var(--aviso-c) !important; }
+:root[data-theme="dark"] #vista-app .kpi.kpi-exito strong { color: var(--ok) !important; }
+
+:root[data-theme="dark"] #vista-app .vendor-hero { box-shadow: 0 24px 70px -30px rgba(204, 219, 42, .55); }
+:root[data-theme="dark"] #vista-app .vendor-hero-metrics,
+:root[data-theme="dark"] #vista-app .vendor-hero-avance-box { border-color: rgba(0, 0, 0, .25) !important; }
+
+:root[data-theme="dark"] #vista-app th { background: #1d2018 !important; color: var(--tx-2) !important; }
+:root[data-theme="dark"] #vista-app td { color: var(--tx); }
+:root[data-theme="dark"] #vista-app tbody tr:hover td { background: rgba(204, 219, 42, .07) !important; }
+:root[data-theme="dark"] #vista-app tbody tr:nth-child(even) td { background: rgba(255, 255, 255, .012); }
+
+:root[data-theme="dark"] #vista-app .filtros input,
+:root[data-theme="dark"] #vista-app .filtros select,
+:root[data-theme="dark"] .input-moderno { background-color: var(--sup-hundida) !important; border-color: var(--linea-fuerte) !important; }
+:root[data-theme="dark"] #vista-app .btn,
+:root[data-theme="dark"] .modal-backdrop .btn { background: var(--sup-2); border-color: var(--linea-fuerte); color: var(--tx); }
+:root[data-theme="dark"] #vista-app .btn:hover { border-color: rgba(204, 219, 42, .5); color: #fff; }
+:root[data-theme="dark"] #vista-app .tb-sync,
+:root[data-theme="dark"] #vista-app .tb-icono.btn-refrescar,
+:root[data-theme="dark"] #vista-app .tema-toggle.tb-tema,
+:root[data-theme="dark"] #vista-app .paginacion span { background: var(--sup-2); border-color: var(--linea-fuerte); }
+:root[data-theme="dark"] #vista-app .tb-titulos h1 { color: #fff; }
+:root[data-theme="dark"] .tb-saludo { color: var(--lima-texto); }
+:root[data-theme="dark"] .aviso { background: var(--sup-2) !important; border-color: rgba(204, 219, 42, .3) !important; }
+
+/* =====================================================================
+   6c. TRANSICIÓN AL CAMBIAR DE TEMA
+   ===================================================================== */
+/* Con View Transitions: el tema nuevo se revela en un círculo desde el botón (ver ui.js) */
+::view-transition-old(root),
+::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
+::view-transition-old(root) { z-index: 1; }
+::view-transition-new(root) { z-index: 2; }
+/* Navegadores sin View Transitions: fundido suave de colores */
+.tema-transicion, .tema-transicion *, .tema-transicion *::before, .tema-transicion *::after {
+  transition: background-color .55s var(--curva), color .55s var(--curva), border-color .55s var(--curva), fill .55s, box-shadow .55s !important;
+}
+#btn-tema.girando-tema .tb-tema-pista { animation: girarTema .7s var(--resorte); }
+@keyframes girarTema { from { transform: rotate(-200deg) scale(.5); } to { transform: none; } }
+
+/* =====================================================================
    7. Animaciones
    ===================================================================== */
 @keyframes subir { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
@@ -1196,9 +1399,29 @@ svg { flex-shrink: 0; }
 /* =====================================================================
    8. Responsive
    ===================================================================== */
-@media (max-width: 1200px) {
+@media (max-width: 1280px) {
   #vista-app .vendor-hero-grid { grid-template-columns: 1fr 1fr; }
-  #vista-app .vendor-hero-avance-box { grid-column: 1 / -1; }
+  #vista-app .vendor-hero-perfil { grid-column: 1 / -1; }
+}
+@media (max-width: 1100px) {
+  #vista-app .filtros { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  #vista-app .filtros > #wrap-f-vendedor,
+  #vista-app .filtros > #wrap-f-buscar { grid-column: span 6; }
+  #vista-app .filtros > label:nth-of-type(n),
+  #vista-app .filtros:has(> #wrap-f-vendedor[hidden]) > label:nth-of-type(n) { grid-column: span 2; }
+  #vista-app .filtros > #btn-limpiar { grid-column: span 2; }
+}
+@media (max-width: 640px) {
+  #vista-app .filtros { grid-template-columns: 1fr 1fr; padding: 14px; }
+  #vista-app .filtros > #wrap-f-vendedor,
+  #vista-app .filtros > #wrap-f-buscar,
+  #vista-app .filtros > #btn-limpiar { grid-column: 1 / -1; }
+  #vista-app .filtros > label:nth-of-type(n),
+  #vista-app .filtros:has(> #wrap-f-vendedor[hidden]) > label:nth-of-type(n) { grid-column: span 1; }
+  #vista-app .filtros > label:nth-of-type(1),
+  #vista-app .filtros:has(> #wrap-f-vendedor[hidden]) > label:nth-of-type(1) { grid-column: 1 / -1; }
+  #vista-app .vendor-hero-grid { grid-template-columns: 1fr; }
+  #vista-app .kpi span { font-size: 11.5px; white-space: normal; line-height: 1.3; }
 }
 
 @media (max-width: 980px) {

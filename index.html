@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css?v=beval2">
-<link rel="stylesheet" href="beval.css?v=3">
+<link rel="stylesheet" href="beval.css?v=5">
 </head>
 <body>
 
@@ -248,39 +248,49 @@
         </div>
       </div>
 
-      <div class="vendor-hero-avance-box">
-        <div class="vh-avance-header">
-          <span id="vh-avance-titulo">Avance & Proyección Cierre</span>
-          <strong id="vh-avance-txt">0% (Proy. 0%)</strong>
+      <!-- Avance y proyección de cierre -->
+      <div class="vendor-hero-avance-box av">
+        <div class="av-cabeza">
+          <span id="vh-avance-titulo" class="av-titulo">Avance & Proyección Cierre</span>
+          <!-- app.js escribe aquí "20% (Proy. Cierre 70%)"; ui.js lo reparte en las cifras de abajo -->
+          <strong id="vh-avance-txt" class="av-oculto">0%</strong>
         </div>
-        <div class="vh-gauge-wrap">
+
+        <div class="av-cifras">
+          <div class="av-principal">
+            <span class="av-num"><b id="av-num">0</b><i>%</i></span>
+            <span class="av-etq" id="av-etq">cobrado</span>
+          </div>
+          <div class="av-proy" id="av-proy">
+            <span>Proyección cierre</span>
+            <b id="av-proy-num">0%</b>
+          </div>
+        </div>
+
+        <div class="vh-gauge-wrap av-medidor">
           <div class="vh-gauge-track">
             <div id="vh-gauge-fill" class="vh-gauge-fill" style="width: 0%"></div>
-            <div class="vh-gauge-target-tick" title="Meta esperada"></div>
+            <div id="av-proy-fill" class="av-proy-fill" style="width: 0%"></div>
+            <div class="vh-gauge-target-tick" title="Meta esperada: 65%"><span>Meta</span></div>
           </div>
         </div>
 
-        <!-- Switch de Cartera: Cartera Completa / Solo Vencido / Solo al Día -->
-        <div class="vh-switch-wrap">
-          <span class="vh-switch-lbl">Ver:</span>
-          <div class="vh-switch-pills" id="vh-switch-cartera">
-            <button type="button" class="vh-pill-btn activa" data-vista="completa">Cartera completa</button>
-            <button type="button" class="vh-pill-btn" data-vista="vencida">Solo vencido</button>
-            <button type="button" class="vh-pill-btn" data-vista="aldia">Solo al día</button>
-          </div>
+        <div class="vh-switch-pills av-switch" id="vh-switch-cartera" role="tablist" aria-label="Vista de cartera">
+          <button type="button" class="vh-pill-btn activa" data-vista="completa">Completa</button>
+          <button type="button" class="vh-pill-btn" data-vista="vencida">Vencido</button>
+          <button type="button" class="vh-pill-btn" data-vista="aldia">Al día</button>
         </div>
 
-        <!-- Distribución Porcentual de la Cartera -->
-        <div class="vh-distribucion-wrap">
+        <div class="vh-distribucion-wrap av-dist">
           <div class="vh-distribucion-bar">
             <div id="vh-bar-cobrado" class="vh-dist-seg seg-cobrado" style="width: 0%" title="Cobrado"></div>
             <div id="vh-bar-aldia" class="vh-dist-seg seg-aldia" style="width: 0%" title="Al día (por vencer)"></div>
             <div id="vh-bar-vencido" class="vh-dist-seg seg-vencido" style="width: 0%" title="Vencido (mora)"></div>
           </div>
-          <div class="vh-distribucion-legend">
-            <span class="vh-leg-item"><span class="dot dot-cobrado"></span> Cobrado: <strong id="vh-pct-cobrado">0%</strong></span>
-            <span class="vh-leg-item"><span class="dot dot-aldia"></span> Al día: <strong id="vh-pct-aldia">0%</strong></span>
-            <span class="vh-leg-item"><span class="dot dot-vencido"></span> Vencido: <strong id="vh-pct-vencido">0%</strong></span>
+          <div class="vh-distribucion-legend av-leyenda">
+            <div class="vh-leg-item"><span><i class="dot dot-cobrado"></i>Cobrado</span><strong id="vh-pct-cobrado">0%</strong></div>
+            <div class="vh-leg-item"><span><i class="dot dot-aldia"></i>Al día</span><strong id="vh-pct-aldia">0%</strong></div>
+            <div class="vh-leg-item"><span><i class="dot dot-vencido"></i>Vencido</span><strong id="vh-pct-vencido">0%</strong></div>
           </div>
         </div>
       </div>
@@ -745,6 +755,6 @@
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script src="config.js?v=beval2"></script>
 <script src="app.js?v=beval2"></script>
-<script src="ui.js?v=3"></script>
+<script src="ui.js?v=5"></script>
 </body>
 </html>
