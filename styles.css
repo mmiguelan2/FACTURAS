@@ -3245,3 +3245,34 @@ tbody tr:hover {
   background: rgba(255, 255, 255, 0.02);
 }
 
+
+
+/* ===== LOGIN AUTOMOTRIZ BEVAL (tablero didáctico) ===== */
+.auto-tablero{display:flex;flex-direction:column;align-items:center;margin:4px 0 6px}
+.auto-gauge{width:min(260px,80%);height:auto;overflow:visible}
+.g-pista,.g-avance{fill:none;stroke-width:10;stroke-linecap:round}
+.g-pista{stroke:var(--gauge-track)}
+.g-avance{stroke:var(--beval-lime);stroke-dasharray:251.3;stroke-dashoffset:251.3;transition:stroke-dashoffset .6s cubic-bezier(.4,0,.2,1)}
+.g-marcas line{stroke:var(--suave);stroke-width:2;stroke-linecap:round}
+.g-aguja{transform-origin:100px 100px;transform:rotate(-90deg);transition:transform .6s cubic-bezier(.34,1.56,.64,1)}
+.g-aguja line{stroke:var(--beval-accent);stroke-width:3.5;stroke-linecap:round}
+.g-eje{fill:var(--beval-navy);stroke:var(--beval-lime);stroke-width:3}
+.g-txt{fill:var(--suave);font:700 9px "Plus Jakarta Sans",sans-serif}
+.auto-estado{margin:2px 0 0;font-size:13px;font-weight:600;color:var(--suave);text-align:center;min-height:18px}
+.auto-pasos{list-style:none;display:flex;gap:8px;margin:12px 0 18px;padding:0}
+.auto-pasos li{flex:1;display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--borde);border-radius:12px;font-size:12px;font-weight:600;color:var(--suave);transition:.25s}
+.auto-pasos b{display:grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--chip);color:var(--suave);font-size:12px;flex:none}
+.auto-pasos li.activo{border-color:var(--beval-accent);color:var(--texto)}
+.auto-pasos li.activo b{background:var(--beval-accent);color:#fff}
+.auto-pasos li.hecho{border-color:var(--beval-lime);color:var(--texto)}
+.auto-pasos li.hecho b{background:var(--beval-lime);color:#0d234a}
+.auto-pasos li.hecho b::before{content:"\2713"}
+.auto-pasos li.hecho b{font-size:0}.auto-pasos li.hecho b::before{font-size:12px}
+.ojo-clave{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:0;cursor:pointer;font-size:16px;opacity:.7}
+.ojo-clave:hover{opacity:1}
+.input-contenedor{position:relative}
+.input-contenedor input#login-clave{padding-right:42px}
+.auto-error{animation:auto-sacudir .4s}
+@keyframes auto-sacudir{20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
+@media(max-width:480px){.auto-pasos span{display:none}.auto-pasos li{justify-content:center}}
+@media(prefers-reduced-motion:reduce){.g-aguja,.g-avance{transition:none}.auto-error{animation:none}}

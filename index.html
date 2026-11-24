@@ -7,7 +7,7 @@
 <link rel="icon" type="image/x-icon" href="favicon.ico">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=corporate2">
+<link rel="stylesheet" href="styles.css?v=auto1">
 </head>
 <body>
 
@@ -86,9 +86,8 @@
   </div>
 
   <div class="login-wrapper">
-    <div class="login-card">
-      
-      <!-- Logo Beval Oficial -->
+    <div class="login-card auto-card" id="auto-card">
+
       <div class="login-header">
         <div class="beval-logo-box">
           <img src="logo_beval_transparent.png" alt="Comercializadora Beval" class="beval-logo">
@@ -99,35 +98,48 @@
         </div>
       </div>
 
-      <!-- Formulario de Ingreso -->
+      <!-- Tablero didáctico: la aguja avanza con cada paso -->
+      <div class="auto-tablero" aria-hidden="true">
+        <svg viewBox="0 0 200 118" class="auto-gauge">
+          <path d="M20 100 A80 80 0 0 1 180 100" class="g-pista"/>
+          <path d="M20 100 A80 80 0 0 1 180 100" class="g-avance" id="g-avance"/>
+          <g class="g-marcas"><line x1="24" y1="100" x2="36" y2="100"/><line x1="100" y1="16" x2="100" y2="28"/><line x1="164" y1="100" x2="176" y2="100"/></g>
+          <g id="g-aguja" class="g-aguja"><line x1="100" y1="100" x2="100" y2="34"/></g>
+          <circle cx="100" cy="100" r="7" class="g-eje"/>
+          <text x="22" y="115" class="g-txt">P</text><text x="100" y="12" class="g-txt" text-anchor="middle">N</text><text x="178" y="115" class="g-txt" text-anchor="end">D</text>
+        </svg>
+        <p class="auto-estado" id="auto-estado">Motor apagado: identifícate para comenzar</p>
+      </div>
+
+      <ol class="auto-pasos" aria-hidden="true">
+        <li id="paso-1" class="activo"><b>1</b><span>Usuario</span></li>
+        <li id="paso-2"><b>2</b><span>Clave</span></li>
+        <li id="paso-3"><b>3</b><span>Arrancar</span></li>
+      </ol>
+
       <form id="form-login" class="login-form">
         <div class="campo">
-          <label for="login-correo">Usuario o Primer Nombre</label>
+          <label for="login-correo">Usuario</label>
           <div class="input-contenedor">
-            <svg class="input-icono" viewBox="0 0 20 20" fill="currentColor">
-              <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
-            </svg>
-            <input type="text" id="login-correo" autocomplete="username" placeholder="Ej: angel, ronny, miguel, liseth o admin" required>
+            <svg class="input-icono" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/></svg>
+            <input type="text" id="login-correo" autocomplete="username" placeholder="Tu usuario" required>
           </div>
-          <span class="pista">💡 Asesor Comercial: escribe tu <strong>primer nombre</strong> (ej. angel, ronny, miguel) o tu código de zona</span>
+          <span class="pista">💡 Asesor: usa el usuario que te asignó el administrador</span>
         </div>
 
         <div class="campo">
           <label for="login-clave">Contraseña</label>
           <div class="input-contenedor">
-            <svg class="input-icono" viewBox="0 0 20 20" fill="currentColor">
-              <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" />
-            </svg>
-            <input type="password" id="login-clave" autocomplete="current-password" placeholder="Tu primer nombre o beval" required>
+            <svg class="input-icono" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/></svg>
+            <input type="password" id="login-clave" autocomplete="current-password" placeholder="Tu contraseña" required>
+            <button type="button" class="ojo-clave" id="ojo-clave" aria-label="Mostrar u ocultar contraseña">👁️</button>
           </div>
-          <span class="pista">🔑 Contraseña sencilla: <strong>tu primer nombre</strong> (o <strong>beval</strong>, o la definida en Excel)</span>
+          <span class="pista">🔑 Si no la recuerdas, pídele una nueva al administrador</span>
         </div>
 
         <button type="submit" class="btn primario btn-login" id="btn-entrar">
-          <span>Ingresar al Sistema</span>
-          <svg class="btn-flecha" viewBox="0 0 20 20" fill="currentColor">
-            <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" />
-          </svg>
+          <span>Arrancar motor</span>
+          <svg class="btn-flecha" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
         </button>
 
         <p class="error" id="login-error" hidden></p>
@@ -138,7 +150,6 @@
         <span class="separador">&bull;</span>
         <span class="version">Softland ERP Sync</span>
       </div>
-
     </div>
   </div>
 </section>
@@ -741,5 +752,33 @@
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script src="config.js?v=corporate2"></script>
 <script src="app.js?v=corporate2"></script>
+
+<script>
+/* Tablero didáctico del login (solo visual; no toca la lógica de app.js) */
+(function(){
+  var u=document.getElementById("login-correo"),c=document.getElementById("login-clave"),
+      av=document.getElementById("g-avance"),ag=document.getElementById("g-aguja"),
+      est=document.getElementById("auto-estado"),card=document.getElementById("auto-card"),
+      err=document.getElementById("login-error"),ojo=document.getElementById("ojo-clave");
+  if(!u||!c||!av) return;
+  var L=251.3, msg=["Motor apagado: identifícate para comenzar","Usuario listo: ahora escribe tu contraseña","Todo listo: presiona «Arrancar motor»"];
+  function set(n){
+    var p=[0,.33,.66,1][n];
+    av.style.strokeDashoffset=L*(1-p);
+    ag.style.transform="rotate("+(-90+180*p)+"deg)";
+    est.textContent=msg[Math.min(n,2)];
+    for(var i=1;i<=3;i++){var li=document.getElementById("paso-"+i);
+      li.className=i<=n?"hecho":(i===n+1?"activo":"");}
+  }
+  function calc(){ set(!u.value.trim()?0:(!c.value?1:2)); }
+  u.addEventListener("input",calc); c.addEventListener("input",calc);
+  if(ojo) ojo.addEventListener("click",function(){c.type=c.type==="password"?"text":"password";});
+  new MutationObserver(function(){
+    if(!err.hidden){ card.classList.remove("auto-error"); void card.offsetWidth; card.classList.add("auto-error");
+      est.textContent="Algo no cuadra: revisa tus datos e intenta de nuevo"; set(1); }
+  }).observe(err,{attributes:true,attributeFilter:["hidden"]});
+  set(0);
+})();
+</script>
 </body>
 </html>
