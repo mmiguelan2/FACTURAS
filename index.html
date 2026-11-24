@@ -3,220 +3,218 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#ccdb2a">
 <title>Facturas sin Retención · Beval</title>
 <link rel="icon" type="image/x-icon" href="favicon.ico">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=mayoreo1">
-<link rel="stylesheet" href="rediseno.css?v=1">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css?v=beval2">
+<link rel="stylesheet" href="beval.css?v=3">
 </head>
 <body>
 
-<!-- ============ LOGIN CORPORATIVO MODERNO ============ -->
-<section id="vista-login" class="login" hidden>
-  <!-- Fondo dinámico con líneas topográficas y rejilla abstracta -->
-  <div class="login-bg" aria-hidden="true">
-    <div class="login-glow"></div>
-    <div class="login-grid-pattern"></div>
-    <svg class="login-topo-svg" viewBox="0 0 1440 900" fill="none" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <!-- Gradientes para líneas en Verde Lima Beval -->
-        <linearGradient id="limeGrad1" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stop-color="#ccdb2a" stop-opacity="0.08" />
-          <stop offset="25%" stop-color="#ccdb2a" stop-opacity="0.6" />
-          <stop offset="70%" stop-color="#ccdb2a" stop-opacity="0.7" />
-          <stop offset="100%" stop-color="#ccdb2a" stop-opacity="0.1" />
-        </linearGradient>
-        <linearGradient id="limeGrad2" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stop-color="#ccdb2a" stop-opacity="0.1" />
-          <stop offset="35%" stop-color="#ccdb2a" stop-opacity="0.85" />
-          <stop offset="75%" stop-color="#dbe66a" stop-opacity="0.6" />
-          <stop offset="100%" stop-color="#ccdb2a" stop-opacity="0.1" />
-        </linearGradient>
-        <filter id="topoGlow" x="-20%" y="-20%" width="140%" height="140%">
-          <feGaussianBlur stdDeviation="3.5" result="blur" />
-          <feMerge>
-            <feMergeNode in="blur" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
-      </defs>
+<!-- Logo Beval reutilizable (los colores se controlan con --logo-tinta, --logo-centro y --logo-tapa) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="beval-logo" viewBox="262 68 372 142">
+    <path class="lg-tinta" d="M425.97,181.24c.59,7.49,7.97,11.06,16.41,11.06,6.18,0,11.18-.83,16.06-2.38l2.38,12.25c-5.95,2.38-13.2,3.57-21.05,3.57-19.74,0-31.04-11.42-31.04-29.61,0-14.75,9.16-31.04,29.38-31.04,18.79,0,25.93,14.63,25.93,29.02,0,3.09-.36,5.83-.59,7.14h-37.46ZM447.26,168.87c0-4.4-1.9-11.77-10.23-11.77-7.61,0-10.7,6.9-11.18,11.77h21.41Z"/>
+    <path class="lg-tinta" d="M491.74,146.39l7.85,27c1.43,4.88,2.5,9.51,3.33,14.15h.36c.95-4.76,1.9-9.16,3.21-14.15l7.49-27h19.03l-21.65,58.16h-18.08l-21.17-58.16h19.62Z"/>
+    <path class="lg-tinta" d="M577.73,204.55l-1.07-5.83h-.36c-3.81,4.64-9.75,7.14-16.65,7.14-11.77,0-18.79-8.56-18.79-17.84,0-15.1,13.56-22.36,34.13-22.24v-.83c0-3.09-1.67-7.49-10.58-7.49-5.95,0-12.25,2.02-16.06,4.4l-3.33-11.66c4.04-2.26,12.01-5.11,22.6-5.11,19.39,0,25.57,11.42,25.57,25.09v20.22c0,5.59.24,10.94.83,14.15h-16.29ZM575.59,177.08c-9.51-.12-16.89,2.14-16.89,9.16,0,4.64,3.09,6.9,7.14,6.9,4.52,0,8.21-2.97,9.4-6.66.24-.95.36-2.02.36-3.09v-6.3Z"/>
+    <path class="lg-tinta" d="M611.62,120.11h18.08v84.44h-18.08v-84.44Z"/>
+    <path class="lg-tinta" d="M291.94,73.31v17.12h3.47c7.26,0,13.14,6.06,13.14,13.53v13.62s0,18.82,0,18.82v.05-18.87s0,18.82,0,18.82h0v24.11h0c-.01.44-.02.88-.02,1.33,0,24.36,19.75,44.11,44.11,44.11s44.11-19.75,44.11-44.11-19.75-44.11-44.11-44.11c-.38,0-.76,0-1.15.01l-23.96-.23v-11.88h0c0-.32.02-.63.02-.95,0-17.46-14.16-31.62-31.62-31.62l-3.98.26ZM379.08,161.81c0,14.27-11.57,25.84-25.84,25.84h0c-14.27,0-25.84-11.57-25.84-25.84v-.02s.04-25.69.04-25.69l25.58-.13h.22c14.27,0,25.84,11.57,25.84,25.84h0Z"/>
+    <path class="lg-centro" d="M353.03,135.97l-25.58.13-.04,25.69v.02c0,14.27,11.57,25.84,25.84,25.84h0c14.27,0,25.84-11.57,25.84-25.84h0c0-14.27-11.57-25.84-25.84-25.84h-.22Z"/>
+    <path class="lg-tapa" d="M308.54,117.58l-12.18-.09h0s-5.49,0-5.49,0c-7.26,0-13.14-6.06-13.14-13.53,0-7.47,5.88-13.53,13.14-13.53.02,0,.46,0,1.06,0v-17.12c-15.58,1.96-27.64,15.25-27.64,31.36,0,17.46,14.16,31.62,31.62,31.62.27,0,.55,0,.82-.01l11.8.12v.05"/>
+  </symbol>
+</svg>
 
-      <!-- Grupo 1: Curvas Topográficas Base (Azul pizarra corporativo #2a2a2a / #404040) -->
-      <g class="topo-base-group">
-        <path class="topo-line topo-b1" d="M -100,100 C 220,40 460,200 780,120 C 1100,40 1300,180 1560,90" />
-        <path class="topo-line topo-b2" d="M -100,180 C 240,110 480,290 810,190 C 1140,90 1320,260 1560,170" />
-        <path class="topo-line topo-b3" d="M -100,260 C 260,180 500,380 840,260 C 1180,140 1340,340 1560,250" />
-        <path class="topo-line topo-b4" d="M -100,340 C 280,250 520,470 870,330 C 1220,190 1360,420 1560,330" />
-        <path class="topo-line topo-b5" d="M -100,430 C 260,330 540,560 900,410 C 1250,250 1380,510 1560,420" />
-        <path class="topo-line topo-b6" d="M -100,520 C 240,410 560,650 930,490 C 1280,310 1400,600 1560,510" />
-        <path class="topo-line topo-b7" d="M -100,610 C 220,490 580,740 960,570 C 1310,380 1420,690 1560,600" />
-        <path class="topo-line topo-b8" d="M -100,700 C 200,570 600,820 1000,650 C 1340,460 1440,780 1560,690" />
-        <path class="topo-line topo-b9" d="M -100,790 C 180,650 620,890 1040,730 C 1370,550 1460,860 1560,780" />
-      </g>
+<!-- ======================= LOGIN ======================= -->
+<section id="vista-login" class="lg" hidden>
 
-      <!-- Grupo 2: Acentos Sutiles en Verde Lima Corporativo (#ccdb2a) -->
-      <g class="topo-accent-group">
-        <!-- Curva acento 1 continua con sutil resplandor -->
-        <path class="topo-line topo-lime-continuous" stroke="url(#limeGrad1)" filter="url(#topoGlow)" d="M -100,220 C 250,145 490,335 825,225 C 1160,115 1330,300 1560,210" />
-        
-        <!-- Curva acento 2 discontinua y fluida -->
-        <path class="topo-line topo-lime-dashed" stroke="url(#limeGrad2)" d="M -100,385 C 270,290 530,515 885,370 C 1235,220 1370,465 1560,375" />
+  <!-- Panel de marca: verde Beval con campo de puntos que reacciona al cursor -->
+  <aside class="lg-marca" id="lg-marca">
+    <canvas class="lg-puntos" id="lg-puntos" aria-hidden="true"></canvas>
+    <div class="lg-marca-arriba">
+      <svg class="lg-logo" role="img" aria-label="Beval"><use href="#beval-logo"/></svg>
+    </div>
 
-        <!-- Curva acento 3 en la parte inferior -->
-        <path class="topo-line topo-lime-continuous" stroke="url(#limeGrad1)" filter="url(#topoGlow)" d="M -100,655 C 210,530 590,780 980,610 C 1325,420 1430,735 1560,645" />
+    <div class="lg-marca-centro">
+      <span class="lg-kicker"><i></i>Cuentas por cobrar · IVA</span>
+      <h2 class="lg-titular">Retenciones<br><em>bajo control.</em></h2>
+      <p class="lg-bajada">Seguimiento de comprobantes de retención de IVA por cliente, asesor y zona, en un solo lugar.</p>
 
-        <!-- Nodos de coordenadas técnicas y acento -->
-        <circle cx="250" cy="145" r="3" class="topo-node" />
-        <circle cx="825" cy="225" r="4.5" class="topo-node-lime" />
-        <circle cx="1160" cy="115" r="3" class="topo-node" />
-        <circle cx="530" cy="515" r="4.5" class="topo-node-lime" />
-        <circle cx="885" cy="370" r="3.5" class="topo-node" />
-        <circle cx="1235" cy="220" r="4" class="topo-node-lime" />
-        <circle cx="980" cy="610" r="4.5" class="topo-node-lime" />
-        <circle cx="1430" cy="735" r="3" class="topo-node" />
+      <ul class="lg-rasgos">
+        <li style="--d:0">
+          <span class="lg-rasgo-ico"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg></span>
+          <span><b>Cartera en vivo</b>Sincronizada con Google Sheets</span>
+        </li>
+        <li style="--d:1">
+          <span class="lg-rasgo-ico"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 15l2 2 4-4"/></svg></span>
+          <span><b>Conciliación automática</b>Lectura inteligente de comprobantes</span>
+        </li>
+        <li style="--d:2">
+          <span class="lg-rasgo-ico"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 8.6 8.6 0 0 1-3.9-.9L3 21l2-5.1a8.4 8.4 0 0 1-.9-3.9 8.5 8.5 0 0 1 8.4-8.5h.5a8.5 8.5 0 0 1 8 8z"/></svg></span>
+          <span><b>Recordatorios</b>A los asesores por WhatsApp</span>
+        </li>
+      </ul>
+    </div>
 
-        <!-- Marcadores geométricos discretos (+) -->
-        <path class="topo-cross" d="M 180,180 L 190,180 M 185,175 L 185,185" />
-        <path class="topo-cross topo-cross-lime" d="M 1260,260 L 1270,260 M 1265,255 L 1265,265" />
-        <path class="topo-cross" d="M 160,720 L 170,720 M 165,715 L 165,725" />
-        <path class="topo-cross topo-cross-lime" d="M 1310,750 L 1320,750 M 1315,745 L 1315,755" />
-      </g>
-    </svg>
-    <div class="login-vignette"></div>
-  </div>
+    <div class="lg-marca-pie">
+      <span>Comercializadora Beval, C.A.</span>
+      <span>Grupo Mayoreo</span>
+    </div>
+  </aside>
 
-  <div class="login-wrapper">
-    <aside class="login-lado">
-      <img src="logo_beval_blanco.svg" alt="Comercializadora Beval" class="login-lado-logo">
-      <div class="login-lado-texto">
-        <span class="login-lado-etiqueta">Cuentas por Cobrar &middot; IVA</span>
-        <h2>Facturas sin Retención</h2>
-        <p>Seguimiento de comprobantes de retención de IVA por cliente, asesor y zona.</p>
-        <ul class="login-lado-lista">
-          <li>Cartera sincronizada con Google Sheets</li>
-          <li>Conciliación de comprobantes con lectura automática</li>
-          <li>Recordatorios a asesores por WhatsApp</li>
-        </ul>
-      </div>
-      <span class="login-lado-pie">Grupo Mayoreo</span>
-    </aside>
+  <!-- Formulario -->
+  <main class="lg-panel">
+    <div class="lg-tarjeta" id="auto-card">
+      <svg class="lg-logo-movil" role="img" aria-label="Beval"><use href="#beval-logo"/></svg>
 
-    <div class="login-card auto-card" id="auto-card">
-
-      <div class="login-header">
-        <div class="login-titulos">
-          <h1>Iniciar sesión</h1>
-          <p>Ingresa con el usuario y la contraseña que te asignó el administrador.</p>
-        </div>
+      <div class="lg-encabezado">
+        <span class="lg-saludo" id="lg-saludo">Hola de nuevo</span>
+        <h1>Inicia sesión</h1>
+        <p>Elige tu perfil e ingresa con los datos que te asignó el administrador.</p>
       </div>
 
-      <!-- Tablero didáctico: la aguja avanza con cada paso -->
-      <div class="auto-tablero" aria-hidden="true">
-        <svg viewBox="0 0 200 118" class="auto-gauge">
-          <path d="M20 100 A80 80 0 0 1 180 100" class="g-pista"/>
-          <path d="M20 100 A80 80 0 0 1 180 100" class="g-avance" id="g-avance"/>
-          <g class="g-marcas"><line x1="24" y1="100" x2="36" y2="100"/><line x1="100" y1="16" x2="100" y2="28"/><line x1="164" y1="100" x2="176" y2="100"/></g>
-          <g id="g-aguja" class="g-aguja"><line x1="100" y1="100" x2="100" y2="34"/></g>
-          <circle cx="100" cy="100" r="7" class="g-eje"/>
-          <text x="22" y="115" class="g-txt">P</text><text x="100" y="12" class="g-txt" text-anchor="middle">N</text><text x="178" y="115" class="g-txt" text-anchor="end">D</text>
-        </svg>
-        <p class="auto-estado" id="auto-estado">Motor apagado: identifícate para comenzar</p>
+      <div class="lg-rol" id="lg-rol" role="radiogroup" aria-label="Tipo de acceso">
+        <span class="lg-rol-indicador" aria-hidden="true"></span>
+        <button type="button" role="radio" aria-checked="true" data-rol="asesor">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
+          Asesor comercial
+        </button>
+        <button type="button" role="radio" aria-checked="false" data-rol="admin">
+          <svg viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg>
+          Administración
+        </button>
       </div>
 
-      <ol class="auto-pasos" aria-hidden="true">
-        <li id="paso-1" class="activo"><b>1</b><span>Usuario</span></li>
-        <li id="paso-2"><b>2</b><span>Clave</span></li>
-        <li id="paso-3"><b>3</b><span>Arrancar</span></li>
-      </ol>
-
-      <form id="form-login" class="login-form">
-        <div class="campo">
+      <form id="form-login" class="lg-form" novalidate>
+        <div class="lg-campo">
+          <input type="text" id="login-correo" autocomplete="username" placeholder=" " required autocapitalize="none" spellcheck="false">
           <label for="login-correo">Usuario</label>
-          <div class="input-contenedor">
-            <svg class="input-icono" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/></svg>
-            <input type="text" id="login-correo" autocomplete="username" placeholder="Tu usuario" required>
-          </div>
+          <svg class="lg-campo-ico" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
+          <span class="lg-campo-ok" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg></span>
         </div>
 
-        <div class="campo">
+        <div class="lg-campo">
+          <input type="password" id="login-clave" autocomplete="current-password" placeholder=" " required>
           <label for="login-clave">Contraseña</label>
-          <div class="input-contenedor">
-            <svg class="input-icono" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/></svg>
-            <input type="password" id="login-clave" autocomplete="current-password" placeholder="Tu contraseña" required>
-            <button type="button" class="ojo-clave" id="ojo-clave" aria-label="Mostrar u ocultar contraseña"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button>
-          </div>
-          <span class="pista">Si no la recuerdas, pídele una nueva al administrador</span>
+          <svg class="lg-campo-ico" viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="2.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+          <button type="button" class="lg-ojo" id="ojo-clave" aria-label="Mostrar contraseña" aria-pressed="false">
+            <svg class="lg-ojo-abierto" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+            <svg class="lg-ojo-cerrado" viewBox="0 0 24 24"><path d="M3 3l18 18"/><path d="M10.6 5.1A10 10 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-3.2 4.1M6.6 6.6A17 17 0 0 0 2 12s3.5 7 10 7a9.7 9.7 0 0 0 5.4-1.6"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>
+          </button>
         </div>
 
-        <button type="submit" class="btn primario btn-login" id="btn-entrar">
-          <span>Arrancar motor</span>
-          <svg class="btn-flecha" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+        <div class="lg-ayudas">
+          <span class="lg-pista" id="lg-pista">Tu usuario es tu primer nombre (ej. «angel»).</span>
+          <span class="lg-mayus" id="lg-mayus" hidden>Bloq Mayús activado</span>
+        </div>
+
+        <div class="lg-progreso" aria-hidden="true"><span id="lg-progreso-barra"></span></div>
+
+        <button type="submit" class="lg-entrar" id="btn-entrar">
+          <span class="lg-entrar-txt">Entrar al portal</span>
+          <span class="lg-entrar-flecha"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+          <span class="lg-entrar-spin" aria-hidden="true"></span>
         </button>
 
-        <p class="error" id="login-error" hidden></p>
+        <p class="lg-error" id="login-error" role="alert" hidden></p>
       </form>
 
-      <div class="login-footer">
-        <span class="beval-empresa">Comercializadora Beval, C.A.</span>
-        <span class="separador">&bull;</span>
-        <span class="version">Softland ERP Sync</span>
+      <div class="lg-pie">
+        <span class="lg-estado"><i></i>Conectado a Google Sheets</span>
+        <span>¿Olvidaste tu clave? Pídela al administrador</span>
       </div>
     </div>
-  </div>
+  </main>
 </section>
 
-<!-- ============ APP ============ -->
-<div id="vista-app" hidden>
-  <header class="barra">
-    <div class="marca">
-      <div class="beval-logo-nav">
-        <img src="logo_beval_transparent.png" alt="Beval" class="logo-mini">
+<!-- ======================= APLICACIÓN ======================= -->
+<div id="vista-app" class="shell" hidden>
+
+  <!-- Barra lateral -->
+  <aside class="sb" id="sb">
+    <div class="sb-cabeza">
+      <svg class="sb-logo" role="img" aria-label="Beval"><use href="#beval-logo"/></svg>
+      <svg class="sb-logo-mini" viewBox="262 68 120 142" role="img" aria-label="Beval"><use href="#beval-logo"/></svg>
+      <button type="button" class="sb-colapsar" id="sb-colapsar" aria-label="Contraer menú" title="Contraer menú ( [ )">
+        <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 4v16"/></svg>
+      </button>
+    </div>
+
+    <div class="sb-seccion">Cartera</div>
+    <nav class="sb-nav" id="pestanas" aria-label="Secciones">
+      <button data-tab="facturas" class="activa" data-titulo="Facturas sin retención" data-atajo="1">
+        <svg viewBox="0 0 24 24"><path d="M6 2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/><path d="M14 2v6h6"/><path d="M9.5 13.5l5 5M14.5 13.5l-5 5"/></svg>
+        <span class="sb-txt">Sin retención</span>
+        <span class="tab-badge" id="badge-sin-retencion">0</span>
+      </button>
+      <button data-tab="por-procesar" data-titulo="Pendiente por procesar" data-atajo="2">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+        <span class="sb-txt">Por procesar</span>
+        <span class="tab-badge badge-por-procesar" id="badge-por-procesar">0</span>
+      </button>
+      <button data-tab="vendedores" class="solo-admin" data-titulo="Cartera por vendedor" data-atajo="3">
+        <svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6.5 6.5 0 0 1 3.5 6"/></svg>
+        <span class="sb-txt">Por vendedor</span>
+      </button>
+      <button data-tab="comprobantes" data-titulo="Comprobantes montados" data-atajo="4">
+        <svg viewBox="0 0 24 24"><path d="M6 2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/><path d="M14 2v6h6"/><path d="M8.5 15l2.5 2.5 4.5-5"/></svg>
+        <span class="sb-txt">Comprobantes</span>
+        <span class="tab-badge badge-exito" id="badge-comprobantes-montados">0</span>
+      </button>
+    </nav>
+
+    <div class="sb-seccion">Herramientas</div>
+    <div class="sb-herramientas">
+      <button id="btn-abrir-comprobante-nav" type="button" class="sb-cta" title="Subir comprobante y asociar facturas con lectura inteligente">
+        <svg viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
+        <span class="sb-txt">Cargar comprobante</span>
+      </button>
+      <a href="https://docs.google.com/spreadsheets/d/1Jf5oSCIGX7wKNswlpsea8mWDRqa2DYgKYVuNN5sqH6w/edit?gid=0#gid=0" target="_blank" rel="noopener" class="sb-link" title="Abrir Google Sheets maestro">
+        <svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M4 9h16M4 15h16M10 9v12"/></svg>
+        <span class="sb-txt">Google Sheets</span>
+        <svg class="sb-externo" viewBox="0 0 24 24"><path d="M7 17L17 7M9 7h8v8"/></svg>
+      </a>
+    </div>
+
+    <div class="sb-pie">
+      <div class="sb-usuario">
+        <span class="sb-avatar" id="sb-avatar">B</span>
+        <span class="sb-usuario-datos">
+          <span id="usuario-nombre"></span>
+          <span class="chip" id="usuario-rol"></span>
+        </span>
       </div>
-      <div>
-        <div class="marca-titulo-wrap">
-          <strong>Facturas sin Retención</strong>
-          <button id="btn-refrescar" type="button" class="btn-refrescar" title="Sincronizar con Google Sheets en vivo" aria-label="Sincronizar datos">
-            <svg class="icono-refrescar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M 15 4 H 8 A 4 4 0 0 0 4 8 V 19" />
-              <path d="M 1.5 16.5 L 4 19.5 L 6.5 16.5" />
-              <path d="M 9 20 H 16 A 4 4 0 0 0 20 16 V 5" />
-              <path d="M 17.5 7.5 L 20 4.5 L 22.5 7.5" />
-            </svg>
-          </button>
-          <a href="https://docs.google.com/spreadsheets/d/1Jf5oSCIGX7wKNswlpsea8mWDRqa2DYgKYVuNN5sqH6w/edit?gid=0#gid=0" target="_blank" rel="noopener" class="btn-sheet-link" title="Abrir Google Sheets maestro">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z"/></svg>
-            <span>Google Sheets</span>
-          </a>
-          <button id="btn-abrir-comprobante-nav" type="button" class="btn-sheet-link btn-comprobante-nav" title="Subir comprobante y asociar facturas con lectura inteligente">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-              <polyline points="14 2 14 8 20 8"></polyline>
-              <line x1="12" y1="18" x2="12" y2="12"></line>
-              <line x1="9" y1="15" x2="15" y2="15"></line>
-            </svg>
-            <span>Cargar Comprobante</span>
-          </button>
+      <button class="sb-salir" id="btn-salir" title="Cerrar sesión" aria-label="Cerrar sesión">
+        <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></svg>
+      </button>
+    </div>
+  </aside>
+  <div class="sb-velo" id="sb-velo"></div>
+
+  <!-- Contenido -->
+  <div class="contenido">
+    <header class="topbar">
+      <button type="button" class="tb-menu" id="tb-menu" aria-label="Abrir menú">
+        <svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></svg>
+      </button>
+      <div class="tb-titulos">
+        <span class="tb-saludo" id="tb-saludo">Buen día</span>
+        <h1 id="tb-titulo">Facturas sin retención</h1>
+      </div>
+      <div class="tb-acciones">
+        <span class="tb-sync"><i></i><small id="ultima-carga">Cargando datos desde Google Sheets...</small></span>
+        <button id="btn-refrescar" type="button" class="tb-icono btn-refrescar" title="Sincronizar con Google Sheets ( R )" aria-label="Sincronizar datos">
+          <svg class="icono-refrescar" viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 1-15.5 6.2L3 16"/><path d="M3 21v-5h5"/><path d="M3 12a9 9 0 0 1 15.5-6.2L21 8"/><path d="M21 3v5h-5"/></svg>
+        </button>
+        <div class="tema-toggle tb-tema" id="btn-tema" role="button" tabindex="0" title="Alternar modo claro u oscuro ( T )">
+          <span class="tb-tema-pista"><span class="tema-icon tema-icon-sun"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></span><span class="tema-icon tema-icon-moon"><svg viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg></span></span>
+          <span class="tema-texto" id="tema-texto">Claro</span>
         </div>
-        <small id="ultima-carga">Cargando datos desde Google Sheets...</small>
       </div>
-    </div>
-    
-    <div class="usuario">
-      <!-- Selector Modo Oscuro / Claro -->
-      <div class="tema-toggle" id="btn-tema" role="button" tabindex="0" title="Alternar modo claro u oscuro">
-        <span class="tema-icon tema-icon-sun"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></span>
-        <span class="tema-icon tema-icon-moon"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg></span>
-        <span class="tema-texto" id="tema-texto">Claro</span>
-      </div>
+    </header>
 
-      <span id="usuario-nombre"></span>
-      <span class="chip" id="usuario-rol"></span>
-      <button class="btn" id="btn-salir">Salir</button>
-    </div>
-  </header>
-
-  <!-- Tarjeta Ejecutiva del Asesor / Vendedor (Inspirada en Centro de Mando) -->
   <section id="vendor-hero" class="vendor-hero" hidden>
     <div class="vendor-hero-grid">
       <div class="vendor-hero-perfil">
@@ -288,24 +286,6 @@
       </div>
     </div>
   </section>
-
-  <nav class="pestanas" id="pestanas">
-    <button data-tab="facturas" class="activa">
-      <span>Sin Retención</span>
-      <span class="tab-badge" id="badge-sin-retencion">0</span>
-    </button>
-    <button data-tab="por-procesar">
-      <span>Pendiente por Procesar</span>
-      <span class="tab-badge badge-por-procesar" id="badge-por-procesar">0</span>
-    </button>
-    <button data-tab="vendedores" class="solo-admin">
-      <span>Por vendedor</span>
-    </button>
-    <button data-tab="comprobantes">
-      <span>Comprobantes montados</span>
-      <span class="tab-badge badge-exito" id="badge-comprobantes-montados">0</span>
-    </button>
-  </nav>
 
   <main>
     <section class="kpis">
@@ -492,7 +472,8 @@
       </div>
     </section>
   </main>
-</div>
+  </div><!-- /contenido -->
+</div><!-- /vista-app -->
 
 <!-- Modal de Mensajería Masiva -->
 <div id="modal-masivo" class="modal-backdrop" hidden>
@@ -762,35 +743,8 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-<script src="config.js?v=mayoreo1"></script>
-<script src="app.js?v=mayoreo1"></script>
-
-<script>
-/* Tablero didáctico del login (solo visual; no toca la lógica de app.js) */
-(function(){
-  var u=document.getElementById("login-correo"),c=document.getElementById("login-clave"),
-      av=document.getElementById("g-avance"),ag=document.getElementById("g-aguja"),
-      est=document.getElementById("auto-estado"),card=document.getElementById("auto-card"),
-      err=document.getElementById("login-error"),ojo=document.getElementById("ojo-clave");
-  if(!u||!c||!av) return;
-  var L=251.3, msg=["Motor apagado: identifícate para comenzar","Usuario listo: ahora escribe tu contraseña","Todo listo: presiona «Arrancar motor»"];
-  function set(n){
-    var p=[0,.33,.66,1][n];
-    av.style.strokeDashoffset=L*(1-p);
-    ag.style.transform="rotate("+(-90+180*p)+"deg)";
-    est.textContent=msg[Math.min(n,2)];
-    for(var i=1;i<=3;i++){var li=document.getElementById("paso-"+i);
-      li.className=i<=n?"hecho":(i===n+1?"activo":"");}
-  }
-  function calc(){ set(!u.value.trim()?0:(!c.value?1:2)); }
-  u.addEventListener("input",calc); c.addEventListener("input",calc);
-  if(ojo) ojo.addEventListener("click",function(){c.type=c.type==="password"?"text":"password";});
-  new MutationObserver(function(){
-    if(!err.hidden){ card.classList.remove("auto-error"); void card.offsetWidth; card.classList.add("auto-error");
-      est.textContent="Algo no cuadra: revisa tus datos e intenta de nuevo"; set(1); }
-  }).observe(err,{attributes:true,attributeFilter:["hidden"]});
-  set(0);
-})();
-</script>
+<script src="config.js?v=beval2"></script>
+<script src="app.js?v=beval2"></script>
+<script src="ui.js?v=3"></script>
 </body>
 </html>
