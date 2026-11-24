@@ -597,13 +597,13 @@
       setTimeout(() => {
         if (icono) icono.classList.remove("girando");
         if (btn) btn.disabled = false;
-        aviso("✅ Datos sincronizados con Google Sheets");
+        aviso("Datos sincronizados con Google Sheets");
       }, demora);
     } catch (err) {
       console.error("Error al refrescar datos:", err);
       if (icono) icono.classList.remove("girando");
       if (btn) btn.disabled = false;
-      aviso("❌ Error al leer Google Sheets: " + (err.message || "Verifique la conexión"));
+      aviso("Error al leer Google Sheets: " + (err.message || "Verifique la conexión"));
     }
   });
 
@@ -1213,7 +1213,7 @@
 
         let html = `<div class="combo-desglose-section">
           <div class="combo-desglose-header">
-            <span>⭐</span> Clientes con mayor saldo sin retención
+            Clientes con mayor saldo sin retención
           </div>`;
 
         html += topClientes.map((c) => `
@@ -1238,7 +1238,7 @@
 
         html += `<div class="combo-desglose-section">
           <div class="combo-desglose-tip">
-            💡 Escribe un <strong>N° de factura</strong>, <strong>cliente</strong>, <strong>RIF</strong> o <strong>asesor</strong> para desglosar resultados al instante.
+            Escribe un <strong>N° de factura</strong>, <strong>cliente</strong>, <strong>RIF</strong> o <strong>asesor</strong> para desglosar resultados al instante.
           </div>
         </div>`;
 
@@ -1325,7 +1325,7 @@
       if (facturasCoinciden.length > 0) {
         html += `<div class="combo-desglose-section">
           <div class="combo-desglose-header">
-            <span>📄</span> Facturas coincidentes (${facturasCoinciden.length})
+            Facturas coincidentes (${facturasCoinciden.length})
           </div>`;
         html += facturasCoinciden.map((f) => {
           const dias = Number(f.dias_vencida) || 0;
@@ -1359,7 +1359,7 @@
       if (clientesCoinciden.length > 0) {
         html += `<div class="combo-desglose-section">
           <div class="combo-desglose-header">
-            <span>🏢</span> Clientes / Razón Social (${clientesCoinciden.length})
+            Clientes / Razón Social (${clientesCoinciden.length})
           </div>`;
         html += clientesCoinciden.map((c) => `
           <div class="combo-desglose-item" data-tipo="cliente" data-val="${esc(c.nombre)}">
@@ -1386,7 +1386,7 @@
       if (vendedoresCoinciden.length > 0) {
         html += `<div class="combo-desglose-section">
           <div class="combo-desglose-header">
-            <span>👤</span> Asesores Comerciales (${vendedoresCoinciden.length})
+            Asesores Comerciales (${vendedoresCoinciden.length})
           </div>`;
         html += vendedoresCoinciden.map((v) => `
           <div class="combo-desglose-item" data-tipo="vendedor" data-val="${esc(v.nombre)}">
@@ -1411,7 +1411,7 @@
       if (analistasCoinciden.length > 0) {
         html += `<div class="combo-desglose-section">
           <div class="combo-desglose-header">
-            <span>👔</span> Analistas de Crédito (${analistasCoinciden.length})
+            Analistas de Crédito (${analistasCoinciden.length})
           </div>`;
         html += analistasCoinciden.map((a) => `
           <div class="combo-desglose-item" data-tipo="analista" data-val="${esc(a.nombre)}">
@@ -1437,7 +1437,7 @@
         <div class="combo-desglose-item" data-tipo="texto" data-val="${esc(query)}">
           <div class="combo-desglose-principal">
             <div class="combo-desglose-titulo">
-              🔍 <strong>Buscar "${esc(query)}" en toda la tabla</strong>
+              <strong>Buscar "${esc(query)}" en toda la tabla</strong>
             </div>
             <div class="combo-desglose-sub">
               ${totalCoincidencias} facturas coinciden con este criterio
@@ -1805,19 +1805,19 @@
     const ratioMora = saldoTotal > 0 ? (saldoVencido / saldoTotal) * 100 : 0;
 
     if (saldoVencido <= 0 || ratioMora === 0) {
-      if (avance >= 40) return { nivel: "estable", label: "🟢 Estable", clase: "estable" };
-      return { nivel: "precaucion", label: "🟡 En precaución", clase: "precaucion" };
+      if (avance >= 40) return { nivel: "estable", label: "Estable", clase: "estable" };
+      return { nivel: "precaucion", label: "En precaución", clase: "precaucion" };
     }
 
     if (ratioMora > 45 || (avance < 25 && ratioMora > 20)) {
-      return { nivel: "riesgo", label: "🔴 En riesgo", clase: "riesgo" };
+      return { nivel: "riesgo", label: "En riesgo", clase: "riesgo" };
     }
 
     if (avance >= 50 && ratioMora <= 25) {
-      return { nivel: "estable", label: "🟢 Estable", clase: "estable" };
+      return { nivel: "estable", label: "Estable", clase: "estable" };
     }
 
-    return { nivel: "precaucion", label: "🟡 En precaución", clase: "precaucion" };
+    return { nivel: "precaucion", label: "En precaución", clase: "precaucion" };
   }
 
   // ---------- TARJETA EJECUTIVA HERO CARD ----------
@@ -1982,17 +1982,17 @@
       }
     }
     const badgeComprobante = compAsociado
-      ? `<span class="badge-comprobante-cargado" data-ver-detalle-comp="${esc(compAsociado)}" title="Comprobante digital cargado: ${esc(compAsociado)}. Clic para ver">📄 #${esc(compAsociado)}</span>`
+      ? `<span class="badge-comprobante-cargado" data-ver-detalle-comp="${esc(compAsociado)}" title="Comprobante digital cargado: ${esc(compAsociado)}. Clic para ver"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg> #${esc(compAsociado)}</span>`
       : "";
 
     const clienteHtml = `
       <div class="cliente-consolidado" title="${esc(f.razon_social)} · ${esc(f.codigo_cliente)}">
         <button type="button" class="btn-copiar-razon" data-copiar-codigo="${esc(f.razon_social)}" data-tipo="Razón Social" title="Clic para copiar razón social: ${esc(f.razon_social)}">
           <span class="cliente-nombre">${esc(f.razon_social || "Sin nombre")}</span>
-          <span class="cod-icono-inline">📋</span>
+          <span class="cod-icono-inline"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></span>
         </button>
         <button type="button" class="cliente-codigo-btn" data-copiar-codigo="${esc(f.codigo_cliente)}" data-tipo="Código Cliente" title="Toca para copiar código ${esc(f.codigo_cliente)}">
-          <span class="cod-icono">📋</span>
+          <span class="cod-icono"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></span>
           <span class="cod-txt">${esc(f.codigo_cliente || "")}</span>
         </button>
         ${badgeDias}
@@ -2006,7 +2006,7 @@
       <td style="width: 105px;">
         <button type="button" class="btn-copiar-factura" data-copiar-codigo="${esc(f.factura)}" data-tipo="Factura" title="Clic para copiar factura #${esc(f.factura)}">
           <span class="cod-txt">#${esc(f.factura)}</span>
-          <span class="cod-icono">📋</span>
+          <span class="cod-icono"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></span>
         </button>
       </td>
       <td class="celda-fecha" style="width: 94px;">${fecha(f.fecha_emision)}</td>
@@ -2116,10 +2116,10 @@
       <div class="cliente-consolidado" title="${esc(f.razon_social)} · ${esc(f.codigo_cliente)}">
         <button type="button" class="btn-copiar-razon" data-copiar-codigo="${esc(f.razon_social)}" data-tipo="Razón Social" title="Clic para copiar razón social: ${esc(f.razon_social)}">
           <span class="cliente-nombre">${esc(f.razon_social || "Sin nombre")}</span>
-          <span class="cod-icono-inline">📋</span>
+          <span class="cod-icono-inline"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></span>
         </button>
         <button type="button" class="cliente-codigo-btn" data-copiar-codigo="${esc(f.codigo_cliente)}" data-tipo="Código Cliente" title="Toca para copiar código ${esc(f.codigo_cliente)}">
-          <span class="cod-icono">📋</span>
+          <span class="cod-icono"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></span>
           <span class="cod-txt">${esc(f.codigo_cliente || "")}</span>
         </button>
         ${badgeDias}
@@ -2133,12 +2133,12 @@
       }
     }
     const badgeCompMontado = compAsociado
-      ? `<span class="badge-comprobante-cargado" data-ver-detalle-comp="${esc(compAsociado)}" title="Comprobante digital cargado: ${esc(compAsociado)}. Clic para ver">📄 #${esc(compAsociado)}</span>`
+      ? `<span class="badge-comprobante-cargado" data-ver-detalle-comp="${esc(compAsociado)}" title="Comprobante digital cargado: ${esc(compAsociado)}. Clic para ver"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg> #${esc(compAsociado)}</span>`
       : "";
 
     const comprobanteHtml = f.retencion
       ? `<button type="button" class="btn-copiar-comprobante" data-copiar-codigo="${esc(f.retencion)}" title="Toca para copiar comprobante ${esc(f.retencion)}">
-          <span class="cod-icono">📑</span>
+          <span class="cod-icono"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></span>
           <span class="cod-txt" style="font-family: monospace; font-weight: 700;">${esc(f.retencion)}</span>
         </button> ${badgeCompMontado}`
       : (badgeCompMontado || `<span style="color: var(--suave);">—</span>`);
@@ -2150,7 +2150,7 @@
       <td style="width: 105px;">
         <button type="button" class="btn-copiar-factura" data-copiar-codigo="${esc(f.factura)}" data-tipo="Factura" title="Clic para copiar factura #${esc(f.factura)}">
           <span class="cod-txt">#${esc(f.factura)}</span>
-          <span class="cod-icono">📋</span>
+          <span class="cod-icono"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></span>
         </button>
       </td>
       <td class="celda-fecha" style="width: 94px;">${fecha(f.fecha_emision)}</td>
@@ -2158,7 +2158,7 @@
       <td class="num" style="width: 62px;">${diasV > 0 ? `<span class="vencida">${ent(diasV)}</span>` : ent(diasV)}</td>
       <td style="width: auto;">${clienteHtml}</td>
       <td style="width: 155px;">${comprobanteHtml}</td>
-      <td class="num" style="width: 95px; font-weight: 700; color: #0284c7;">$${usd(f.monto_retencion || f.monto_estimado)}</td>
+      <td class="num" style="width: 95px; font-weight: 700; color: #a3b018;">$${usd(f.monto_retencion || f.monto_estimado)}</td>
       <td class="num" style="width: 85px;">${usd(f.saldo_usd)}</td>
       <td style="width: 125px; font-size: 11.5px;">${esc(f.analista)}</td>
       <td style="width: 120px; font-size: 11.5px;" title="${esc(f.vendedor)}">${esc(f.vendedor)}</td>
@@ -2229,7 +2229,7 @@
       ? estado.filtradasProc.filter((f) => estado.seleccionadasProc.has(f.factura))
       : estado.filtradasProc;
     if (lista.length === 0) {
-      aviso("⚠️ No hay facturas por procesar para copiar");
+      aviso("No hay facturas por procesar para copiar");
       return;
     }
     const totalRet = lista.reduce((s, f) => s + (Number(f.monto_retencion) || Number(f.monto_estimado) || 0), 0);
@@ -2241,7 +2241,7 @@
       lineas.slice(0, 100).join("\n") +
       (lineas.length > 100 ? `\n\n... y ${lineas.length - 100} facturas más.` : "");
     await navigator.clipboard.writeText(texto);
-    aviso(`📋 Copiada lista de ${ent(lista.length)} facturas por procesar`);
+    aviso(`Copiada lista de ${ent(lista.length)} facturas por procesar`);
   });
 
   // Exportar CSV de "Por Procesar"
@@ -2311,13 +2311,13 @@
 
     btn.classList.add("copiado");
     const icono = btn.querySelector(".cod-icono") || btn.querySelector(".cod-icono-inline");
-    const txtOrig = icono ? icono.textContent : "";
-    if (icono) icono.textContent = "✓";
+    const htmlOrig = icono ? icono.innerHTML : "";
+    if (icono) icono.textContent = "";
     setTimeout(() => {
       btn.classList.remove("copiado");
-      if (icono) icono.textContent = txtOrig || "📋";
+      if (icono) icono.innerHTML = htmlOrig;
     }, 1200);
-    aviso(`📋 ${tipo} copiado al portapapeles: ${cod}`);
+    aviso(`${tipo} copiado al portapapeles: ${cod}`);
   });
 
   // Listener para editar / guardar teléfono de asesor comercial
@@ -2338,7 +2338,7 @@
     }
     pintarVendedores();
     actualizarModalMasivo();
-    aviso(limpio ? `📱 Teléfono guardado para ${v.nombre || cod}: ${limpio}` : `Teléfono eliminado para ${v.nombre || cod}`);
+    aviso(limpio ? `Teléfono guardado para ${v.nombre || cod}: ${limpio}` : `Teléfono eliminado para ${v.nombre || cod}`);
   });
 
   // ---------- TABLA 3: VENDEDORES ----------
@@ -2407,7 +2407,7 @@
       const codIdent = v.codigo || (zona ? zona.replace(/^Z0*/, "") : cod);
       const yaEnviado = estado.wsEnviados.has(codIdent) || estado.wsEnviados.has(cod);
       const statusBadge = yaEnviado
-        ? `<span class="badge-ws enviado">✅ Enviado</span>`
+        ? `<span class="badge-ws enviado">Enviado</span>`
         : `<span class="badge-ws espera">⏳ En espera</span>`;
 
       const colorAvance = avancePct >= 65 ? "#22c55e" : avancePct >= 35 ? "#f59e0b" : "#ef4444";
@@ -2424,16 +2424,16 @@
       const nombreLimpio = v.nombre || cod;
       const tieneTel = !!v.telefono;
       const telBtnHtml = tieneTel
-        ? `<button type="button" class="btn-editar-tel" data-editar-tel="${esc(cod)}" title="Clic para editar número de WhatsApp">📱 ${esc(v.telefono)} ✏️</button>`
-        : `<button type="button" class="btn-editar-tel sin-tel" data-editar-tel="${esc(cod)}" title="Clic para registrar número de WhatsApp">⚠️ Sin tel. ✏️ [+ Tel]</button>`;
+        ? `<button type="button" class="btn-editar-tel" data-editar-tel="${esc(cod)}" title="Clic para editar número de WhatsApp">${esc(v.telefono)} </button>`
+        : `<button type="button" class="btn-editar-tel sin-tel" data-editar-tel="${esc(cod)}" title="Clic para registrar número de WhatsApp">Sin tel. [+ Tel]</button>`;
 
       const cred = obtenerCredencialVendedor(cod, zona);
       const credBtnHtml = `
         <button type="button" class="btn-editar-cred ${cred.esPersonalizada ? 'personalizada' : ''}" data-editar-cred="${esc(cod)}" title="Clic para ver o cambiar el usuario y la contraseña de este asesor">
-          <span class="icono-llave">🔑</span>
+          <span class="icono-llave"></span>
           <span class="cred-detalle">User: <strong>${esc(cred.usuario)}</strong> &bull; Clave: <strong>${esc(cred.clave)}</strong></span>
-          ${cred.esPersonalizada ? '<span class="badge-personalizado" title="Clave personalizada">✓</span>' : ''}
-          <span class="cred-lapiz">✏️</span>
+          ${cred.esPersonalizada ? '<span class="badge-personalizado" title="Clave personalizada"></span>' : ''}
+          <span class="cred-lapiz"></span>
         </button>`;
 
       const celdaVendedor = `
@@ -2447,10 +2447,10 @@
       const waButtonsHtml = `
         <div class="acciones-wa-grupo">
           <button type="button" class="btn btn-wa-pill btn-wa-vencidas" data-wa="${esc(cod)}" data-modo="vencidas" title="Enviar WhatsApp solo de facturas vencidas (${r.vencidas}) y generar imagen">
-            🔴 Vencidas (${r.vencidas})
+            Vencidas (${r.vencidas})
           </button>
           <button type="button" class="btn btn-wa-pill btn-wa-todas" data-wa="${esc(cod)}" data-modo="todas" title="Enviar WhatsApp de cartera completa (${r.facturas}) y generar imagen">
-            📋 Todas (${r.facturas})
+            Todas (${r.facturas})
           </button>
         </div>`;
 
@@ -2490,7 +2490,7 @@
     estado.wsEnviados.clear();
     guardarWsEnviados(estado.wsEnviados);
     pintarVendedores();
-    aviso("🔄 Estados de WhatsApp reiniciados para hoy");
+    aviso("Estados de WhatsApp reiniciados para hoy");
   });
 
   // ---------- GENERADOR DE IMAGEN / TARJETA VISUAL DE COBRANZA (CANVAS PNG) ----------
@@ -2512,12 +2512,12 @@
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, width, height);
 
-    // Cabecera superior Beval Blue (#0b2341)
-    ctx.fillStyle = "#0b2341";
+    // Cabecera superior Beval Blue (#1d1d1b)
+    ctx.fillStyle = "#1d1d1b";
     ctx.fillRect(0, 0, width, 125);
 
-    // Línea de acento verde Beval (#84cc16)
-    ctx.fillStyle = "#84cc16";
+    // Línea de acento verde Beval (#ccdb2a)
+    ctx.fillStyle = "#ccdb2a";
     ctx.fillRect(0, 125, width, 5);
 
     // Título Principal
@@ -2526,7 +2526,7 @@
     ctx.fillText("DISTRIBUIDORA BEVAL, C.A.", padding, 38);
 
     // Subtítulo según modo
-    ctx.fillStyle = esSoloVencidas ? "#f87171" : "#38bdf8";
+    ctx.fillStyle = esSoloVencidas ? "#f87171" : "#a3b018";
     ctx.font = "bold 13px 'Inter', sans-serif, Arial";
     const subTit = esSoloVencidas
       ? "🔴 REPORTE DE RETENCIONES DE IVA · SOLO FACTURAS VENCIDAS"
@@ -2534,7 +2534,7 @@
     ctx.fillText(subTit, padding, 62);
 
     // Datos del Asesor y Fecha
-    ctx.fillStyle = "#e2e8f0";
+    ctx.fillStyle = "#e5e5e5";
     ctx.font = "13px 'Inter', sans-serif, Arial";
     const hoyStr = new Date().toLocaleDateString("es-VE", { year: "numeric", month: "short", day: "numeric" });
     const zonaTxt = listaFacturas[0]?.zona ? `Zona: ${listaFacturas[0].zona}   |   ` : "";
@@ -2543,10 +2543,10 @@
 
     // Cabecera de la tabla
     const tableY = 145;
-    ctx.fillStyle = "#f1f5f9";
+    ctx.fillStyle = "#f4f4f4";
     ctx.fillRect(padding, tableY, width - (padding * 2), 30);
 
-    ctx.fillStyle = "#1e293b";
+    ctx.fillStyle = "#2a2a2a";
     ctx.font = "bold 11px 'Inter', sans-serif, Arial";
     ctx.fillText("FACTURA", padding + 10, tableY + 19);
     ctx.fillText("CLIENTE / RAZÓN SOCIAL", padding + 95, tableY + 19);
@@ -2561,27 +2561,27 @@
     for (let i = 0; i < totalRows; i++) {
       const f = listaFacturas[i];
       if (i % 2 === 1) {
-        ctx.fillStyle = "#f8fafc";
+        ctx.fillStyle = "#fafafa";
         ctx.fillRect(padding, curY, width - (padding * 2), rowHeight);
       }
 
       // Línea divisoria
-      ctx.fillStyle = "#e2e8f0";
+      ctx.fillStyle = "#e5e5e5";
       ctx.fillRect(padding, curY + rowHeight - 1, width - (padding * 2), 1);
 
       // Factura
-      ctx.fillStyle = "#0f172a";
+      ctx.fillStyle = "#171717";
       ctx.font = "bold 11px 'Inter', sans-serif, Arial";
       ctx.fillText(String(f.factura || ""), padding + 10, curY + 18);
 
       // Cliente (truncado suave si es muy largo)
       ctx.font = "11px 'Inter', sans-serif, Arial";
-      ctx.fillStyle = "#334155";
+      ctx.fillStyle = "#404040";
       const nomCliente = (f.razon_social || f.codigo_cliente || "").substring(0, 48);
       ctx.fillText(nomCliente, padding + 95, curY + 18);
 
       // Vence
-      ctx.fillStyle = "#64748b";
+      ctx.fillStyle = "#6b6b6b";
       ctx.fillText(fecha(f.fecha_vence) || "—", padding + 460, curY + 18);
 
       // Días Vencida
@@ -2607,7 +2607,7 @@
 
     // Pie con totales y marca Beval
     curY += 12;
-    ctx.fillStyle = "#0b2341";
+    ctx.fillStyle = "#1d1d1b";
     ctx.fillRect(padding, curY, width - (padding * 2), 44);
 
     const totalEstimado = listaFacturas.reduce((s, f) => s + (Number(f.monto_estimado) || 0), 0);
@@ -2615,7 +2615,7 @@
     ctx.font = "bold 12px 'Inter', sans-serif, Arial";
     ctx.fillText(`TOTAL: ${totalRows} FACTURAS`, padding + 16, curY + 27);
 
-    ctx.fillStyle = "#84cc16";
+    ctx.fillStyle = "#ccdb2a";
     ctx.font = "bold 15px 'Inter', sans-serif, Arial";
     ctx.fillText(`ESTIMADO TOTAL: $${usd(totalEstimado)} USD`, width - padding - 310, curY + 27);
 
@@ -2745,12 +2745,12 @@
       const url = `https://api.whatsapp.com/send?phone=${tel}&text=${encodeURIComponent(textoMsg)}`;
       window.open(url, "_blank", "noopener");
       marcarWsEnviado(cod);
-      aviso(`✅ WhatsApp abierto para ${v.nombre || cod} con ${lista.length} facturas ${soloVencidas ? "vencidas" : "totales"}. ¡Imagen descargada lista para adjuntar!`);
+      aviso(`WhatsApp abierto para ${v.nombre || cod} con ${lista.length} facturas ${soloVencidas ? "vencidas" : "totales"}. ¡Imagen descargada lista para adjuntar!`);
     } else {
       const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(textoMsg)}`;
       window.open(url, "_blank", "noopener");
       marcarWsEnviado(cod);
-      aviso(`📋 Mensaje copiado e imagen descargada. Elige a ${v.nombre || cod} en WhatsApp`);
+      aviso(`Mensaje copiado e imagen descargada. Elige a ${v.nombre || cod} en WhatsApp`);
     }
   }
 
@@ -2768,7 +2768,7 @@
     const cod = $("f-vendedor")?.value || (esAdmin() ? "" : estado.perfil?.codigo_vendedor);
     const soloVencidas = $("f-estado")?.value === "vencidas";
     await navigator.clipboard.writeText(mensaje(cod, estado.filtradas, soloVencidas));
-    aviso("📋 Mensaje copiado al portapapeles");
+    aviso("Mensaje copiado al portapapeles");
   });
 
   // ---------- MENSAJERÍA MASIVA ----------
@@ -2852,7 +2852,7 @@
       const modoLabel = esModoVencidas ? "vencidas" : "totales";
 
       $("masivo-proximo-nombre").textContent = v.nombre || proximo.cod;
-      $("masivo-proximo-detalles").textContent = `Zona ${proximo.zona || "—"} · ${ent(cantFact)} facturas ${modoLabel} · $${usd(montoEst)} USD ${tel ? `· 📱 ${tel}` : "· ℹ️ Se abrirá WhatsApp para seleccionar contacto"}`;
+      $("masivo-proximo-detalles").textContent = `Zona ${proximo.zona || "—"} · ${ent(cantFact)} facturas ${modoLabel} · $${usd(montoEst)} USD ${tel ? `· ${tel}` : "· ℹ️ Se abrirá WhatsApp para seleccionar contacto"}`;
       if (btnSiguiente) {
         btnSiguiente.disabled = false;
         btnSiguiente.dataset.codProximo = proximo.cod;
@@ -2861,11 +2861,11 @@
           : `<span>▶ Abrir WhatsApp para ${esc(v.nombre || proximo.cod)} (${cantFact} ${modoLabel})</span>`;
       }
     } else {
-      $("masivo-proximo-nombre").textContent = "🎉 ¡Todos los asesores han sido contactados hoy!";
+      $("masivo-proximo-nombre").textContent = "¡Todos los asesores han sido contactados hoy!";
       $("masivo-proximo-detalles").textContent = "Puedes reiniciar los estados en cualquier momento si deseas enviar nuevamente.";
       if (btnSiguiente) {
         btnSiguiente.disabled = true;
-        btnSiguiente.innerHTML = "<span>🎉 Todo enviado por hoy</span>";
+        btnSiguiente.innerHTML = "<span>Todo enviado por hoy</span>";
         delete btnSiguiente.dataset.codProximo;
       }
     }
@@ -2887,19 +2887,19 @@
     const separador = "\n" + "=".repeat(45) + "\n\n";
     const textoCompleto = listaGrupos.map(({ cod, fs }) => mensaje(cod, fs, esModoVencidas)).join(separador);
     await navigator.clipboard.writeText(textoCompleto);
-    aviso(`📋 Se han copiado todos los mensajes (${esModoVencidas ? "Solo Vencidas" : "Cartera Completa"}) al portapapeles`);
+    aviso(`Se han copiado todos los mensajes (${esModoVencidas ? "Solo Vencidas" : "Cartera Completa"}) al portapapeles`);
   });
 
   $("btn-copiar-clientes-sel")?.addEventListener("click", async () => {
     if (estado.seleccionadas.size === 0) {
-      aviso("⚠️ Primero marca al menos una factura en la tabla");
+      aviso("Primero marca al menos una factura en la tabla");
       return;
     }
     const listaSel = estado.facturas.filter((f) => estado.seleccionadas.has(f.factura));
     const lineas = listaSel.map((f) => `• Factura: ${f.factura} | Cliente: ${f.razon_social} | Estimado Ret. 75%: $${usd(f.monto_estimado)} USD | Vence: ${fecha(f.fecha_vence)}`);
     const texto = `*RECORDATORIO DE FACTURAS PENDIENTES DE RETENCIÓN DE IVA*\n\n` + lineas.join("\n") + `\n\nTotal estimado: $${usd(listaSel.reduce((s, f) => s + (Number(f.monto_estimado) || 0), 0))} USD`;
     await navigator.clipboard.writeText(texto);
-    aviso(`📋 Mensaje copiado con ${listaSel.length} facturas`);
+    aviso(`Mensaje copiado con ${listaSel.length} facturas`);
   });
 
   // ---------- CSV EXPORT (SIN RETENCIÓN) ----------
@@ -3240,7 +3240,7 @@
     actualizarOtrasFacturasCliente();
 
     if (facturasDetectadas.size > 0) {
-      aviso(`✅ ¡Lectura exitosa! Se detectaron ${facturasDetectadas.size} factura(s) automáticamente.`);
+      aviso(`¡Lectura exitosa! Se detectaron ${facturasDetectadas.size} factura(s) automáticamente.`);
     } else {
       aviso("ℹ️ Documento leído. Puedes ingresar el correlativo y asociar tus facturas abajo.");
     }
@@ -3271,7 +3271,7 @@
               <strong>$${usd(f.monto_dolar)} USD</strong>
               <small>Ret. Est.: $${usd(f.monto_estimado)}</small>
             </div>
-            <button type="button" class="btn-quitar-fac" data-quitar-fac="${esc(f.factura)}" title="Quitar de este comprobante">✕</button>
+            <button type="button" class="btn-quitar-fac" data-quitar-fac="${esc(f.factura)}" title="Quitar de este comprobante"></button>
           </div>
         </div>
       `).join("");
@@ -3417,7 +3417,7 @@
     const numComp = $("comp-input-numero")?.value.trim() || "Comprobante Digital";
     const facs = [...estado.comprobanteActivo.facturas.keys()];
     if (facs.length === 0) {
-      aviso("⚠️ Agrega al menos una factura para filtrar");
+      aviso("Agrega al menos una factura para filtrar");
       return;
     }
 
@@ -3440,7 +3440,7 @@
 
     aplicarFiltros();
     cerrarModalComprobante();
-    aviso(`🔍 Tabla filtrada con las ${facs.length} facturas del comprobante`);
+    aviso(`Tabla filtrada con las ${facs.length} facturas del comprobante`);
   });
 
   function quitarFiltroComprobante() {
@@ -3464,7 +3464,7 @@
     const lista = [...estado.comprobanteActivo.facturas.values()];
 
     if (lista.length === 0) {
-      aviso("⚠️ Asocia al menos una factura antes de copiar el resumen");
+      aviso("Asocia al menos una factura antes de copiar el resumen");
       return;
     }
 
@@ -3484,7 +3484,7 @@
       `Estatus: En verificación / Conciliación`;
 
     await navigator.clipboard.writeText(texto);
-    aviso("📋 Resumen para WhatsApp copiado al portapapeles con éxito");
+    aviso("Resumen para WhatsApp copiado al portapapeles con éxito");
   });
 
   // Permitir agregar factura pulsando Enter en el buscador del asistente
@@ -3526,14 +3526,14 @@
   $("btn-comp-guardar")?.addEventListener("click", () => {
     const numComp = ($("comp-input-numero")?.value || "").trim();
     if (!numComp) {
-      aviso("⚠️ El único requisito obligatorio es el número correlativo del comprobante");
+      aviso("El único requisito obligatorio es el número correlativo del comprobante");
       $("comp-input-numero")?.focus();
       return;
     }
 
     const facs = [...estado.comprobanteActivo.facturas.keys()];
     if (facs.length === 0) {
-      aviso("⚠️ Debe asociar al menos una factura al comprobante");
+      aviso("Debe asociar al menos una factura al comprobante");
       $("comp-buscador-asistente")?.focus();
       return;
     }
@@ -3558,7 +3558,7 @@
     pintarPorProcesar();
     pintarComprobantesMontados();
     cerrarModalComprobante();
-    aviso(`💾 Comprobante #${numComp} guardado con éxito (${facs.length} factura(s) asociadas)`);
+    aviso(`Comprobante #${numComp} guardado con éxito (${facs.length} factura(s) asociadas)`);
   });
 
   // ==============================================
@@ -3595,8 +3595,8 @@
     if (filtrados.length === 0) {
       tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 36px 16px; color: var(--suave);">
         ${comps.length === 0
-          ? "No has montado ningún comprobante todavía.<br><br><button type='button' class='btn primario btn-exito-beval' onclick='document.getElementById(\"btn-nuevo-comprobante-tab\")?.click()'>📄 + Montar Primer Comprobante</button>"
-          : "🔍 No se encontraron comprobantes que coincidan con la búsqueda."}
+          ? "No has montado ningún comprobante todavía.<br><br><button type='button' class='btn primario btn-exito-beval' onclick='document.getElementById(\"btn-nuevo-comprobante-tab\")?.click()'>+ Montar Primer Comprobante</button>"
+          : "No se encontraron comprobantes que coincidan con la búsqueda."}
       </td></tr>`;
       return;
     }
@@ -3619,7 +3619,7 @@
         <td>
           <div style="display: flex; align-items: center; gap: 6px;">
             <strong style="font-family: monospace; font-size: 13.5px; color: var(--texto);">${esc(c.numero)}</strong>
-            <button type="button" class="btn-copiar-mini" data-copiar-txt="${esc(c.numero)}" title="Copiar correlativo">📋</button>
+            <button type="button" class="btn-copiar-mini" data-copiar-txt="${esc(c.numero)}" title="Copiar correlativo"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
           </div>
           <small style="color: var(--suave); font-size: 10px;">${c.timestamp ? new Date(c.timestamp).toLocaleDateString("es-VE") : ""}</small>
         </td>
@@ -3637,10 +3637,10 @@
         <td style="text-align: center;">
           <div style="display: flex; justify-content: center; gap: 6px;">
             <button type="button" class="btn btn-sm btn-secundario" data-ver-detalle-comp="${esc(c.numero)}" title="Ver y editar facturas de este comprobante">
-              🔍 Ver
+              Ver
             </button>
-            <button type="button" class="btn btn-sm btn-secundario" data-eliminar-comp="${esc(c.numero)}" title="Eliminar comprobante" style="color: #ef4444;">
-              🗑️
+            <button type="button" class="btn btn-sm btn-secundario" data-eliminar-comp="${esc(c.numero)}" title="Eliminar comprobante" style="color: #dc2626;" aria-label="Eliminar comprobante">
+              <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
             </button>
           </div>
         </td>
@@ -3723,7 +3723,7 @@
         pintarFacturas();
         pintarPorProcesar();
         pintarComprobantesMontados();
-        aviso(`🗑️ Comprobante #${numC} eliminado`);
+        aviso(`Comprobante #${numC} eliminado`);
       }
       return;
     }
@@ -3752,9 +3752,9 @@
       const txt = btnCopiar.dataset.copiarTxt;
       if (txt && navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(txt).then(() => {
-          aviso(`📋 Correlativo #${txt} copiado al portapapeles`);
+          aviso(`Correlativo #${txt} copiado al portapapeles`);
         }).catch(() => {
-          aviso(`📋 ${txt}`);
+          aviso(`${txt}`);
         });
       }
       return;
@@ -3779,8 +3779,6 @@
     $("mc-input-usuario").value = cred.usuario;
     $("mc-input-clave").value = cred.clave;
     $("mc-input-clave").type = "text";
-    $("mc-btn-ver-clave").textContent = "👁️";
-
     $("modal-credencial").hidden = false;
     $("mc-input-usuario").focus();
   }
@@ -3826,10 +3824,8 @@
     if (!inp) return;
     if (inp.type === "password") {
       inp.type = "text";
-      $("mc-btn-ver-clave").textContent = "👁️";
     } else {
       inp.type = "password";
-      $("mc-btn-ver-clave").textContent = "🙈";
     }
   });
 
@@ -3840,7 +3836,7 @@
     const c = ($("mc-input-clave").value || "").trim();
 
     if (!u || !c) {
-      aviso("⚠️ El usuario y la contraseña no pueden estar vacíos");
+      aviso("El usuario y la contraseña no pueden estar vacíos");
       return;
     }
 
@@ -3848,7 +3844,7 @@
     cerrarModalCredencial();
     pintarVendedores();
     if (!$("modal-todos-accesos")?.hidden) pintarTablaTodosAccesos();
-    aviso(`✅ Acceso guardado para ${asesorEditandoCred.v.nombre || asesorEditandoCred.cod}: Usuario "${u}" | Clave "${c}"`);
+    aviso(`Acceso guardado para ${asesorEditandoCred.v.nombre || asesorEditandoCred.cod}: Usuario "${u}" | Clave "${c}"`);
   });
 
   // Restablecer por defecto
@@ -3882,7 +3878,7 @@ Hola *${v.nombre || asesorEditandoCred.cod}*, aquí tienes tus datos de acceso a
 _Al ingresar podrás consultar tus clientes asignados y gestionar las facturas pendientes._`;
 
     navigator.clipboard.writeText(texto).then(() => {
-      aviso("📋 Mensaje de acceso copiado al portapapeles listo para enviar por WhatsApp");
+      aviso("Mensaje de acceso copiado al portapapeles listo para enviar por WhatsApp");
     }).catch(() => {
       prompt("Copia este mensaje para el asesor:", texto);
     });
@@ -3947,7 +3943,7 @@ _Al ingresar podrás consultar tus clientes asignados y gestionar las facturas p
         </td>
         <td style="text-align: center;">
           <button type="button" class="btn btn-sm btn-secundario" data-editar-cred="${esc(g.cod)}" title="Editar usuario y clave">
-            ✏️ Cambiar
+            Cambiar
           </button>
         </td>
       </tr>`;
@@ -3978,7 +3974,7 @@ _Al ingresar podrás consultar tus clientes asignados y gestionar las facturas p
     a.download = `credenciales_asesores_beval_${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-    aviso("📥 Archivo CSV con los accesos descargado");
+    aviso("Archivo CSV con los accesos descargado");
   });
 
   iniciar().catch((err) => {

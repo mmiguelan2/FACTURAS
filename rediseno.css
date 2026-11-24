@@ -1,0 +1,886 @@
+/* =====================================================================
+   REDISEÑO · Facturas sin Retención (Beval)
+   Sistema de diseño Grupo Mayoreo: base en grises, lima Beval como acento.
+   Se carga después de styles.css y lo sobrescribe sin tocar app.js.
+   Los selectores con #vista-app / #vista-login ganan a las reglas viejas.
+   ===================================================================== */
+
+:root,
+:root[data-theme="light"] {
+  --r-fondo: #f4f4f3;
+  --r-superficie: #ffffff;
+  --r-superficie-2: #fafaf9;
+  --r-borde: #e7e7e5;
+  --r-borde-fuerte: #d4d4d2;
+  --r-texto: #1d1d1b;
+  --r-texto-2: #57574f;
+  --r-texto-3: #8a8a84;
+  --r-primario: #1d1d1b;
+  --r-primario-hover: #3a3a37;
+  --r-primario-texto: #ffffff;
+  --r-acento: #ccdb2a;
+  --r-acento-texto: #4f5a00;
+  --r-acento-suave: #f5f8d6;
+  --r-exito: #00866a;
+  --r-exito-suave: #e6f6f2;
+  --r-peligro: #c62828;
+  --r-peligro-suave: #fdeeee;
+  --r-aviso: #b45309;
+  --r-aviso-suave: #fef6e7;
+  --r-foco: 0 0 0 3px rgba(29, 29, 27, 0.12);
+  --r-sombra: 0 1px 2px rgba(16, 16, 14, 0.04), 0 1px 3px rgba(16, 16, 14, 0.04);
+  --r-sombra-alta: 0 12px 32px -8px rgba(16, 16, 14, 0.18), 0 2px 6px rgba(16, 16, 14, 0.06);
+  --r-radio: 10px;
+  --r-radio-sm: 8px;
+}
+
+:root[data-theme="dark"] {
+  --r-fondo: #111110;
+  --r-superficie: #1a1a19;
+  --r-superficie-2: #20201f;
+  --r-borde: #2b2b29;
+  --r-borde-fuerte: #3a3a37;
+  --r-texto: #f2f2f0;
+  --r-texto-2: #b5b5ae;
+  --r-texto-3: #85857e;
+  --r-primario: #f2f2f0;
+  --r-primario-hover: #ffffff;
+  --r-primario-texto: #1d1d1b;
+  --r-acento: #ccdb2a;
+  --r-acento-texto: #d8e54f;
+  --r-acento-suave: rgba(204, 219, 42, 0.12);
+  --r-exito: #2fc4a1;
+  --r-exito-suave: rgba(0, 168, 133, 0.14);
+  --r-peligro: #f26d6d;
+  --r-peligro-suave: rgba(239, 68, 68, 0.14);
+  --r-aviso: #f0a944;
+  --r-aviso-suave: rgba(245, 158, 11, 0.14);
+  --r-foco: 0 0 0 3px rgba(204, 219, 42, 0.22);
+  --r-sombra: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --r-sombra-alta: 0 16px 40px -10px rgba(0, 0, 0, 0.7);
+}
+
+/* Los tokens antiguos apuntan a los nuevos para que todo lo heredado combine */
+:root, :root[data-theme="light"], :root[data-theme="dark"] {
+  --bg: var(--r-fondo);
+  --panel: var(--r-superficie);
+  --fila: var(--r-superficie-2);
+  --texto: var(--r-texto);
+  --suave: var(--r-texto-3);
+  --borde: var(--r-borde);
+  --chip: var(--r-superficie-2);
+  --chip-texto: var(--r-texto-2);
+  --sombra: var(--r-sombra);
+  --hero-bg: var(--r-superficie);
+  --gauge-track: var(--r-borde);
+}
+
+html, body {
+  font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 14px;
+  background: var(--r-fondo);
+  color: var(--r-texto);
+  font-feature-settings: "cv11", "ss01";
+}
+
+/* ---------------------------------------------------------------------
+   Botones
+   --------------------------------------------------------------------- */
+#vista-app .btn,
+.modal-backdrop .btn {
+  height: 34px;
+  padding: 0 14px;
+  border-radius: var(--r-radio-sm);
+  border: 1px solid var(--r-borde-fuerte);
+  background: var(--r-superficie);
+  color: var(--r-texto);
+  font-size: 13px;
+  font-weight: 500;
+  box-shadow: none;
+  transform: none;
+  gap: 7px;
+}
+#vista-app .btn:hover,
+.modal-backdrop .btn:hover {
+  background: var(--r-superficie-2);
+  border-color: var(--r-texto-3);
+  transform: none;
+  box-shadow: none;
+}
+#vista-app .btn:focus-visible,
+.modal-backdrop .btn:focus-visible { outline: none; box-shadow: var(--r-foco); }
+
+#vista-app .btn.primario,
+#vista-app .btn.btn-masivo-accion,
+.modal-backdrop .btn.primario {
+  background: var(--r-primario) !important;
+  border-color: var(--r-primario) !important;
+  color: var(--r-primario-texto) !important;
+  font-weight: 600;
+  box-shadow: none !important;
+}
+#vista-app .btn.primario:hover,
+#vista-app .btn.btn-masivo-accion:hover,
+.modal-backdrop .btn.primario:hover {
+  background: var(--r-primario-hover) !important;
+  border-color: var(--r-primario-hover) !important;
+  transform: none !important;
+}
+#vista-app .btn.btn-exito-beval,
+.modal-backdrop .btn.btn-exito-beval {
+  background: var(--r-exito) !important;
+  border-color: var(--r-exito) !important;
+  color: #ffffff !important;
+}
+#vista-app .btn-comprobante-accion {
+  background: var(--r-superficie) !important;
+  color: var(--r-texto) !important;
+  border: 1px solid var(--r-borde-fuerte) !important;
+}
+#vista-app .btn-comprobante-accion:hover { background: var(--r-superficie-2) !important; }
+
+/* ---------------------------------------------------------------------
+   Encabezado
+   --------------------------------------------------------------------- */
+#vista-app .barra {
+  height: 60px;
+  padding: 0 28px;
+  background: var(--r-superficie);
+  border-top: 0;
+  border-bottom: 1px solid var(--r-borde);
+  box-shadow: none;
+  position: sticky;
+  top: 0;
+}
+#vista-app .barra::before {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; top: 0;
+  height: 3px;
+  background: var(--r-acento);
+}
+#vista-app .marca { gap: 14px; }
+#vista-app .beval-logo-nav {
+  padding: 0 16px 0 0;
+  border-right: 1px solid var(--r-borde);
+  border-radius: 0;
+  background: transparent;
+  height: 28px;
+}
+:root[data-theme="dark"] #vista-app .beval-logo-nav { background: transparent; padding: 0 16px 0 0; }
+#vista-app .logo-mini { height: 24px; }
+:root[data-theme="dark"] #vista-app .logo-mini { content: url("logo_beval_blanco.svg"); }
+#vista-app .marca-titulo-wrap { gap: 6px; }
+#vista-app .marca strong {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin-right: 6px;
+  color: var(--r-texto);
+}
+#vista-app #ultima-carga {
+  font-size: 12px;
+  color: var(--r-texto-3);
+  font-weight: 400;
+}
+#vista-app .btn-refrescar,
+#vista-app .btn-sheet-link,
+#vista-app .btn-comprobante-nav {
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 7px;
+  border: 1px solid var(--r-borde);
+  background: var(--r-superficie);
+  color: var(--r-texto-2);
+  font-size: 12px;
+  font-weight: 500;
+  box-shadow: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transform: none;
+}
+#vista-app .btn-refrescar { width: 28px; padding: 0; justify-content: center; }
+#vista-app .btn-refrescar svg { width: 14px; height: 14px; }
+#vista-app .btn-refrescar:hover,
+#vista-app .btn-sheet-link:hover,
+#vista-app .btn-comprobante-nav:hover {
+  background: var(--r-superficie-2);
+  color: var(--r-texto);
+  border-color: var(--r-borde-fuerte);
+  transform: none;
+  box-shadow: none;
+}
+#vista-app .usuario { gap: 10px; }
+#vista-app .tema-toggle {
+  height: 32px;
+  padding: 0 10px;
+  border-radius: var(--r-radio-sm);
+  border: 1px solid var(--r-borde);
+  background: var(--r-superficie);
+  color: var(--r-texto-2);
+  font-size: 12px;
+  font-weight: 500;
+  box-shadow: none;
+}
+#vista-app .tema-toggle:hover { border-color: var(--r-borde-fuerte); box-shadow: none; }
+#vista-app #usuario-nombre {
+  font-size: 13px;
+  font-weight: 600;
+  padding-left: 10px;
+  border-left: 1px solid var(--r-borde);
+}
+#vista-app #usuario-rol {
+  background: var(--r-acento-suave);
+  color: var(--r-acento-texto);
+  border: 0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+#vista-app #btn-salir { height: 32px; }
+
+/* ---------------------------------------------------------------------
+   Contenedor general
+   --------------------------------------------------------------------- */
+#vista-app .vendor-hero,
+#vista-app .pestanas,
+#vista-app main {
+  max-width: 1520px;
+  margin-left: auto;
+  margin-right: auto;
+}
+#vista-app main { padding: 20px 28px 40px; gap: 16px; }
+
+/* ---------------------------------------------------------------------
+   Resumen ejecutivo (vendor-hero)
+   --------------------------------------------------------------------- */
+#vista-app .vendor-hero {
+  margin-top: 24px;
+  width: calc(100% - 56px);
+  padding: 22px 24px;
+  background: var(--r-superficie);
+  border: 1px solid var(--r-borde);
+  border-radius: var(--r-radio);
+  box-shadow: var(--r-sombra);
+}
+#vista-app .vendor-hero::before { display: none; }
+#vista-app .vendor-hero-grid {
+  grid-template-columns: minmax(220px, 1fr) minmax(420px, 1.6fr) minmax(300px, 1.1fr);
+  gap: 0;
+  align-items: stretch;
+}
+#vista-app .vendor-hero-grid > * { padding: 0 24px; }
+#vista-app .vendor-hero-grid > *:first-child { padding-left: 0; }
+#vista-app .vendor-hero-grid > *:last-child { padding-right: 0; }
+#vista-app .vendor-hero-grid > * + * { border-left: 1px solid var(--r-borde); }
+#vista-app .vendor-hero-perfil { justify-content: center; gap: 6px; }
+#vista-app .vendor-hero-pill {
+  color: var(--r-texto-3);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+#vista-app .vendor-hero-nombre {
+  font-size: 20px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  color: var(--r-texto);
+  margin: 0;
+}
+#vista-app .vendor-hero-sub { font-size: 12.5px; color: var(--r-texto-3); }
+#vista-app .vendor-hero-metrics {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  border-radius: 0;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px 24px;
+  align-content: center;
+}
+#vista-app .vh-metric-lbl {
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--r-texto-3);
+}
+#vista-app .vh-metric-val {
+  font-size: 22px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  color: var(--r-texto);
+}
+#vista-app .vh-verde { color: var(--r-exito) !important; }
+#vista-app .vh-ambar { color: var(--r-aviso) !important; }
+#vista-app .vh-lima { color: var(--r-texto) !important; }
+#vista-app .vendor-hero-avance-box {
+  background: transparent;
+  border: 0;
+  padding: 0 0 0 24px;
+  border-radius: 0;
+  justify-content: center;
+  gap: 10px;
+}
+#vista-app .vh-avance-header { font-size: 12px; font-weight: 500; color: var(--r-texto-3); }
+#vista-app .vh-avance-header strong { font-weight: 600; font-size: 12.5px; }
+#vista-app .vh-gauge-track { height: 6px; }
+#vista-app .vh-gauge-fill { background: var(--r-texto); }
+#vista-app .vh-gauge-target-tick { background: var(--r-texto-3); box-shadow: none; width: 2px; }
+#vista-app .vh-switch-lbl { font-size: 12px; font-weight: 500; text-transform: none; }
+#vista-app .vh-switch-pills { background: var(--r-superficie-2); border-color: var(--r-borde); border-radius: 7px; }
+#vista-app .vh-pill-btn { font-size: 11.5px; font-weight: 500; border-radius: 5px; padding: 3px 9px; }
+#vista-app .vh-pill-btn.activa {
+  background: var(--r-superficie);
+  color: var(--r-texto);
+  box-shadow: 0 0 0 1px var(--r-borde-fuerte);
+  font-weight: 600;
+}
+#vista-app .vh-distribucion-bar { height: 6px; gap: 2px; background: transparent; }
+#vista-app .vh-dist-seg { border-radius: 2px; }
+#vista-app .seg-cobrado, #vista-app .dot-cobrado { background: var(--r-exito); }
+#vista-app .seg-aldia, #vista-app .dot-aldia { background: var(--r-borde-fuerte); }
+#vista-app .seg-vencido, #vista-app .dot-vencido { background: var(--r-peligro); }
+#vista-app .vh-distribucion-legend { font-size: 11.5px; gap: 14px; }
+
+/* ---------------------------------------------------------------------
+   Pestañas
+   --------------------------------------------------------------------- */
+#vista-app .pestanas {
+  margin-top: 20px;
+  padding: 0 28px;
+  width: 100%;
+  background: transparent;
+  border-bottom: 0;
+  gap: 4px;
+  position: relative;
+}
+#vista-app .pestanas::after {
+  content: "";
+  position: absolute;
+  left: 28px; right: 28px; bottom: 0;
+  height: 1px;
+  background: var(--r-borde);
+}
+#vista-app .pestanas button {
+  padding: 10px 14px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--r-texto-3);
+  border-bottom: 2px solid transparent;
+  position: relative;
+  z-index: 1;
+}
+#vista-app .pestanas button:hover { color: var(--r-texto); }
+#vista-app .pestanas button.activa,
+:root[data-theme="dark"] #vista-app .pestanas button.activa {
+  color: var(--r-texto);
+  font-weight: 600;
+  border-bottom: 2px solid var(--r-texto);
+}
+#vista-app .tab-badge,
+:root[data-theme="dark"] #vista-app .tab-badge {
+  background: var(--r-superficie);
+  color: var(--r-texto-2);
+  border: 1px solid var(--r-borde);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 6px;
+}
+#vista-app .pestanas button.activa .tab-badge { background: var(--r-texto); color: var(--r-superficie); border-color: var(--r-texto); }
+#vista-app .tab-badge.badge-exito { color: var(--r-exito); }
+
+/* ---------------------------------------------------------------------
+   Indicadores (KPIs)
+   --------------------------------------------------------------------- */
+#vista-app .kpis { gap: 12px; }
+#vista-app .kpi {
+  padding: 16px 18px;
+  border: 1px solid var(--r-borde);
+  border-radius: var(--r-radio);
+  background: var(--r-superficie);
+  box-shadow: var(--r-sombra);
+}
+#vista-app .kpi::before { display: none; }
+#vista-app .kpi:hover { border-color: var(--r-borde-fuerte); transform: none; }
+#vista-app .kpi span {
+  font-size: 12.5px;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--r-texto-3);
+}
+#vista-app .kpi strong {
+  font-size: 26px;
+  font-weight: 650;
+  letter-spacing: -0.025em;
+  margin-top: 6px;
+  color: var(--r-texto);
+}
+#vista-app .kpi.kpi-destacado-procesar strong { color: var(--r-texto); }
+#vista-app .kpi.kpi-exito strong { color: var(--r-exito); }
+#vista-app .kpi.alerta strong { color: var(--r-peligro); }
+#vista-app .kpi.kpi-clic:hover { border-color: var(--r-exito); }
+
+/* ---------------------------------------------------------------------
+   Filtros
+   --------------------------------------------------------------------- */
+#vista-app .filtros {
+  padding: 14px 16px;
+  gap: 12px;
+  border: 1px solid var(--r-borde);
+  border-radius: var(--r-radio);
+  background: var(--r-superficie);
+  box-shadow: var(--r-sombra);
+}
+#vista-app .filtros label,
+#vista-app .filtros .combo-vendedor-wrap label,
+#vista-app .filtros .combo-buscar-wrap label {
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--r-texto-2);
+  gap: 6px;
+  border: 0;
+  animation: none;
+}
+#vista-app .filtros input,
+#vista-app .filtros select,
+#vista-app .input-moderno,
+.modal-backdrop .input-moderno,
+.modal-backdrop input[type="text"],
+.modal-backdrop input[type="password"] {
+  height: 36px;
+  border: 1px solid var(--r-borde-fuerte);
+  border-radius: var(--r-radio-sm);
+  background-color: var(--r-superficie);
+  color: var(--r-texto);
+  font-size: 13px;
+  box-shadow: none;
+}
+#vista-app .filtros input:hover,
+#vista-app .filtros select:hover { border-color: var(--r-texto-3); }
+#vista-app .filtros input:focus,
+#vista-app .filtros select:focus,
+#vista-app .input-moderno:focus,
+.modal-backdrop input:focus,
+:root[data-theme="dark"] #vista-app .filtros input:focus,
+:root[data-theme="dark"] #vista-app .filtros select:focus {
+  outline: none;
+  border-color: var(--r-texto);
+  box-shadow: var(--r-foco);
+}
+#vista-app .filtros input::placeholder,
+#vista-app .input-moderno::placeholder { color: var(--r-texto-3); }
+#vista-app .combo-arrow { color: var(--r-texto-3); }
+#vista-app .combo-lupa { display: inline-flex; }
+#vista-app .combo-lupa .ico { width: 15px; height: 15px; }
+#vista-app #btn-limpiar { align-self: end; }
+#vista-app .combo-list {
+  border: 1px solid var(--r-borde);
+  border-radius: var(--r-radio);
+  box-shadow: var(--r-sombra-alta);
+  background: var(--r-superficie);
+}
+
+/* ---------------------------------------------------------------------
+   Barra de acciones y tablas
+   --------------------------------------------------------------------- */
+#vista-app .acciones { margin: 4px 0 12px; }
+#vista-app #conteo,
+#vista-app #conteo-por-procesar,
+#vista-app #vendedores-conteo,
+#vista-app #conteo-comprobantes {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--r-texto);
+}
+#vista-app .pista-procesar {
+  background: var(--r-superficie-2);
+  border: 1px solid var(--r-borde);
+  color: var(--r-texto-2);
+  border-radius: 6px;
+}
+#vista-app .tabla-wrap {
+  border: 1px solid var(--r-borde);
+  border-radius: var(--r-radio);
+  background: var(--r-superficie);
+  box-shadow: var(--r-sombra);
+}
+#vista-app th,
+#vista-app td {
+  padding: 11px 12px;
+  border-bottom: 1px solid var(--r-borde);
+  font-size: 13px;
+}
+#vista-app th {
+  background: var(--r-superficie-2);
+  color: var(--r-texto-3);
+  font-size: 11.5px;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+#vista-app th:hover { color: var(--r-texto); }
+#vista-app tbody tr { transition: background-color 0.12s ease; }
+#vista-app tbody tr:hover { background: var(--r-superficie-2); }
+#vista-app tbody tr:last-child td { border-bottom: 0; }
+#vista-app td.num,
+#vista-app .celda-estimado { font-variant-numeric: tabular-nums; }
+#vista-app input[type="checkbox"] { accent-color: var(--r-texto); width: 15px; height: 15px; }
+
+#vista-app .btn-copiar-factura,
+#vista-app .cliente-codigo-btn,
+#vista-app .btn-copiar-razon {
+  border-radius: 6px;
+  font-variant-numeric: tabular-nums;
+}
+#vista-app .btn-copiar-factura {
+  background: transparent;
+  border: 1px solid transparent;
+  font-weight: 600;
+  color: var(--r-texto);
+}
+#vista-app .btn-copiar-factura:hover { background: var(--r-superficie-2); border-color: var(--r-borde); }
+#vista-app .cliente-codigo-btn {
+  background: var(--r-superficie-2);
+  border: 1px solid var(--r-borde);
+  color: var(--r-texto-2);
+}
+#vista-app .badge-dias {
+  border-radius: 6px;
+  font-weight: 600;
+  border: 0;
+}
+#vista-app .badge-dias.vencido { background: var(--r-peligro-suave); color: var(--r-peligro); }
+#vista-app .badge-dias.al-dia { background: var(--r-exito-suave); color: var(--r-exito); }
+
+#vista-app .paginacion {
+  justify-content: flex-end;
+  margin-top: 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--r-texto-3);
+}
+
+/* Semáforo y filtros rápidos */
+#vista-app .btn-sem-filtro {
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 6px;
+  padding: 4px 10px;
+}
+#vista-app .btn-sem-filtro.activa {
+  background: var(--r-superficie);
+  border: 1px solid var(--r-borde-fuerte);
+  box-shadow: none;
+  font-weight: 600;
+}
+#vista-app .badge-semaforo {
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 6px;
+  padding: 3px 9px;
+}
+#vista-app .badge-semaforo.riesgo { background: var(--r-peligro-suave); color: var(--r-peligro); border-color: transparent; }
+#vista-app .badge-semaforo.precaucion { background: var(--r-aviso-suave); color: var(--r-aviso); border-color: transparent; }
+#vista-app .badge-semaforo.estable { background: var(--r-exito-suave); color: var(--r-exito); border-color: transparent; }
+
+/* ---------------------------------------------------------------------
+   Modales
+   --------------------------------------------------------------------- */
+.modal-backdrop {
+  background: rgba(17, 17, 16, 0.5) !important;
+  backdrop-filter: blur(3px) !important;
+  -webkit-backdrop-filter: blur(3px) !important;
+}
+.modal-backdrop .modal-caja {
+  background: var(--r-superficie);
+  border: 1px solid var(--r-borde);
+  border-radius: 14px;
+  box-shadow: var(--r-sombra-alta);
+  animation: rModal 0.18s ease-out;
+}
+@keyframes rModal {
+  from { transform: translateY(6px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+.modal-backdrop .modal-header { padding: 18px 22px; border-bottom: 1px solid var(--r-borde); }
+.modal-backdrop .modal-titulos h3 { font-size: 17px; font-weight: 650; letter-spacing: -0.015em; }
+.modal-backdrop .modal-titulos p { color: var(--r-texto-3); font-size: 13px; }
+.modal-backdrop .btn-cerrar-modal {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--r-radio-sm);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--r-texto-3);
+  font-size: 16px;
+  cursor: pointer;
+}
+.modal-backdrop .btn-cerrar-modal:hover { background: var(--r-superficie-2); color: var(--r-texto); border-color: var(--r-borde); }
+.modal-backdrop .modal-tabs { border-bottom: 1px solid var(--r-borde); gap: 4px; }
+.modal-backdrop .modal-tab-btn { font-weight: 500; border-radius: 0; border-bottom: 2px solid transparent; }
+.modal-backdrop .modal-tab-btn.activa {
+  color: var(--r-texto);
+  font-weight: 600;
+  background: transparent;
+  border-bottom-color: var(--r-texto);
+}
+
+/* Aviso flotante y pantalla de carga */
+.aviso {
+  background: var(--r-primario) !important;
+  color: var(--r-primario-texto) !important;
+  border: 0 !important;
+  border-radius: var(--r-radio-sm) !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  box-shadow: var(--r-sombra-alta) !important;
+}
+.cargando { background: var(--r-fondo); color: var(--r-texto-3); font-weight: 500; }
+
+/* ---------------------------------------------------------------------
+   Login: panel de marca + formulario
+   --------------------------------------------------------------------- */
+#vista-login.login {
+  --texto: #1d1d1b;
+  --suave: #6b6b65;
+  --borde: #e7e7e5;
+  --chip: #f4f4f3;
+  --gauge-track: #ececea;
+  --beval-accent: #1d1d1b;
+  --beval-lime: #a9b81a;
+  --beval-navy: #ffffff;
+  background: #f4f4f3;
+  color: #1d1d1b;
+  padding: 32px 20px;
+}
+#vista-login .login-bg { display: none; }
+#vista-login .login-wrapper {
+  max-width: 960px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: #ffffff;
+  border: 1px solid #e7e7e5;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 24px 60px -20px rgba(16, 16, 14, 0.22), 0 2px 6px rgba(16, 16, 14, 0.05);
+}
+#vista-login .login-lado {
+  background: #1d1d1b;
+  color: #f2f2f0;
+  padding: 44px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+  position: relative;
+  overflow: hidden;
+}
+#vista-login .login-lado::after {
+  content: "";
+  position: absolute;
+  right: -90px;
+  bottom: -90px;
+  width: 260px;
+  height: 260px;
+  border-radius: 50%;
+  border: 36px solid rgba(204, 219, 42, 0.07);
+}
+#vista-login .login-lado-logo { height: 64px; width: auto; align-self: flex-start; margin: -12px 0 0 -18px; }
+#vista-login .login-lado-texto { margin-top: auto; position: relative; z-index: 1; }
+#vista-login .login-lado-etiqueta {
+  display: inline-block;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #ccdb2a;
+  margin-bottom: 12px;
+}
+#vista-login .login-lado h2 {
+  font-size: 30px;
+  font-weight: 650;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+  margin: 0 0 12px;
+  color: #ffffff;
+}
+#vista-login .login-lado p {
+  font-size: 14px;
+  line-height: 1.55;
+  color: #b5b5ae;
+  margin: 0 0 24px;
+}
+#vista-login .login-lado-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+#vista-login .login-lado-lista li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13.5px;
+  color: #e2e2de;
+}
+#vista-login .login-lado-lista li::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 2px;
+  background: #ccdb2a;
+  flex-shrink: 0;
+}
+#vista-login .login-lado-pie {
+  font-size: 12px;
+  color: #85857e;
+  position: relative;
+  z-index: 1;
+}
+
+#vista-login .login-card {
+  background: #ffffff;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 44px 44px 32px;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+#vista-login .login-card:hover { border: 0; box-shadow: none; }
+#vista-login .login-card::before { display: none; }
+#vista-login .login-header { text-align: left; margin-bottom: 8px; }
+#vista-login .login-titulos h1 {
+  color: #1d1d1b;
+  font-size: 22px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  margin: 0 0 6px;
+}
+#vista-login .login-titulos p { color: #6b6b65; font-size: 13.5px; line-height: 1.5; font-weight: 400; }
+
+#vista-login .auto-tablero { margin: 8px 0 0; }
+#vista-login .auto-gauge { max-width: 170px; display: block; margin: 0 auto; }
+#vista-login .g-aguja line { stroke: #1d1d1b; }
+#vista-login .g-eje { fill: #ffffff; stroke: #1d1d1b; }
+#vista-login .auto-estado { font-size: 12.5px; font-weight: 500; color: #6b6b65; }
+#vista-login .auto-pasos { margin: 14px 0 20px; }
+#vista-login .auto-pasos li {
+  border-radius: 8px;
+  font-weight: 500;
+  border-color: #e7e7e5;
+  color: #8a8a84;
+}
+#vista-login .auto-pasos li.activo { border-color: #1d1d1b; color: #1d1d1b; }
+#vista-login .auto-pasos li.activo b { background: #1d1d1b; color: #ffffff; }
+#vista-login .auto-pasos li.hecho { border-color: #cfdc4a; color: #1d1d1b; background: #fafbe9; }
+#vista-login .auto-pasos li.hecho b { background: #ccdb2a; color: #1d1d1b; }
+
+#vista-login .login-form { gap: 16px; }
+#vista-login .campo label {
+  color: #3a3a37;
+  font-size: 12.5px;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+}
+#vista-login .input-contenedor input {
+  height: 42px;
+  background: #ffffff;
+  border: 1px solid #d4d4d2;
+  border-radius: 8px;
+  color: #1d1d1b;
+  font-size: 14px;
+  box-shadow: none;
+}
+#vista-login .input-contenedor input::placeholder { color: #a3a39c; }
+#vista-login .input-contenedor input:hover { border-color: #a3a39c; }
+#vista-login .input-contenedor input:focus {
+  border-color: #1d1d1b;
+  box-shadow: 0 0 0 3px rgba(29, 29, 27, 0.1);
+}
+#vista-login .input-icono { color: #a3a39c; }
+#vista-login .input-contenedor:focus-within .input-icono { color: #1d1d1b; }
+#vista-login .pista { color: #8a8a84; font-size: 12px; }
+#vista-login .ojo-clave { color: #8a8a84; }
+#vista-login .btn.primario.btn-login {
+  height: 44px;
+  border-radius: 8px;
+  background: #1d1d1b;
+  border-color: #1d1d1b;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: none;
+  margin-top: 4px;
+}
+#vista-login .btn.primario.btn-login:hover {
+  background: #3a3a37;
+  border-color: #3a3a37;
+  transform: none;
+  box-shadow: none;
+}
+#vista-login .error {
+  background: #fdeeee;
+  color: #b42318;
+  border: 1px solid #f7cdcd;
+  border-radius: 8px;
+}
+#vista-login .login-footer {
+  margin-top: 24px;
+  padding-top: 18px;
+  border-top: 1px solid #ececea;
+  color: #8a8a84;
+  font-size: 12px;
+  justify-content: flex-start;
+}
+#vista-login .login-footer * { color: #8a8a84; }
+
+/* ---------------------------------------------------------------------
+   Responsivo
+   --------------------------------------------------------------------- */
+@media (max-width: 1100px) {
+  #vista-app .vendor-hero-grid { grid-template-columns: 1fr 1.6fr; row-gap: 20px; }
+  #vista-app .vendor-hero-avance-box {
+    grid-column: 1 / -1;
+    border-left: 0 !important;
+    border-top: 1px solid var(--r-borde);
+    padding: 18px 0 0 !important;
+  }
+}
+@media (max-width: 760px) {
+  #vista-app .barra { height: auto; padding: 14px 16px 12px; }
+  #vista-app .beval-logo-nav { border-right: 0; padding-right: 0; }
+  #vista-app #usuario-nombre { border-left: 0; padding-left: 0; }
+  #vista-app .vendor-hero { width: calc(100% - 32px); margin-top: 16px; padding: 18px; }
+  #vista-app .vendor-hero-grid { grid-template-columns: 1fr; }
+  #vista-app .vendor-hero-grid > * { padding: 0 !important; border-left: 0 !important; }
+  #vista-app .vendor-hero-metrics { border-top: 1px solid var(--r-borde); padding-top: 16px !important; }
+  #vista-app .vh-metric-val { font-size: 19px; }
+  #vista-app .pestanas { padding: 0 16px; overflow-x: auto; scrollbar-width: none; }
+  #vista-app .pestanas::after { left: 16px; right: 16px; }
+  #vista-app main { padding: 16px 16px 32px; }
+  #vista-app .kpi strong { font-size: 22px; }
+
+  #vista-login .login-wrapper { grid-template-columns: 1fr; max-width: 440px; }
+  #vista-login .login-lado { padding: 24px 24px 22px; gap: 14px; }
+  #vista-login .login-lado-lista,
+  #vista-login .login-lado p,
+  #vista-login .login-lado-pie,
+  #vista-login .login-lado::after { display: none; }
+  #vista-login .login-lado h2 { font-size: 22px; margin: 0; }
+  #vista-login .login-lado-etiqueta { margin-bottom: 6px; }
+  #vista-login .login-card { padding: 28px 24px 24px; }
+}

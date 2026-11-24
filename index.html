@@ -7,7 +7,8 @@
 <link rel="icon" type="image/x-icon" href="favicon.ico">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=corporate2">
+<link rel="stylesheet" href="styles.css?v=mayoreo1">
+<link rel="stylesheet" href="rediseno.css?v=1">
 </head>
 <body>
 
@@ -21,16 +22,16 @@
       <defs>
         <!-- Gradientes para líneas en Verde Lima Beval -->
         <linearGradient id="limeGrad1" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stop-color="#c5e01b" stop-opacity="0.08" />
-          <stop offset="25%" stop-color="#c5e01b" stop-opacity="0.6" />
-          <stop offset="70%" stop-color="#84cc16" stop-opacity="0.7" />
-          <stop offset="100%" stop-color="#c5e01b" stop-opacity="0.1" />
+          <stop offset="0%" stop-color="#ccdb2a" stop-opacity="0.08" />
+          <stop offset="25%" stop-color="#ccdb2a" stop-opacity="0.6" />
+          <stop offset="70%" stop-color="#ccdb2a" stop-opacity="0.7" />
+          <stop offset="100%" stop-color="#ccdb2a" stop-opacity="0.1" />
         </linearGradient>
         <linearGradient id="limeGrad2" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stop-color="#c5e01b" stop-opacity="0.1" />
-          <stop offset="35%" stop-color="#c5e01b" stop-opacity="0.85" />
-          <stop offset="75%" stop-color="#bef264" stop-opacity="0.6" />
-          <stop offset="100%" stop-color="#c5e01b" stop-opacity="0.1" />
+          <stop offset="0%" stop-color="#ccdb2a" stop-opacity="0.1" />
+          <stop offset="35%" stop-color="#ccdb2a" stop-opacity="0.85" />
+          <stop offset="75%" stop-color="#dbe66a" stop-opacity="0.6" />
+          <stop offset="100%" stop-color="#ccdb2a" stop-opacity="0.1" />
         </linearGradient>
         <filter id="topoGlow" x="-20%" y="-20%" width="140%" height="140%">
           <feGaussianBlur stdDeviation="3.5" result="blur" />
@@ -41,7 +42,7 @@
         </filter>
       </defs>
 
-      <!-- Grupo 1: Curvas Topográficas Base (Azul pizarra corporativo #1e293b / #334155) -->
+      <!-- Grupo 1: Curvas Topográficas Base (Azul pizarra corporativo #2a2a2a / #404040) -->
       <g class="topo-base-group">
         <path class="topo-line topo-b1" d="M -100,100 C 220,40 460,200 780,120 C 1100,40 1300,180 1560,90" />
         <path class="topo-line topo-b2" d="M -100,180 C 240,110 480,290 810,190 C 1140,90 1320,260 1560,170" />
@@ -54,7 +55,7 @@
         <path class="topo-line topo-b9" d="M -100,790 C 180,650 620,890 1040,730 C 1370,550 1460,860 1560,780" />
       </g>
 
-      <!-- Grupo 2: Acentos Sutiles en Verde Lima Corporativo (#c5e01b) -->
+      <!-- Grupo 2: Acentos Sutiles en Verde Lima Corporativo (#ccdb2a) -->
       <g class="topo-accent-group">
         <!-- Curva acento 1 continua con sutil resplandor -->
         <path class="topo-line topo-lime-continuous" stroke="url(#limeGrad1)" filter="url(#topoGlow)" d="M -100,220 C 250,145 490,335 825,225 C 1160,115 1330,300 1560,210" />
@@ -86,48 +87,71 @@
   </div>
 
   <div class="login-wrapper">
-    <div class="login-card">
-      
-      <!-- Logo Beval Oficial -->
+    <aside class="login-lado">
+      <img src="logo_beval_blanco.svg" alt="Comercializadora Beval" class="login-lado-logo">
+      <div class="login-lado-texto">
+        <span class="login-lado-etiqueta">Cuentas por Cobrar &middot; IVA</span>
+        <h2>Facturas sin Retención</h2>
+        <p>Seguimiento de comprobantes de retención de IVA por cliente, asesor y zona.</p>
+        <ul class="login-lado-lista">
+          <li>Cartera sincronizada con Google Sheets</li>
+          <li>Conciliación de comprobantes con lectura automática</li>
+          <li>Recordatorios a asesores por WhatsApp</li>
+        </ul>
+      </div>
+      <span class="login-lado-pie">Grupo Mayoreo</span>
+    </aside>
+
+    <div class="login-card auto-card" id="auto-card">
+
       <div class="login-header">
-        <div class="beval-logo-box">
-          <img src="logo_beval_transparent.png" alt="Comercializadora Beval" class="beval-logo">
-        </div>
         <div class="login-titulos">
-          <h1>Facturas sin Retención</h1>
-          <p>Portal de Cuentas por Cobrar &bull; IVA</p>
+          <h1>Iniciar sesión</h1>
+          <p>Ingresa con el usuario y la contraseña que te asignó el administrador.</p>
         </div>
       </div>
 
-      <!-- Formulario de Ingreso -->
+      <!-- Tablero didáctico: la aguja avanza con cada paso -->
+      <div class="auto-tablero" aria-hidden="true">
+        <svg viewBox="0 0 200 118" class="auto-gauge">
+          <path d="M20 100 A80 80 0 0 1 180 100" class="g-pista"/>
+          <path d="M20 100 A80 80 0 0 1 180 100" class="g-avance" id="g-avance"/>
+          <g class="g-marcas"><line x1="24" y1="100" x2="36" y2="100"/><line x1="100" y1="16" x2="100" y2="28"/><line x1="164" y1="100" x2="176" y2="100"/></g>
+          <g id="g-aguja" class="g-aguja"><line x1="100" y1="100" x2="100" y2="34"/></g>
+          <circle cx="100" cy="100" r="7" class="g-eje"/>
+          <text x="22" y="115" class="g-txt">P</text><text x="100" y="12" class="g-txt" text-anchor="middle">N</text><text x="178" y="115" class="g-txt" text-anchor="end">D</text>
+        </svg>
+        <p class="auto-estado" id="auto-estado">Motor apagado: identifícate para comenzar</p>
+      </div>
+
+      <ol class="auto-pasos" aria-hidden="true">
+        <li id="paso-1" class="activo"><b>1</b><span>Usuario</span></li>
+        <li id="paso-2"><b>2</b><span>Clave</span></li>
+        <li id="paso-3"><b>3</b><span>Arrancar</span></li>
+      </ol>
+
       <form id="form-login" class="login-form">
         <div class="campo">
-          <label for="login-correo">Usuario o Primer Nombre</label>
+          <label for="login-correo">Usuario</label>
           <div class="input-contenedor">
-            <svg class="input-icono" viewBox="0 0 20 20" fill="currentColor">
-              <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
-            </svg>
-            <input type="text" id="login-correo" autocomplete="username" placeholder="Ej: angel, ronny, miguel, liseth o admin" required>
+            <svg class="input-icono" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/></svg>
+            <input type="text" id="login-correo" autocomplete="username" placeholder="Tu usuario" required>
           </div>
-          <span class="pista">💡 Asesor Comercial: escribe tu <strong>primer nombre</strong> (ej. angel, ronny, miguel) o tu código de zona</span>
         </div>
 
         <div class="campo">
           <label for="login-clave">Contraseña</label>
           <div class="input-contenedor">
-            <svg class="input-icono" viewBox="0 0 20 20" fill="currentColor">
-              <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" />
-            </svg>
-            <input type="password" id="login-clave" autocomplete="current-password" placeholder="Tu primer nombre o beval" required>
+            <svg class="input-icono" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/></svg>
+            <input type="password" id="login-clave" autocomplete="current-password" placeholder="Tu contraseña" required>
+            <button type="button" class="ojo-clave" id="ojo-clave" aria-label="Mostrar u ocultar contraseña"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button>
           </div>
-          <span class="pista">🔑 Contraseña sencilla: <strong>tu primer nombre</strong> (o <strong>beval</strong>, o la definida en Excel)</span>
+          <span class="pista">Si no la recuerdas, pídele una nueva al administrador</span>
         </div>
 
         <button type="submit" class="btn primario btn-login" id="btn-entrar">
-          <span>Ingresar al Sistema</span>
-          <svg class="btn-flecha" viewBox="0 0 20 20" fill="currentColor">
-            <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" />
-          </svg>
+          <span>Arrancar motor</span>
+          <svg class="btn-flecha" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
         </button>
 
         <p class="error" id="login-error" hidden></p>
@@ -138,7 +162,6 @@
         <span class="separador">&bull;</span>
         <span class="version">Softland ERP Sync</span>
       </div>
-
     </div>
   </div>
 </section>
@@ -182,8 +205,8 @@
     <div class="usuario">
       <!-- Selector Modo Oscuro / Claro -->
       <div class="tema-toggle" id="btn-tema" role="button" tabindex="0" title="Alternar modo claro u oscuro">
-        <span class="tema-icon tema-icon-sun">☀️</span>
-        <span class="tema-icon tema-icon-moon">🌙</span>
+        <span class="tema-icon tema-icon-sun"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></span>
+        <span class="tema-icon tema-icon-moon"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg></span>
         <span class="tema-texto" id="tema-texto">Claro</span>
       </div>
 
@@ -204,7 +227,7 @@
         <h2 id="vh-nombre" class="vendor-hero-nombre">—</h2>
         <div id="vh-sub" class="vendor-hero-sub">—</div>
         <div class="vh-semaforo-wrap">
-          <span id="vh-semaforo" class="badge-semaforo riesgo">🔴 En riesgo</span>
+          <span id="vh-semaforo" class="badge-semaforo riesgo">En riesgo</span>
         </div>
       </div>
 
@@ -279,8 +302,8 @@
       <span>Por vendedor</span>
     </button>
     <button data-tab="comprobantes">
-      <span>📋 Comprobantes Montados</span>
-      <span class="tab-badge" id="badge-comprobantes-montados" style="background: rgba(16, 185, 129, 0.2); color: #10b981;">0</span>
+      <span>Comprobantes montados</span>
+      <span class="tab-badge badge-exito" id="badge-comprobantes-montados">0</span>
     </button>
   </nav>
 
@@ -288,8 +311,8 @@
     <section class="kpis">
       <div class="kpi"><span>Sin Retención</span><strong id="k-facturas">0</strong></div>
       <div class="kpi kpi-destacado-procesar"><span>Por Procesar (ERP)</span><strong id="k-por-procesar">0</strong></div>
-      <div class="kpi" style="border-left: 2px solid #10b981; cursor: pointer;" id="kpi-card-comprobantes" title="Ver comprobantes montados">
-        <span>Comprobantes Montados</span><strong id="k-comprobantes-montados" style="color: #10b981;">0</strong>
+      <div class="kpi kpi-exito kpi-clic" id="kpi-card-comprobantes" title="Ver comprobantes montados">
+        <span>Comprobantes Montados</span><strong id="k-comprobantes-montados">0</strong>
       </div>
       <div class="kpi"><span>Monto estimado USD</span><strong id="k-estimado">0</strong></div>
       <div class="kpi alerta"><span>Vencidas</span><strong id="k-vencidas">0</strong></div>
@@ -315,7 +338,7 @@
         <div class="combo-box">
           <input type="text" id="f-buscar" class="combo-input" placeholder="Cliente, RIF, código, factura, comprobante o asesor..." autocomplete="off">
           <button type="button" id="btn-clear-buscar" class="combo-clear" title="Limpiar búsqueda" hidden>&times;</button>
-          <span class="combo-arrow">&#128269;</span>
+          <span class="combo-arrow combo-lupa"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></span>
         </div>
         <div id="combo-buscar-list" class="combo-list combo-list-desglose" hidden></div>
       </div>
@@ -329,8 +352,8 @@
       <div class="acciones">
         <span id="conteo"></span>
         <div class="acciones-botones">
-          <button class="btn btn-comprobante-accion" id="btn-comprobante-accion">📥 Cargar Comprobante</button>
-          <button class="btn btn-masivo-accion" id="btn-abrir-masivo">🚀 Mensajería Masiva</button>
+          <button class="btn btn-comprobante-accion" id="btn-comprobante-accion"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5M12 3v12"/></svg> Cargar comprobante</button>
+          <button class="btn btn-masivo-accion" id="btn-abrir-masivo"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg> Mensajería masiva</button>
           <button class="btn" id="btn-mensaje">Copiar mensaje</button>
           <button class="btn" id="btn-csv">Descargar CSV</button>
         </div>
@@ -338,11 +361,11 @@
       <!-- Banner Filtro Comprobante Activo -->
       <div id="banner-filtro-comp-facturas" class="banner-filtro-comprobante" hidden>
         <div class="banner-filtro-info">
-          <span class="banner-filtro-tag">📥 Filtro Comprobante Activo</span>
+          <span class="banner-filtro-tag">Filtro Comprobante Activo</span>
           <strong id="banner-comp-num">—</strong>
           <span id="banner-comp-cant">(0 facturas)</span>
         </div>
-        <button type="button" class="btn-quitar-filtro" id="btn-quitar-filtro-comp">✕ Quitar filtro y ver todas</button>
+        <button type="button" class="btn-quitar-filtro" id="btn-quitar-filtro-comp">Quitar filtro y ver todas</button>
       </div>
       <div class="tabla-wrap">
         <table id="tabla-facturas" class="tabla-fija">
@@ -362,22 +385,22 @@
       <div class="acciones">
         <div class="acciones-info-wrap">
           <span id="conteo-por-procesar">0 facturas por procesar</span>
-          <span class="pista-procesar">💡 Retenciones ya cargadas en el ERP pendientes por procesar y aplicar</span>
+          <span class="pista-procesar">Retenciones ya cargadas en el ERP pendientes por procesar y aplicar</span>
         </div>
         <div class="acciones-botones">
-          <button class="btn btn-comprobante-accion" id="btn-comprobante-accion-proc">📥 Cargar Comprobante</button>
-          <button class="btn" id="btn-copiar-procesar">📋 Copiar lista por procesar</button>
-          <button class="btn" id="btn-csv-procesar">📥 Descargar CSV</button>
+          <button class="btn btn-comprobante-accion" id="btn-comprobante-accion-proc"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5M12 3v12"/></svg> Cargar comprobante</button>
+          <button class="btn" id="btn-copiar-procesar">Copiar lista por procesar</button>
+          <button class="btn" id="btn-csv-procesar">Descargar CSV</button>
         </div>
       </div>
       <!-- Banner Filtro Comprobante Activo -->
       <div id="banner-filtro-comp-proc" class="banner-filtro-comprobante" hidden>
         <div class="banner-filtro-info">
-          <span class="banner-filtro-tag">📥 Filtro Comprobante Activo</span>
+          <span class="banner-filtro-tag">Filtro Comprobante Activo</span>
           <strong id="banner-comp-num-proc">—</strong>
           <span id="banner-comp-cant-proc">(0 facturas)</span>
         </div>
-        <button type="button" class="btn-quitar-filtro" id="btn-quitar-filtro-comp-proc">✕ Quitar filtro y ver todas</button>
+        <button type="button" class="btn-quitar-filtro" id="btn-quitar-filtro-comp-proc">Quitar filtro y ver todas</button>
       </div>
       <div class="tabla-wrap">
         <table id="tabla-por-procesar" class="tabla-fija">
@@ -400,17 +423,17 @@
           <!-- Filtro rápido de Semáforo para el Jefe -->
           <div class="vendedores-semaforo-filtro" id="filtro-semaforo">
             <button type="button" class="btn-sem-filtro activa" data-sem="todos">Todos</button>
-            <button type="button" class="btn-sem-filtro sem-riesgo" data-sem="riesgo">🔴 En riesgo (<span id="count-sem-riesgo">0</span>)</button>
-            <button type="button" class="btn-sem-filtro sem-precaucion" data-sem="precaucion">🟡 En precaución (<span id="count-sem-precaucion">0</span>)</button>
-            <button type="button" class="btn-sem-filtro sem-estable" data-sem="estable">🟢 Estable (<span id="count-sem-estable">0</span>)</button>
+            <button type="button" class="btn-sem-filtro sem-riesgo" data-sem="riesgo">En riesgo (<span id="count-sem-riesgo">0</span>)</button>
+            <button type="button" class="btn-sem-filtro sem-precaucion" data-sem="precaucion">En precaución (<span id="count-sem-precaucion">0</span>)</button>
+            <button type="button" class="btn-sem-filtro sem-estable" data-sem="estable">Estable (<span id="count-sem-estable">0</span>)</button>
           </div>
         </div>
         <div class="acciones-botones">
           <button class="btn btn-secundario" id="btn-gestionar-credenciales" title="Ver y editar usuarios y contraseñas de todos los asesores">
-            🔑 Gestionar Accesos y Claves
+            Gestionar Accesos y Claves
           </button>
-          <button class="btn btn-masivo-accion" id="btn-masivo-vendedores">🚀 Mensajería Masiva a Asesores</button>
-          <button class="btn" id="btn-reset-ws" title="Reiniciar estados de envío del día">🔄 Reiniciar Estados WhatsApp</button>
+          <button class="btn btn-masivo-accion" id="btn-masivo-vendedores"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg> Mensajería masiva a asesores</button>
+          <button class="btn" id="btn-reset-ws" title="Reiniciar estados de envío del día">Reiniciar Estados WhatsApp</button>
         </div>
       </div>
       <div class="tabla-wrap">
@@ -441,12 +464,12 @@
         <div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
           <span id="conteo-comprobantes" style="font-weight: 700; color: var(--texto); font-size: 14px;">0 comprobante(s) montado(s)</span>
           <div style="position: relative; width: 360px; max-width: 100%;">
-            <input type="text" id="filtro-comprobantes" class="input-moderno" placeholder="🔍 Buscar por N° comprobante, factura o cliente..." style="padding-left: 14px;" />
+            <input type="text" id="filtro-comprobantes" class="input-moderno" placeholder="Buscar por N° comprobante, factura o cliente..." style="padding-left: 14px;" />
           </div>
         </div>
         <div class="acciones-botones">
           <button class="btn primario btn-exito-beval" id="btn-nuevo-comprobante-tab">
-            📄 + Montar Nuevo Comprobante
+            <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5M12 3v12"/></svg> Montar nuevo comprobante
           </button>
         </div>
       </div>
@@ -480,7 +503,7 @@
         <h3>Mensajería Masiva de Cobro</h3>
         <p>Gestión automatizada de recordatorios de retención de IVA</p>
       </div>
-      <button type="button" class="btn-cerrar-modal" id="btn-cerrar-modal">✕</button>
+      <button type="button" class="btn-cerrar-modal" id="btn-cerrar-modal"></button>
     </div>
     <div class="modal-cuerpo">
       <div class="modal-tabs">
@@ -494,8 +517,8 @@
         <div class="masivo-selector-modo">
           <span class="modo-label">Modalidad de cobro a enviar:</span>
           <div class="modo-pills-wrap">
-            <button type="button" class="btn-modo-pill activa" id="btn-modo-vencidas" data-modo="vencidas">🔴 Solo Facturas Vencidas</button>
-            <button type="button" class="btn-modo-pill" id="btn-modo-todas" data-modo="todas">📋 Cartera Completa (Todas)</button>
+            <button type="button" class="btn-modo-pill activa" id="btn-modo-vencidas" data-modo="vencidas">Solo Facturas Vencidas</button>
+            <button type="button" class="btn-modo-pill" id="btn-modo-todas" data-modo="todas">Cartera Completa (Todas)</button>
           </div>
         </div>
 
@@ -521,7 +544,7 @@
         </div>
 
         <div class="modal-pie-acciones">
-          <button type="button" class="btn" id="btn-copiar-todos-ws">📋 Copiar todos los mensajes de asesores</button>
+          <button type="button" class="btn" id="btn-copiar-todos-ws">Copiar todos los mensajes de asesores</button>
         </div>
       </div>
 
@@ -532,7 +555,7 @@
           <div class="cola-etiqueta">Facturas seleccionadas:</div>
           <strong id="masivo-clientes-conteo">0 facturas seleccionadas</strong>
           <div class="masivo-acciones" style="margin-top: 14px;">
-            <button type="button" class="btn primario" id="btn-copiar-clientes-sel">📋 Copiar mensaje de seleccionados</button>
+            <button type="button" class="btn primario" id="btn-copiar-clientes-sel">Copiar mensaje de seleccionados</button>
           </div>
         </div>
       </div>
@@ -549,14 +572,14 @@
         <h3>Cargar Comprobante de Retención</h3>
         <p>Sube el comprobante (PDF o imagen). El sistema detectará las facturas automáticamente y podrás asociar las que falten con 1 clic.</p>
       </div>
-      <button type="button" class="btn-cerrar-modal" id="btn-cerrar-modal-comp">✕</button>
+      <button type="button" class="btn-cerrar-modal" id="btn-cerrar-modal-comp"></button>
     </div>
 
     <div class="modal-cuerpo">
       <!-- Zona de Carga (Drag & Drop) -->
       <div class="dropzone-comprobante" id="dropzone-comprobante">
         <input type="file" id="input-file-comprobante" accept=".pdf,image/png,image/jpeg,image/webp" hidden>
-        <div class="dropzone-icono">📄</div>
+        <div class="dropzone-icono"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5M12 3v12"/></svg></div>
         <div class="dropzone-textos">
           <strong>Arrastra tu comprobante aquí o haz clic para seleccionarlo</strong>
           <p>Soporta archivos <strong>PDF</strong>, o fotos / capturas en <strong>PNG, JPG</strong></p>
@@ -601,13 +624,13 @@
         <!-- Bloque "Si no la identificas, uno te ayuda" (Asistente de Búsqueda y Sugerencias) -->
         <div class="comp-asistente-card">
           <div class="asistente-header">
-            <span class="asistente-tag">💡 Asistente Inteligente</span>
+            <span class="asistente-tag">Asistente Inteligente</span>
             <strong>¿Falta alguna factura o la foto está borrosa?</strong>
             <p>Busca cualquier factura por número o cliente y agrégala con 1 clic:</p>
           </div>
 
           <div class="asistente-buscador-wrap">
-            <input type="text" id="comp-buscador-asistente" placeholder="🔍 Escribe el N° de factura (ej: 3405586) o cliente para agregar...">
+            <input type="text" id="comp-buscador-asistente" placeholder="Escribe el N° de factura (ej: 3405586) o cliente para agregar...">
             <div id="comp-sugerencias-dropdown" class="comp-sugerencias-dropdown" hidden></div>
           </div>
 
@@ -620,10 +643,10 @@
 
         <!-- Acciones Finales -->
         <div class="modal-pie-acciones comp-pie-acciones">
-          <button type="button" class="btn" id="btn-comp-limpiar">🔄 Cargar otro</button>
-          <button type="button" class="btn" id="btn-comp-copiar-ws">📋 Copiar Resumen WhatsApp</button>
-          <button type="button" class="btn primario" id="btn-comp-filtrar-tabla">🔍 Filtrar en la Tabla</button>
-          <button type="button" class="btn primario btn-exito-beval" id="btn-comp-guardar">💾 Guardar y Asociar</button>
+          <button type="button" class="btn" id="btn-comp-limpiar">Cargar otro</button>
+          <button type="button" class="btn" id="btn-comp-copiar-ws">Copiar Resumen WhatsApp</button>
+          <button type="button" class="btn primario" id="btn-comp-filtrar-tabla">Filtrar en la Tabla</button>
+          <button type="button" class="btn primario btn-exito-beval" id="btn-comp-guardar">Guardar y Asociar</button>
         </div>
       </div>
     </div>
@@ -639,46 +662,46 @@
         <h3 id="mc-asesor-nombre">Gestionar Acceso</h3>
         <p id="mc-asesor-zona">Zona Z000 &bull; Código 00</p>
       </div>
-      <button type="button" class="btn-cerrar-modal" id="btn-cerrar-mc" title="Cerrar ventana">✕</button>
+      <button type="button" class="btn-cerrar-modal" id="btn-cerrar-mc" title="Cerrar ventana"></button>
     </div>
     <div class="modal-cuerpo" style="padding: 20px 24px;">
       <div class="campo-grupo" style="margin-bottom: 16px;">
         <label for="mc-input-usuario" style="display: block; font-size: 12px; font-weight: 700; color: var(--texto); margin-bottom: 6px;">
-          👤 Nombre de Usuario (Login):
+          Nombre de Usuario (Login):
         </label>
         <div style="display: flex; gap: 8px;">
           <input type="text" id="mc-input-usuario" class="input-moderno" placeholder="ej. socrates" />
         </div>
         <div class="chips-sugerencias" style="display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap;">
-          <button type="button" class="chip-sug" id="mc-sug-pnombre" title="Usar primer nombre">⚡ Primer nombre</button>
-          <button type="button" class="chip-sug" id="mc-sug-zona" title="Usar zona">⚡ Zona</button>
-          <button type="button" class="chip-sug" id="mc-sug-cod" title="Usar código">⚡ Código</button>
+          <button type="button" class="chip-sug" id="mc-sug-pnombre" title="Usar primer nombre">Primer nombre</button>
+          <button type="button" class="chip-sug" id="mc-sug-zona" title="Usar zona">Zona</button>
+          <button type="button" class="chip-sug" id="mc-sug-cod" title="Usar código">Código</button>
         </div>
       </div>
 
       <div class="campo-grupo" style="margin-bottom: 18px;">
         <label for="mc-input-clave" style="display: block; font-size: 12px; font-weight: 700; color: var(--texto); margin-bottom: 6px;">
-          🔑 Contraseña de Acceso:
+          Contraseña de Acceso:
         </label>
         <div style="display: flex; gap: 8px; position: relative;">
           <input type="text" id="mc-input-clave" class="input-moderno" placeholder="ej. socrates" />
-          <button type="button" id="mc-btn-ver-clave" class="btn btn-sm btn-secundario" style="padding: 0 12px;" title="Alternar visibilidad">👁️</button>
+          <button type="button" id="mc-btn-ver-clave" class="btn btn-sm btn-secundario" style="padding: 0 12px;" title="Alternar visibilidad"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button>
         </div>
         <div class="chips-sugerencias" style="display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap;">
-          <button type="button" class="chip-sug" id="mc-sug-clave-user" title="Poner la misma que el usuario">⚡ Igual a usuario</button>
-          <button type="button" class="chip-sug" id="mc-sug-clave-beval" title="Usar beval2026">⚡ beval2026</button>
-          <button type="button" class="chip-sug" id="mc-sug-clave-123" title="Usar 123456">⚡ 123456</button>
+          <button type="button" class="chip-sug" id="mc-sug-clave-user" title="Poner la misma que el usuario">Igual a usuario</button>
+          <button type="button" class="chip-sug" id="mc-sug-clave-beval" title="Usar beval2026">beval2026</button>
+          <button type="button" class="chip-sug" id="mc-sug-clave-123" title="Usar 123456">123456</button>
         </div>
       </div>
 
-      <div style="background: rgba(184, 201, 25, 0.08); border: 1px solid rgba(184, 201, 25, 0.25); border-radius: 10px; padding: 10px 14px; margin-bottom: 20px; font-size: 12px; color: var(--suave);">
+      <div style="background: rgba(204,219,42, 0.08); border: 1px solid rgba(204,219,42, 0.25); border-radius: 10px; padding: 10px 14px; margin-bottom: 20px; font-size: 12px; color: var(--suave);">
         ℹ️ <em>El asesor podrá ingresar con este usuario y contraseña en la pantalla inicial. Podrá ver únicamente sus clientes y facturas.</em>
       </div>
 
       <div style="display: flex; flex-direction: column; gap: 12px;">
         <div style="display: flex; gap: 10px;">
           <button type="button" id="mc-btn-guardar" class="btn primario btn-exito-beval" style="flex: 1; justify-content: center; font-weight: 700;">
-            💾 Guardar Acceso
+            Guardar Acceso
           </button>
           <button type="button" id="mc-btn-cancelar" class="btn btn-secundario">
             Cancelar
@@ -689,7 +712,7 @@
             Restablecer por defecto
           </button>
           <button type="button" id="mc-btn-copiar-ws" class="btn btn-sm btn-secundario" style="font-size: 11px;">
-            📋 Copiar texto para WhatsApp
+            Copiar texto para WhatsApp
           </button>
         </div>
       </div>
@@ -706,13 +729,13 @@
         <h3>Gestión de Accesos y Contraseñas</h3>
         <p>Listado de credenciales activas para el inicio de sesión de los asesores</p>
       </div>
-      <button type="button" class="btn-cerrar-modal" id="btn-cerrar-mta" title="Cerrar">✕</button>
+      <button type="button" class="btn-cerrar-modal" id="btn-cerrar-mta" title="Cerrar"></button>
     </div>
     <div class="modal-cuerpo" style="padding: 16px 24px; overflow-y: auto; flex: 1;">
       <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; flex-wrap: wrap;">
-        <input type="text" id="mta-filtro" class="input-moderno" placeholder="🔍 Buscar por nombre, zona o usuario..." style="max-width: 340px;" />
+        <input type="text" id="mta-filtro" class="input-moderno" placeholder="Buscar por nombre, zona o usuario..." style="max-width: 340px;" />
         <div style="display: flex; gap: 8px;">
-          <button type="button" class="btn btn-sm btn-secundario" id="mta-btn-exportar">📥 Exportar Lista (CSV)</button>
+          <button type="button" class="btn btn-sm btn-secundario" id="mta-btn-exportar">Exportar Lista (CSV)</button>
         </div>
       </div>
       <div style="border: 1px solid var(--borde); border-radius: 10px; overflow: hidden;">
@@ -739,7 +762,35 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-<script src="config.js?v=corporate2"></script>
-<script src="app.js?v=corporate2"></script>
+<script src="config.js?v=mayoreo1"></script>
+<script src="app.js?v=mayoreo1"></script>
+
+<script>
+/* Tablero didáctico del login (solo visual; no toca la lógica de app.js) */
+(function(){
+  var u=document.getElementById("login-correo"),c=document.getElementById("login-clave"),
+      av=document.getElementById("g-avance"),ag=document.getElementById("g-aguja"),
+      est=document.getElementById("auto-estado"),card=document.getElementById("auto-card"),
+      err=document.getElementById("login-error"),ojo=document.getElementById("ojo-clave");
+  if(!u||!c||!av) return;
+  var L=251.3, msg=["Motor apagado: identifícate para comenzar","Usuario listo: ahora escribe tu contraseña","Todo listo: presiona «Arrancar motor»"];
+  function set(n){
+    var p=[0,.33,.66,1][n];
+    av.style.strokeDashoffset=L*(1-p);
+    ag.style.transform="rotate("+(-90+180*p)+"deg)";
+    est.textContent=msg[Math.min(n,2)];
+    for(var i=1;i<=3;i++){var li=document.getElementById("paso-"+i);
+      li.className=i<=n?"hecho":(i===n+1?"activo":"");}
+  }
+  function calc(){ set(!u.value.trim()?0:(!c.value?1:2)); }
+  u.addEventListener("input",calc); c.addEventListener("input",calc);
+  if(ojo) ojo.addEventListener("click",function(){c.type=c.type==="password"?"text":"password";});
+  new MutationObserver(function(){
+    if(!err.hidden){ card.classList.remove("auto-error"); void card.offsetWidth; card.classList.add("auto-error");
+      est.textContent="Algo no cuadra: revisa tus datos e intenta de nuevo"; set(1); }
+  }).observe(err,{attributes:true,attributeFilter:["hidden"]});
+  set(0);
+})();
+</script>
 </body>
 </html>
