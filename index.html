@@ -411,42 +411,88 @@
 
     <!-- Por vendedor -->
     <section class="tab" id="tab-vendedores" hidden>
-      <div class="acciones">
-        <div class="vendedores-header-info">
-          <span id="vendedores-conteo"></span>
-          <!-- Filtro rápido de Semáforo para el Jefe -->
-          <div class="vendedores-semaforo-filtro" id="filtro-semaforo">
-            <button type="button" class="btn-sem-filtro activa" data-sem="todos">Todos</button>
-            <button type="button" class="btn-sem-filtro sem-riesgo" data-sem="riesgo">En riesgo (<span id="count-sem-riesgo">0</span>)</button>
-            <button type="button" class="btn-sem-filtro sem-precaucion" data-sem="precaucion">En precaución (<span id="count-sem-precaucion">0</span>)</button>
-            <button type="button" class="btn-sem-filtro sem-estable" data-sem="estable">Estable (<span id="count-sem-estable">0</span>)</button>
+      <!-- Selector de Sub-Vista: Asesores Comerciales vs Analistas de Cobranza -->
+      <div class="subvistas-barra" style="margin-bottom: 12px; display: flex; gap: 8px;">
+        <button type="button" class="btn-subvista activa" id="subvista-vendedores" style="padding: 8px 16px; border-radius: 99px; font-weight: 700; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; transition: all .2s;">
+          <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Por Asesores Comerciales (<span id="count-subvista-vendedores">0</span>)
+        </button>
+        <button type="button" class="btn-subvista" id="subvista-analistas" style="padding: 8px 16px; border-radius: 99px; font-weight: 700; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; transition: all .2s;">
+          <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          Por Analistas de Cobranza &bull; Zonas (<span id="count-subvista-analistas">7</span>)
+        </button>
+      </div>
+
+      <!-- Subvista 1: Asesores Comerciales -->
+      <div id="subvista-panel-vendedores">
+        <div class="acciones">
+          <div class="vendedores-header-info">
+            <span id="vendedores-conteo"></span>
+            <!-- Filtro rápido de Semáforo para el Jefe -->
+            <div class="vendedores-semaforo-filtro" id="filtro-semaforo">
+              <button type="button" class="btn-sem-filtro activa" data-sem="todos">Todos</button>
+              <button type="button" class="btn-sem-filtro sem-riesgo" data-sem="riesgo">En riesgo (<span id="count-sem-riesgo">0</span>)</button>
+              <button type="button" class="btn-sem-filtro sem-precaucion" data-sem="precaucion">En precaución (<span id="count-sem-precaucion">0</span>)</button>
+              <button type="button" class="btn-sem-filtro sem-estable" data-sem="estable">Estable (<span id="count-sem-estable">0</span>)</button>
+            </div>
+          </div>
+          <div class="acciones-botones">
+            <button class="btn btn-secundario" id="btn-gestionar-credenciales" title="Ver y editar usuarios y contraseñas de todos los asesores">
+              Gestionar Accesos y Claves
+            </button>
+            <button class="btn btn-masivo-accion" id="btn-masivo-vendedores"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg> Mensajería masiva a asesores</button>
+            <button class="btn" id="btn-reset-ws" title="Reiniciar estados de envío del día">Reiniciar Estados WhatsApp</button>
           </div>
         </div>
-        <div class="acciones-botones">
-          <button class="btn btn-secundario" id="btn-gestionar-credenciales" title="Ver y editar usuarios y contraseñas de todos los asesores">
-            Gestionar Accesos y Claves
-          </button>
-          <button class="btn btn-masivo-accion" id="btn-masivo-vendedores"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg> Mensajería masiva a asesores</button>
-          <button class="btn" id="btn-reset-ws" title="Reiniciar estados de envío del día">Reiniciar Estados WhatsApp</button>
+        <div class="tabla-wrap">
+          <table id="tabla-vendedores" class="tabla-fija tabla-vendedores-estilo">
+            <thead>
+              <tr>
+                <th style="width: 48px; text-align: center;">Nivel</th>
+                <th style="width: 60px;">Zona</th>
+                <th style="width: 275px;">Vendedor</th>
+                <th class="num" style="width: 75px;">Facturas</th>
+                <th class="num" style="width: 75px;">Vencidas</th>
+                <th class="num" style="width: 105px;">Estimado USD</th>
+                <th style="width: 140px;">Avance Cobro</th>
+                <th style="width: 110px; text-align: center;">Estado WS</th>
+                <th style="width: 175px; text-align: center;">Enviar WhatsApp</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
         </div>
       </div>
-      <div class="tabla-wrap">
-        <table id="tabla-vendedores" class="tabla-fija tabla-vendedores-estilo">
-          <thead>
-            <tr>
-              <th style="width: 48px; text-align: center;">Nivel</th>
-              <th style="width: 60px;">Zona</th>
-              <th style="width: 275px;">Vendedor</th>
-              <th class="num" style="width: 75px;">Facturas</th>
-              <th class="num" style="width: 75px;">Vencidas</th>
-              <th class="num" style="width: 105px;">Estimado USD</th>
-              <th style="width: 140px;">Avance Cobro</th>
-              <th style="width: 110px; text-align: center;">Estado WS</th>
-              <th style="width: 175px; text-align: center;">Enviar WhatsApp</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
+
+      <!-- Subvista 2: Analistas de Cobranza (Zonas a Cargo) -->
+      <div id="subvista-panel-analistas" hidden>
+        <div class="acciones">
+          <div class="vendedores-header-info">
+            <span id="analistas-conteo-vista" style="font-weight: 700; color: var(--texto); font-size: 14px;">7 analistas de cobranza supervisando zonas</span>
+          </div>
+          <div class="acciones-botones">
+            <button class="btn btn-masivo-accion" id="btn-masivo-analistas-vista"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg> Reportes WS a Analistas</button>
+            <button class="btn" id="btn-copiar-macro-analistas" title="Copiar informe global de todos los analistas para la gerencia">Copiar Macro-Reporte Gerencial</button>
+          </div>
+        </div>
+        <div class="tabla-wrap">
+          <table id="tabla-analistas" class="tabla-fija tabla-vendedores-estilo">
+            <thead>
+              <tr>
+                <th style="width: 200px;">Analista de Cobranzas</th>
+                <th style="width: 260px;">Zonas Supervisadas</th>
+                <th class="num" style="width: 75px;">Asesores</th>
+                <th class="num" style="width: 80px;">Facturas</th>
+                <th class="num" style="width: 80px;">Vencidas</th>
+                <th class="num" style="width: 115px;">Ret. Estimada</th>
+                <th style="width: 135px;">Avance Cobro</th>
+                <th style="width: 130px; text-align: center;">Teléfono</th>
+                <th style="width: 180px; text-align: center;">Acción WhatsApp</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-analistas-vista"></tbody>
+          </table>
+        </div>
       </div>
     </section>
 
@@ -491,18 +537,26 @@
 
 <!-- Modal de Mensajería Masiva -->
 <div id="modal-masivo" class="modal-backdrop" hidden>
-  <div class="modal-caja">
+  <div class="modal-caja modal-caja-masivo">
     <div class="modal-header">
       <div class="modal-titulos">
-        <div class="badge-modal">WhatsApp Cobranzas</div>
+        <div class="badge-modal">WhatsApp Cobranzas &bull; Beval</div>
         <h3>Mensajería Masiva de Cobro</h3>
-        <p>Gestión automatizada de recordatorios de retención de IVA</p>
+        <p>Gestión automatizada de recordatorios de retención de IVA para Asesores y Analistas</p>
       </div>
-      <button type="button" class="btn-cerrar-modal" id="btn-cerrar-modal"></button>
+      <button type="button" class="btn-cerrar-modal" id="btn-cerrar-modal" title="Cerrar ventana [ESC]" aria-label="Cerrar ventana">
+        <svg class="ico-cerrar-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="9.5" class="rin-aro" stroke-width="1.6" stroke-dasharray="3 2"></circle>
+          <circle cx="12" cy="12" r="6" class="tuerca-nucleo" stroke-width="1.2" opacity="0.35"></circle>
+          <line x1="8.5" y1="8.5" x2="15.5" y2="15.5" stroke-width="2.4"></line>
+          <line x1="15.5" y1="8.5" x2="8.5" y2="15.5" stroke-width="2.4"></line>
+        </svg>
+      </button>
     </div>
     <div class="modal-cuerpo">
       <div class="modal-tabs">
         <button type="button" class="modal-tab-btn activa" id="mtab-vendedores">A Asesores Comerciales</button>
+        <button type="button" class="modal-tab-btn" id="mtab-analistas">A Analistas de Cobranza (Zonas)</button>
         <button type="button" class="modal-tab-btn" id="mtab-clientes">A Clientes Seleccionados</button>
       </div>
 
@@ -517,6 +571,42 @@
           </div>
         </div>
 
+        <!-- Barra de selección masiva con Marcar a Todos y Filtros Rápidos -->
+        <div class="masivo-control-bar">
+          <div class="masivo-master-check">
+            <label class="custom-checkbox-lbl" title="Marcar o desmarcar todos los asesores comerciales">
+              <input type="checkbox" id="chk-todos-masivo-vend" checked />
+              <span class="chk-custom-box"></span>
+              <span class="chk-lbl-txt"><strong>Marcar todos</strong> (<span id="txt-total-asesores-masivo">0</span>)</span>
+            </label>
+            <span class="badge-sel-conteo" id="badge-sel-conteo-vend">0 seleccionados</span>
+          </div>
+          <div class="masivo-busqueda-rapida">
+            <input type="text" id="filtro-masivo-vend" class="input-moderno" placeholder="Buscar asesor o zona..." />
+            <button type="button" class="btn-chip-filtro" id="btn-filtro-con-vencidas" title="Marcar solo los que tienen facturas vencidas">Con vencidas</button>
+            <button type="button" class="btn-chip-filtro" id="btn-filtro-pendientes-ws" title="Marcar solo los pendientes de envío hoy">Pendientes WS</button>
+          </div>
+        </div>
+
+        <!-- Listado scrollable con todos los asesores para ver exactamente a quiénes se les enviará -->
+        <div class="masivo-tabla-scroll-wrap">
+          <table class="tabla-masivo-vendedores" id="tabla-masivo-vendedores">
+            <thead>
+              <tr>
+                <th style="width: 38px; text-align: center;">Sel</th>
+                <th style="width: 60px;">Zona</th>
+                <th>Asesor Comercial</th>
+                <th class="num" style="width: 85px;">Facturas</th>
+                <th class="num" style="width: 105px;">Ret. Estimada</th>
+                <th style="width: 120px;">Teléfono</th>
+                <th style="width: 90px; text-align: center;">Estado</th>
+                <th style="width: 85px; text-align: center;">Acción</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-masivo-vendedores"></tbody>
+          </table>
+        </div>
+
         <div class="masivo-progreso-card">
           <div class="masivo-progreso-info">
             <span>Progreso de envíos hoy:</span>
@@ -528,7 +618,7 @@
         </div>
 
         <div class="masivo-cola-card" id="masivo-proximo-card">
-          <div class="cola-etiqueta">Próximo asesor en cola:</div>
+          <div class="cola-etiqueta">Próximo asesor seleccionado en cola:</div>
           <div class="cola-nombre" id="masivo-proximo-nombre">—</div>
           <div class="cola-detalles" id="masivo-proximo-detalles">—</div>
           <div class="masivo-acciones">
@@ -539,7 +629,67 @@
         </div>
 
         <div class="modal-pie-acciones">
-          <button type="button" class="btn" id="btn-copiar-todos-ws">Copiar todos los mensajes de asesores</button>
+          <button type="button" class="btn" id="btn-copiar-todos-ws">Copiar mensajes de asesores seleccionados</button>
+          <button type="button" class="btn" id="btn-reset-ws-modal" title="Reiniciar marcas de envío del día">Reiniciar estados WS hoy</button>
+        </div>
+      </div>
+
+      <!-- Panel Masivo Analistas de Cobranza (Zonas a Cargo) -->
+      <div id="mpanel-analistas" class="modal-subpanel" hidden>
+        <div class="masivo-analistas-header">
+          <div class="analistas-header-desc">
+            <h4 style="margin: 0 0 4px; font-size: 15px; font-weight: 800;">Reportes Consolidados por Analista de Cobranzas</h4>
+            <p style="margin: 0; font-size: 12px; color: var(--tx-2);">Envía a cada analista el resumen de retención 75% de todas sus zonas a cargo para el seguimiento de cobro.</p>
+          </div>
+        </div>
+
+        <!-- Barra de selección masiva para Analistas -->
+        <div class="masivo-control-bar">
+          <div class="masivo-master-check">
+            <label class="custom-checkbox-lbl" title="Marcar o desmarcar todos los analistas de cobranza">
+              <input type="checkbox" id="chk-todos-masivo-analistas" checked />
+              <span class="chk-custom-box"></span>
+              <span class="chk-lbl-txt"><strong>Marcar todos los analistas</strong> (<span id="txt-total-analistas-masivo">7</span>)</span>
+            </label>
+            <span class="badge-sel-conteo" id="badge-sel-conteo-analistas">7 seleccionados</span>
+          </div>
+          <div class="masivo-busqueda-rapida">
+            <button type="button" class="btn btn-mini" id="btn-copiar-macro-analistas-modal" style="font-weight: 700;">📋 Copiar Macro-Reporte General</button>
+          </div>
+        </div>
+
+        <!-- Listado scrollable con todos los analistas -->
+        <div class="masivo-tabla-scroll-wrap">
+          <table class="tabla-masivo-analistas" id="tabla-masivo-analistas">
+            <thead>
+              <tr>
+                <th style="width: 38px; text-align: center;">Sel</th>
+                <th style="width: 175px;">Analista</th>
+                <th>Zonas Supervisadas</th>
+                <th class="num" style="width: 75px;">Facturas</th>
+                <th class="num" style="width: 75px;">Vencidas</th>
+                <th class="num" style="width: 105px;">Ret. Estimada</th>
+                <th style="width: 125px;">Teléfono</th>
+                <th style="width: 140px; text-align: center;">Acción WhatsApp</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-masivo-analistas"></tbody>
+          </table>
+        </div>
+
+        <div class="masivo-cola-card" id="masivo-proximo-analista-card">
+          <div class="cola-etiqueta">Próximo analista seleccionado en cola:</div>
+          <div class="cola-nombre" id="masivo-proximo-analista-nombre">—</div>
+          <div class="cola-detalles" id="masivo-proximo-analista-detalles">—</div>
+          <div class="masivo-acciones">
+            <button type="button" class="btn primario btn-masivo-enviar" id="btn-enviar-siguiente-analista">
+              <span>▶ Abrir WhatsApp con Reporte Consolidado</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="modal-pie-acciones">
+          <button type="button" class="btn" id="btn-copiar-reportes-analistas-sel">Copiar reportes de analistas seleccionados</button>
         </div>
       </div>
 
@@ -567,7 +717,14 @@
         <h3>Cargar Comprobante de Retención</h3>
         <p>Sube el comprobante (PDF o imagen). El sistema detectará las facturas automáticamente y podrás asociar las que falten con 1 clic.</p>
       </div>
-      <button type="button" class="btn-cerrar-modal" id="btn-cerrar-modal-comp"></button>
+      <button type="button" class="btn-cerrar-modal" id="btn-cerrar-modal-comp" title="Cerrar ventana [ESC]" aria-label="Cerrar ventana">
+        <svg class="ico-cerrar-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="9.5" class="rin-aro" stroke-width="1.6" stroke-dasharray="3 2"></circle>
+          <circle cx="12" cy="12" r="6" class="tuerca-nucleo" stroke-width="1.2" opacity="0.35"></circle>
+          <line x1="8.5" y1="8.5" x2="15.5" y2="15.5" stroke-width="2.4"></line>
+          <line x1="15.5" y1="8.5" x2="8.5" y2="15.5" stroke-width="2.4"></line>
+        </svg>
+      </button>
     </div>
 
     <div class="modal-cuerpo">
@@ -657,7 +814,14 @@
         <h3 id="mc-asesor-nombre">Gestionar Acceso</h3>
         <p id="mc-asesor-zona">Zona Z000 &bull; Código 00</p>
       </div>
-      <button type="button" class="btn-cerrar-modal" id="btn-cerrar-mc" title="Cerrar ventana"></button>
+      <button type="button" class="btn-cerrar-modal" id="btn-cerrar-mc" title="Cerrar ventana [ESC]" aria-label="Cerrar ventana">
+        <svg class="ico-cerrar-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="9.5" class="rin-aro" stroke-width="1.6" stroke-dasharray="3 2"></circle>
+          <circle cx="12" cy="12" r="6" class="tuerca-nucleo" stroke-width="1.2" opacity="0.35"></circle>
+          <line x1="8.5" y1="8.5" x2="15.5" y2="15.5" stroke-width="2.4"></line>
+          <line x1="15.5" y1="8.5" x2="8.5" y2="15.5" stroke-width="2.4"></line>
+        </svg>
+      </button>
     </div>
     <div class="modal-cuerpo" style="padding: 20px 24px;">
       <div class="campo-grupo" style="margin-bottom: 16px;">
@@ -724,7 +888,14 @@
         <h3>Gestión de Accesos y Contraseñas</h3>
         <p>Listado de credenciales activas para el inicio de sesión de los asesores</p>
       </div>
-      <button type="button" class="btn-cerrar-modal" id="btn-cerrar-mta" title="Cerrar"></button>
+      <button type="button" class="btn-cerrar-modal" id="btn-cerrar-mta" title="Cerrar ventana [ESC]" aria-label="Cerrar ventana">
+        <svg class="ico-cerrar-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="9.5" class="rin-aro" stroke-width="1.6" stroke-dasharray="3 2"></circle>
+          <circle cx="12" cy="12" r="6" class="tuerca-nucleo" stroke-width="1.2" opacity="0.35"></circle>
+          <line x1="8.5" y1="8.5" x2="15.5" y2="15.5" stroke-width="2.4"></line>
+          <line x1="15.5" y1="8.5" x2="8.5" y2="15.5" stroke-width="2.4"></line>
+        </svg>
+      </button>
     </div>
     <div class="modal-cuerpo" style="padding: 16px 24px; overflow-y: auto; flex: 1;">
       <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; flex-wrap: wrap;">

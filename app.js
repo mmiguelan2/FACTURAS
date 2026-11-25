@@ -92,6 +92,28 @@
     }
   };
 
+  // ---------- TELÉFONOS DE ANALISTAS DE COBRANZA ----------
+  const STORAGE_KEY_TELS_ANALISTAS = "beval_telefonos_analistas";
+  const cargarTelefonosAnalistas = () => {
+    try {
+      const g = localStorage.getItem(STORAGE_KEY_TELS_ANALISTAS);
+      return g ? JSON.parse(g) : {};
+    } catch {
+      return {};
+    }
+  };
+
+  const guardarTelefonoAnalista = (nom, tel) => {
+    try {
+      const g = cargarTelefonosAnalistas();
+      if (tel) g[nom.toUpperCase()] = tel;
+      else delete g[nom.toUpperCase()];
+      localStorage.setItem(STORAGE_KEY_TELS_ANALISTAS, JSON.stringify(g));
+    } catch (e) {
+      console.warn("No se pudo guardar teléfono de analista en localStorage", e);
+    }
+  };
+
   // ---------- GESTIÓN DE CREDENCIALES (USUARIOS Y CONTRASEÑAS) ----------
   const STORAGE_KEY_CREDENCIALES = "beval_credenciales_vendedores";
 
@@ -225,8 +247,16 @@
       facturas: new Map(),
     },
 
-    // Modalidad de cobro masivo (vencidas o todas)
+    // Modalidad y Selección de Mensajería Masiva
     modoMasivo: "vencidas",
+    masivoVendedoresSel: new Set(),
+    masivoAnalistasSel: new Set(),
+    wsAnalistasEnviados: new Set(),
+    telefonosAnalistas: new Map(),
+    subvistaEquipo: "vendedores",
+    filtroMasivoVend: "",
+    filtroSoloVencidasMasivo: false,
+    filtroSoloPendientesMasivo: false,
   };
 
   // Pre-poblar estado.vendedores desde el inicio con el directorio base de C.VENDEDORES_DEFAULT
@@ -2662,8 +2692,323 @@
     }).join("") || `<tr><td colspan="9" style="text-align: center; padding: 24px;">No hay asesores en esta categoría del semáforo.</td></tr>`;
 
     $("vendedores-conteo").textContent = `${ent(listaMostrada.length)} asesores comerciales`;
+    if ($("count-subvista-vendedores")) $("count-subvista-vendedores").textContent = listaGrupos.length;
+    renderizarVistaAnalistas();
     actualizarModalMasivo();
   }
+
+  // ---------- GESTIÓN Y REPORTES DE ANALISTAS DE COBRANZA ----------
+  function obtenerResumenAnalistas() {
+    const analistasMap = new Map();
+    const nombresBase = [
+      "Carolina Ache",
+      "Lolimar Oropeza",
+      "Wilson Perez",
+      "Myrlanyelis Palencia",
+      "Yurisnelith Perez",
+      "Ambar Garcia",
+      "Luis Cardozo"
+    ];
+
+    nombresBase.forEach((nom) => {
+      analistasMap.set(nom, {
+        nombre: nom,
+        zonas: new Set(),
+        vendedores: new Set(),
+        facturasTotal: 0,
+        facturasSinRet: 0,
+        vencidasSinRet: 0,
+        estimadoSinRet: 0,
+        estimadoVencidasSinRet: 0,
+        cobradoRet: 0,
+        facturasCobrado: 0
+      });
+    });
+
+    const telsGuardados = cargarTelefonosAnalistas();
+
+    estado.facturas.forEach((f) => {
+      const aNom = (f.analista || "").trim();
+      if (!aNom || aNom.toUpperCase() === "SIN ANALISTA") return;
+      if (!analistasMap.has(aNom)) {
+        analistasMap.set(aNom, {
+          nombre: aNom,
+          zonas: new Set(),
+          vendedores: new Set(),
+          facturasTotal: 0,
+          facturasSinRet: 0,
+          vencidasSinRet: 0,
+          estimadoSinRet: 0,
+          estimadoVencidasSinRet: 0,
+          cobradoRet: 0,
+          facturasCobrado: 0
+        });
+      }
+      const a = analistasMap.get(aNom);
+      if (f.zona) a.zonas.add(f.zona);
+      if (f.vendedor) a.vendedores.add(f.vendedor);
+      a.facturasTotal++;
+
+      const est = Number(f.monto_estimado) || 0;
+      const esVencida = Number(f.dias_vencida) > 0;
+
+      if (f.estado === "SIN RETENCION") {
+        a.facturasSinRet++;
+        a.estimadoSinRet += est;
+        if (esVencida) {
+          a.vencidasSinRet++;
+          a.estimadoVencidasSinRet += est;
+        }
+      } else if (f.estado === "RETENCION MONTADA") {
+        a.cobradoRet += (Number(f.monto_retencion) || est);
+        a.facturasCobrado++;
+      }
+    });
+
+    const lista = Array.from(analistasMap.values()).map((a) => {
+      const k = a.nombre.toUpperCase();
+      const tel = telsGuardados[k] || estado.telefonosAnalistas?.get(k) || "";
+      const totalRetObjetivo = a.estimadoSinRet + a.cobradoRet;
+      const pctCobrado = totalRetObjetivo > 0 ? Math.round((a.cobradoRet / totalRetObjetivo) * 100) : 0;
+      return {
+        nombre: a.nombre,
+        zonas: Array.from(a.zonas).sort(),
+        vendedores: Array.from(a.vendedores).sort(),
+        facturasTotal: a.facturasTotal,
+        facturasSinRet: a.facturasSinRet,
+        vencidasSinRet: a.vencidasSinRet,
+        estimadoSinRet: a.estimadoSinRet,
+        estimadoVencidasSinRet: a.estimadoVencidasSinRet,
+        cobradoRet: a.cobradoRet,
+        pctCobrado: pctCobrado,
+        telefono: tel,
+        enviadoHoy: estado.wsAnalistasEnviados?.has(a.nombre) || false
+      };
+    });
+
+    lista.sort((a, b) => b.estimadoSinRet - a.estimadoSinRet);
+    return lista;
+  }
+
+  function generarReporteAnalista(analistaNombre) {
+    const sinRet = estado.facturas.filter((f) => f.estado === "SIN RETENCION" && f.analista === analistaNombre);
+    const zonasMap = new Map();
+    sinRet.forEach((f) => {
+      const z = f.zona || "S/Z";
+      if (!zonasMap.has(z)) {
+        zonasMap.set(z, {
+          zona: z,
+          vendedores: new Set(),
+          facturas: 0,
+          vencidas: 0,
+          estimado: 0,
+          estimadoVencidas: 0
+        });
+      }
+      const zm = zonasMap.get(z);
+      if (f.vendedor) zm.vendedores.add(f.vendedor);
+      zm.facturas++;
+      const est = Number(f.monto_estimado) || 0;
+      zm.estimado += est;
+      if (Number(f.dias_vencida) > 0) {
+        zm.vencidas++;
+        zm.estimadoVencidas += est;
+      }
+    });
+
+    const totalFacturas = sinRet.length;
+    const totalVencidas = sinRet.filter((f) => Number(f.dias_vencida) > 0).length;
+    const totalEstimado = sinRet.reduce((s, f) => s + (Number(f.monto_estimado) || 0), 0);
+    const totalVencido = sinRet.filter((f) => Number(f.dias_vencida) > 0).reduce((s, f) => s + (Number(f.monto_estimado) || 0), 0);
+    const zonasOrdenadas = Array.from(zonasMap.values()).sort((a, b) => a.zona.localeCompare(b.zona));
+    const fechaHoy = new Date().toLocaleDateString("es-VE");
+
+    let lineas = [];
+    lineas.push(`*COMERCIALIZADORA BEVAL, C.A.*`);
+    lineas.push(`*CONTROL DE RETENCIONES IVA 75%*`);
+    lineas.push(`📅 Fecha: ${fechaHoy}`);
+    lineas.push(``);
+    lineas.push(`Hola *${analistaNombre}*, te compartimos el resumen de retenciones pendientes en tus *${zonasOrdenadas.length} zonas asignadas*:`);
+    lineas.push(``);
+    lineas.push(`📊 *RESUMEN DE TUS ZONAS:*`);
+    lineas.push(`• Facturas pendientes por retención: ${totalFacturas}`);
+    lineas.push(`• Facturas vencidas: ${totalVencidas}`);
+    lineas.push(`• Retención 75% estimada por cobrar: $${usd(totalEstimado)} USD`);
+    if (totalVencido > 0) {
+      lineas.push(`• Monto en mora vencida: $${usd(totalVencido)} USD`);
+    }
+    lineas.push(``);
+    lineas.push(`📍 *DESGLOSE POR ZONA Y ASESOR:*`);
+    zonasOrdenadas.forEach((zm) => {
+      const vendsStr = Array.from(zm.vendedores).join(", ") || "Asesor";
+      lineas.push(`• *${zm.zona}* (${vendsStr}): ${zm.facturas} facturas · Ret. $${usd(zm.estimado)} USD${zm.vencidas > 0 ? ` (${zm.vencidas} vencidas)` : ""}`);
+    });
+    lineas.push(``);
+    lineas.push(`⚠️ *Gestión requerida:* Por favor coordinar con los asesores el seguimiento y la carga de comprobantes pendientes para asegurar el cumplimiento de la meta.`);
+    lineas.push(``);
+    lineas.push(`_Comercializadora Beval, C.A. - Departamento de Cobranzas_`);
+
+    return lineas.join("\n");
+  }
+
+  function generarMacroReporteAnalistas() {
+    const lista = obtenerResumenAnalistas();
+    const fechaHoy = new Date().toLocaleDateString("es-VE");
+    const totalFacturas = lista.reduce((s, a) => s + a.facturasSinRet, 0);
+    const totalVencidas = lista.reduce((s, a) => s + a.vencidasSinRet, 0);
+    const totalEstimado = lista.reduce((s, a) => s + a.estimadoSinRet, 0);
+
+    let lineas = [];
+    lineas.push(`*COMERCIALIZADORA BEVAL, C.A.*`);
+    lineas.push(`*MACRO-REPORTE GERENCIAL: RETENCIONES IVA 75%*`);
+    lineas.push(`📅 Fecha: ${fechaHoy}`);
+    lineas.push(``);
+    lineas.push(`📊 *TOTALES GENERALES:*`);
+    lineas.push(`• Facturas pendientes por retención: ${totalFacturas}`);
+    lineas.push(`• Facturas vencidas en mora: ${totalVencidas}`);
+    lineas.push(`• Cartera retención 75% objetivo: $${usd(totalEstimado)} USD`);
+    lineas.push(``);
+    lineas.push(`👥 *CONSOLIDADO POR ANALISTA DE COBRANZAS:*`);
+    lista.forEach((a) => {
+      lineas.push(`• *${a.nombre}* (${a.zonas.length} zonas): ${a.facturasSinRet} facturas · Ret. $${usd(a.estimadoSinRet)} USD | ${a.vencidasSinRet} vencidas | Cobrado: ${a.pctCobrado}%`);
+    });
+    lineas.push(``);
+    lineas.push(`_Comercializadora Beval, C.A. - Gerencia de Cobranzas y Finanzas_`);
+    return lineas.join("\n");
+  }
+
+  async function enviarWhatsAppAnalista(analistaNombre) {
+    const texto = generarReporteAnalista(analistaNombre);
+    const aList = obtenerResumenAnalistas();
+    const aObj = aList.find((x) => x.nombre === analistaNombre);
+    const tel = aObj?.telefono;
+
+    let url;
+    if (tel) {
+      const telLimpio = String(tel).replace(/\D/g, "");
+      const telWs = telLimpio.startsWith("58") ? telLimpio : (telLimpio.startsWith("0") ? "58" + telLimpio.slice(1) : "58" + telLimpio);
+      url = `https://wa.me/${telWs}?text=${encodeURIComponent(texto)}`;
+    } else {
+      url = `https://wa.me/?text=${encodeURIComponent(texto)}`;
+    }
+
+    window.open(url, "_blank");
+    estado.wsAnalistasEnviados.add(analistaNombre);
+    actualizarModalAnalistas();
+    renderizarVistaAnalistas();
+    aviso(`Reporte de ${analistaNombre} abierto en WhatsApp`);
+  }
+
+  function renderizarVistaAnalistas() {
+    const tbody = $("tbody-analistas-vista");
+    if (!tbody) return;
+    const lista = obtenerResumenAnalistas();
+    if ($("count-subvista-analistas")) $("count-subvista-analistas").textContent = lista.length;
+    if ($("analistas-conteo-vista")) $("analistas-conteo-vista").textContent = `${lista.length} analistas de cobranza supervisando zonas`;
+
+    tbody.innerHTML = lista.map((a) => {
+      const chipsZonasHtml = `<div class="chips-zonas-wrap">${a.zonas.map((z) => `<span class="chip-zona-analista">${esc(z)}</span>`).join("")}</div>`;
+      const telHtml = a.telefono
+        ? `<button type="button" class="btn-tel-editable" data-editar-tel-analista="${esc(a.nombre)}" title="Hacer clic para editar teléfono">${esc(a.telefono)} ✏️</button>`
+        : `<button type="button" class="btn-tel-editable" data-editar-tel-analista="${esc(a.nombre)}" style="color: var(--aviso);" title="Hacer clic para asignar teléfono">+ Asignar Tel</button>`;
+
+      const pct = Math.min(100, Math.max(0, a.pctCobrado));
+      const avanceHtml = `
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <div style="flex: 1; height: 7px; background: var(--sup-hundida); border-radius: 99px; overflow: hidden;">
+            <div style="width: ${pct}%; height: 100%; background: ${pct >= 65 ? "#10b981" : (pct >= 40 ? "var(--lima)" : "#f59e0b")}; border-radius: 99px;"></div>
+          </div>
+          <span style="font-weight: 800; font-size: 11px; min-width: 32px;">${pct}%</span>
+        </div>`;
+
+      const enviadoBadge = a.enviadoHoy
+        ? `<span class="badge" style="background: rgba(16,185,129,0.15); color: #10b981; font-weight: 700; font-size: 11px;">✓ Enviado hoy</span>`
+        : `<span class="badge" style="background: var(--sup-hundida); color: var(--tx-3); font-size: 11px;">Pendiente</span>`;
+
+      return `<tr>
+        <td style="font-weight: 800; color: var(--tx); font-size: 13px;">
+          ${esc(a.nombre)}
+          <div style="font-size: 11px; font-weight: normal; color: var(--tx-3);">${enviadoBadge}</div>
+        </td>
+        <td>${chipsZonasHtml}</td>
+        <td class="num" style="font-weight: 600;">${a.vendedores.length}</td>
+        <td class="num">${ent(a.facturasSinRet)}</td>
+        <td class="num">${a.vencidasSinRet > 0 ? `<span class="vencida">${ent(a.vencidasSinRet)}</span>` : "0"}</td>
+        <td class="num celda-estimado">$${usd(a.estimadoSinRet)}</td>
+        <td>${avanceHtml}</td>
+        <td style="text-align: center;">${telHtml}</td>
+        <td style="text-align: center;">
+          <div style="display: inline-flex; gap: 6px;">
+            <button type="button" class="btn-mini-ws" data-enviar-ws-analista="${esc(a.nombre)}" title="Enviar reporte consolidado por WhatsApp">
+              💬 Enviar WS
+            </button>
+            <button type="button" class="btn-mini-copy" data-copiar-analista="${esc(a.nombre)}" title="Copiar reporte al portapapeles">
+              📋 Copiar
+            </button>
+          </div>
+        </td>
+      </tr>`;
+    }).join("") || `<tr><td colspan="9" style="text-align: center; padding: 24px;">No hay analistas registrados.</td></tr>`;
+  }
+
+  // Event delegation para la tabla de analistas en la vista principal
+  $("tbody-analistas-vista")?.addEventListener("click", async (e) => {
+    const btnWs = e.target.closest("[data-enviar-ws-analista]");
+    if (btnWs) {
+      const nom = btnWs.dataset.enviarWsAnalista;
+      await enviarWhatsAppAnalista(nom);
+      return;
+    }
+    const btnCopiar = e.target.closest("[data-copiar-analista]");
+    if (btnCopiar) {
+      const nom = btnCopiar.dataset.copiarAnalista;
+      const texto = generarReporteAnalista(nom);
+      await navigator.clipboard.writeText(texto);
+      aviso(`Reporte de ${nom} copiado al portapapeles`);
+      return;
+    }
+    const btnTel = e.target.closest("[data-editar-tel-analista]");
+    if (btnTel) {
+      const nom = btnTel.dataset.editarTelAnalista;
+      const tels = cargarTelefonosAnalistas();
+      const actual = tels[nom.toUpperCase()] || "";
+      const nuevo = prompt(`Ingresa o edita el número de WhatsApp para el analista:\n\n${nom}\n\nEjemplo: 04141234567 o 584141234567\n(Deja en blanco para borrar):`, actual);
+      if (nuevo === null) return;
+      const limpio = nuevo.trim();
+      guardarTelefonoAnalista(nom, limpio);
+      renderizarVistaAnalistas();
+      actualizarModalAnalistas();
+      aviso(limpio ? `Teléfono guardado para ${nom}: ${limpio}` : `Teléfono eliminado para ${nom}`);
+      return;
+    }
+  });
+
+  // Toggle de subvistas: Por Asesores vs Por Analistas de Cobranza
+  function activarSubvistaEquipo(vista) {
+    estado.subvistaEquipo = vista;
+    const btnV = $("subvista-vendedores"), btnA = $("subvista-analistas");
+    const pnlV = $("subvista-panel-vendedores"), pnlA = $("subvista-panel-analistas");
+    if (btnV) btnV.classList.toggle("activa", vista === "vendedores");
+    if (btnA) btnA.classList.toggle("activa", vista === "analistas");
+    if (pnlV) pnlV.hidden = vista !== "vendedores";
+    if (pnlA) pnlA.hidden = vista !== "analistas";
+    if (vista === "analistas") {
+      renderizarVistaAnalistas();
+    }
+  }
+
+  $("subvista-vendedores")?.addEventListener("click", () => activarSubvistaEquipo("vendedores"));
+  $("subvista-analistas")?.addEventListener("click", () => activarSubvistaEquipo("analistas"));
+
+  $("btn-masivo-analistas-vista")?.addEventListener("click", () => {
+    abrirModalMasivo("analistas");
+  });
+
+  $("btn-copiar-macro-analistas")?.addEventListener("click", async () => {
+    const texto = generarMacroReporteAnalistas();
+    await navigator.clipboard.writeText(texto);
+    aviso("Macro-Reporte Gerencial copiado al portapapeles");
+  });
 
   $("filtro-semaforo")?.addEventListener("click", (e) => {
     const btn = e.target.closest(".btn-sem-filtro");
@@ -2988,15 +3333,23 @@
   });
 
   function activarTabModal(tab) {
-    const btnV = $("mtab-vendedores"), btnC = $("mtab-clientes");
-    const pnlV = $("mpanel-vendedores"), pnlC = $("mpanel-clientes");
+    const btnV = $("mtab-vendedores"), btnA = $("mtab-analistas"), btnC = $("mtab-clientes");
+    const pnlV = $("mpanel-vendedores"), pnlA = $("mpanel-analistas"), pnlC = $("mpanel-clientes");
     if (btnV) btnV.classList.toggle("activa", tab === "vendedores");
+    if (btnA) btnA.classList.toggle("activa", tab === "analistas");
     if (btnC) btnC.classList.toggle("activa", tab === "clientes");
     if (pnlV) pnlV.hidden = tab !== "vendedores";
+    if (pnlA) pnlA.hidden = tab !== "analistas";
     if (pnlC) pnlC.hidden = tab !== "clientes";
+    if (tab === "analistas") {
+      actualizarModalAnalistas();
+    } else if (tab === "vendedores") {
+      actualizarModalMasivo();
+    }
   }
 
   $("mtab-vendedores")?.addEventListener("click", () => activarTabModal("vendedores"));
+  $("mtab-analistas")?.addEventListener("click", () => activarTabModal("analistas"));
   $("mtab-clientes")?.addEventListener("click", () => activarTabModal("clientes"));
 
   // Selector de Modalidad en el Modal Masivo (Solo Vencidas vs Cartera Completa)
@@ -3016,11 +3369,117 @@
     aviso("Modo de envío masivo: Cartera Completa");
   });
 
+  // Filtros rápidos dentro de la lista de vendedores de masivo
+  $("filtro-masivo-vend")?.addEventListener("input", (e) => {
+    estado.filtroMasivoVend = (e.target.value || "").trim().toLowerCase();
+    actualizarModalMasivo();
+  });
+
+  $("btn-filtro-con-vencidas")?.addEventListener("click", () => {
+    estado.filtroSoloVencidasMasivo = !estado.filtroSoloVencidasMasivo;
+    $("btn-filtro-con-vencidas")?.classList.toggle("activa", estado.filtroSoloVencidasMasivo);
+    actualizarModalMasivo();
+  });
+
+  $("btn-filtro-pendientes-ws")?.addEventListener("click", () => {
+    estado.filtroSoloPendientesMasivo = !estado.filtroSoloPendientesMasivo;
+    $("btn-filtro-pendientes-ws")?.classList.toggle("activa", estado.filtroSoloPendientesMasivo);
+    actualizarModalMasivo();
+  });
+
+  // Checkbox maestro: Marcar / Desmarcar todos los Asesores
+  $("chk-todos-masivo-vend")?.addEventListener("change", (e) => {
+    const checkTodos = e.target.checked;
+    const sinRet = estado.facturas.filter((f) => f.estado === "SIN RETENCION");
+    const listaGrupos = grupos(sinRet);
+    if (checkTodos) {
+      listaGrupos.forEach((g) => estado.masivoVendedoresSel.add(g.cod));
+    } else {
+      estado.masivoVendedoresSel.clear();
+    }
+    actualizarModalMasivo();
+  });
+
+  // Checkbox maestro: Marcar / Desmarcar todos los Analistas
+  $("chk-todos-masivo-analistas")?.addEventListener("change", (e) => {
+    const checkTodos = e.target.checked;
+    const lista = obtenerResumenAnalistas();
+    if (checkTodos) {
+      lista.forEach((a) => estado.masivoAnalistasSel.add(a.nombre));
+    } else {
+      estado.masivoAnalistasSel.clear();
+    }
+    actualizarModalAnalistas();
+  });
+
+  // Renderizar y actualizar panel de vendedores masivo
   function actualizarModalMasivo() {
     const sinRet = estado.facturas.filter((f) => f.estado === "SIN RETENCION");
     const esModoVencidas = estado.modoMasivo !== "todas";
     const listaGrupos = grupos(sinRet);
     const total = listaGrupos.length;
+
+    // Inicializar masivoVendedoresSel si es la primera vez que se abre
+    if (estado.masivoVendedoresSel.size === 0 && !estado._masivoVendDesmarcadoManual) {
+      listaGrupos.forEach((g) => estado.masivoVendedoresSel.add(g.cod));
+    }
+
+    const tbody = $("tbody-masivo-vendedores");
+    const q = estado.filtroMasivoVend || "";
+
+    // Filtrar la lista que se muestra en la tabla
+    const listaFiltrada = listaGrupos.filter((g) => {
+      const v = buscarVendedor(g.cod, null, g.zona);
+      const nom = (v?.nombre || g.cod).toLowerCase();
+      const z = (g.zona || "").toLowerCase();
+      if (q && !nom.includes(q) && !z.includes(q)) return false;
+      if (estado.filtroSoloVencidasMasivo && g.r.vencidas <= 0) return false;
+      const enviado = estado.wsEnviados.has(g.cod) || (v?.codigo && estado.wsEnviados.has(v.codigo));
+      if (estado.filtroSoloPendientesMasivo && enviado) return false;
+      return true;
+    });
+
+    if (tbody) {
+      tbody.innerHTML = listaFiltrada.map((g) => {
+        const v = buscarVendedor(g.cod, null, g.zona);
+        const estaSel = estado.masivoVendedoresSel.has(g.cod);
+        const enviado = estado.wsEnviados.has(g.cod) || (v?.codigo && estado.wsEnviados.has(v.codigo));
+        const cantFact = esModoVencidas ? g.r.vencidas : g.r.facturas;
+        const montoEst = esModoVencidas ? g.r.estimadoVencidas : g.r.estimado;
+        const tel = v?.telefono || "";
+
+        return `<tr class="${estaSel ? "" : "fila-desmarcada"}">
+          <td style="text-align: center;">
+            <input type="checkbox" class="chk-masivo-vend-item" data-cod="${esc(g.cod)}" ${estaSel ? "checked" : ""} style="accent-color: var(--lima-honda); cursor: pointer;" />
+          </td>
+          <td><span class="chip-zona-analista">${esc(g.zona || "—")}</span></td>
+          <td style="font-weight: 700; color: var(--tx);">${esc(v?.nombre || g.cod)}</td>
+          <td class="num">${ent(cantFact)}</td>
+          <td class="num celda-estimado">$${usd(montoEst)}</td>
+          <td style="font-size: 11px; color: ${tel ? "var(--tx-2)" : "var(--aviso)"};">${tel ? esc(tel) : "Sin teléfono"}</td>
+          <td style="text-align: center;">
+            ${enviado ? `<span class="badge" style="background: rgba(16,185,129,0.15); color: #10b981; font-weight: 700; font-size: 11px;">✓ Enviado</span>` : `<span class="badge" style="background: var(--sup-hundida); color: var(--tx-3); font-size: 11px;">Pendiente</span>`}
+          </td>
+          <td style="text-align: center;">
+            <button type="button" class="btn-mini-ws" data-masivo-enviar-cod="${esc(g.cod)}" title="Enviar mensaje por WhatsApp a este asesor">
+              💬 Enviar
+            </button>
+          </td>
+        </tr>`;
+      }).join("") || `<tr><td colspan="8" style="text-align: center; padding: 20px;">No hay asesores comerciales que coincidan con el filtro.</td></tr>`;
+    }
+
+    // Actualizar contadores de selección
+    const selCount = estado.masivoVendedoresSel.size;
+    if ($("txt-total-asesores-masivo")) $("txt-total-asesores-masivo").textContent = total;
+    if ($("badge-sel-conteo-vend")) $("badge-sel-conteo-vend").textContent = `${selCount} seleccionados`;
+    const chkMaster = $("chk-todos-masivo-vend");
+    if (chkMaster) {
+      chkMaster.checked = total > 0 && selCount === total;
+      chkMaster.indeterminate = selCount > 0 && selCount < total;
+    }
+
+    // Progreso general de envíos
     const enviados = listaGrupos.filter((g) => {
       const v = buscarVendedor(g.cod, null, g.zona);
       return estado.wsEnviados.has(g.cod) || (v?.codigo && estado.wsEnviados.has(v.codigo));
@@ -3032,12 +3491,14 @@
     if (progTxt) progTxt.textContent = `${enviados} de ${total} asesores (${pct}%)`;
     if (progBar) progBar.style.width = `${pct}%`;
 
+    // Próximo asesor en cola: debe estar SELECCIONADO y no haber sido enviado hoy
     const proximo = listaGrupos.find((g) => {
+      if (!estado.masivoVendedoresSel.has(g.cod)) return false;
       const v = buscarVendedor(g.cod, null, g.zona);
       return !estado.wsEnviados.has(g.cod) && (!v?.codigo || !estado.wsEnviados.has(v.codigo));
     });
-    const btnSiguiente = $("btn-enviar-siguiente");
 
+    const btnSiguiente = $("btn-enviar-siguiente");
     if (proximo) {
       const v = buscarVendedor(proximo.cod, null, proximo.zona);
       const tel = v.telefono;
@@ -3055,17 +3516,179 @@
           : `<span>▶ Abrir WhatsApp para ${esc(v.nombre || proximo.cod)} (${cantFact} ${modoLabel})</span>`;
       }
     } else {
-      $("masivo-proximo-nombre").textContent = "¡Todos los asesores han sido contactados hoy!";
-      $("masivo-proximo-detalles").textContent = "Puedes reiniciar los estados en cualquier momento si deseas enviar nuevamente.";
+      if (selCount === 0) {
+        $("masivo-proximo-nombre").textContent = "No hay asesores seleccionados";
+        $("masivo-proximo-detalles").textContent = "Marca la casilla de los asesores a los que deseas enviar recordatorios de cobranza.";
+      } else {
+        $("masivo-proximo-nombre").textContent = "¡Todos los asesores seleccionados han sido contactados hoy!";
+        $("masivo-proximo-detalles").textContent = "Puedes reiniciar los estados en cualquier momento si deseas enviar nuevamente.";
+      }
       if (btnSiguiente) {
         btnSiguiente.disabled = true;
-        btnSiguiente.innerHTML = "<span>Todo enviado por hoy</span>";
+        btnSiguiente.innerHTML = "<span>Sin envíos pendientes</span>";
         delete btnSiguiente.dataset.codProximo;
       }
     }
     actualizarContadorSeleccionados();
   }
 
+  // Delegación de eventos para checkboxes y envíos individuales en la tabla de masivo vendedores
+  $("tbody-masivo-vendedores")?.addEventListener("change", (e) => {
+    const chk = e.target.closest(".chk-masivo-vend-item");
+    if (!chk) return;
+    const cod = chk.dataset.cod;
+    if (chk.checked) {
+      estado.masivoVendedoresSel.add(cod);
+    } else {
+      estado.masivoVendedoresSel.delete(cod);
+      estado._masivoVendDesmarcadoManual = true;
+    }
+    actualizarModalMasivo();
+  });
+
+  $("tbody-masivo-vendedores")?.addEventListener("click", async (e) => {
+    const btn = e.target.closest("[data-masivo-enviar-cod]");
+    if (!btn) return;
+    const cod = btn.dataset.masivoEnviarCod;
+    const esModoVencidas = estado.modoMasivo !== "todas";
+    await enviarWhatsAppVendedor(cod, esModoVencidas);
+    actualizarModalMasivo();
+  });
+
+  // Renderizar y actualizar panel de analistas masivo
+  function actualizarModalAnalistas() {
+    const lista = obtenerResumenAnalistas();
+    const total = lista.length;
+
+    // Inicializar selección si está vacía
+    if (estado.masivoAnalistasSel.size === 0 && !estado._masivoAnalistasDesmarcadoManual) {
+      lista.forEach((a) => estado.masivoAnalistasSel.add(a.nombre));
+    }
+
+    const tbody = $("tbody-masivo-analistas");
+    if (tbody) {
+      tbody.innerHTML = lista.map((a) => {
+        const estaSel = estado.masivoAnalistasSel.has(a.nombre);
+        const chipsZonasHtml = `<div class="chips-zonas-wrap">${a.zonas.map((z) => `<span class="chip-zona-analista">${esc(z)}</span>`).join("")}</div>`;
+        const telHtml = a.telefono
+          ? `<span style="font-size: 11px; font-weight: 600;">${esc(a.telefono)}</span>`
+          : `<button type="button" class="btn-tel-editable" data-editar-tel-modal="${esc(a.nombre)}" style="color: var(--aviso);">+ Asignar Tel</button>`;
+
+        return `<tr class="${estaSel ? "" : "fila-desmarcada"}">
+          <td style="text-align: center;">
+            <input type="checkbox" class="chk-masivo-analista-item" data-nom="${esc(a.nombre)}" ${estaSel ? "checked" : ""} style="accent-color: var(--lima-honda); cursor: pointer;" />
+          </td>
+          <td style="font-weight: 800; color: var(--tx);">
+            ${esc(a.nombre)}
+            <div style="font-size: 11px; font-weight: normal; color: var(--tx-3);">${a.zonas.length} zonas asignadas</div>
+          </td>
+          <td>${chipsZonasHtml}</td>
+          <td class="num">${ent(a.facturasSinRet)}</td>
+          <td class="num">${a.vencidasSinRet > 0 ? `<span class="vencida">${ent(a.vencidasSinRet)}</span>` : "0"}</td>
+          <td class="num celda-estimado">$${usd(a.estimadoSinRet)}</td>
+          <td style="text-align: center;">${telHtml}</td>
+          <td style="text-align: center;">
+            <div style="display: inline-flex; gap: 4px;">
+              <button type="button" class="btn-mini-ws" data-masivo-enviar-analista="${esc(a.nombre)}" title="Enviar reporte por WhatsApp">
+                💬 WS
+              </button>
+              <button type="button" class="btn-mini-copy" data-masivo-copiar-analista="${esc(a.nombre)}" title="Copiar reporte al portapapeles">
+                📋
+              </button>
+            </div>
+          </td>
+        </tr>`;
+      }).join("") || `<tr><td colspan="8" style="text-align: center; padding: 20px;">No hay analistas registrados.</td></tr>`;
+    }
+
+    // Actualizar contadores de selección
+    const selCount = estado.masivoAnalistasSel.size;
+    if ($("txt-total-analistas-masivo")) $("txt-total-analistas-masivo").textContent = total;
+    if ($("badge-sel-conteo-analistas")) $("badge-sel-conteo-analistas").textContent = `${selCount} seleccionados`;
+    const chkMaster = $("chk-todos-masivo-analistas");
+    if (chkMaster) {
+      chkMaster.checked = total > 0 && selCount === total;
+      chkMaster.indeterminate = selCount > 0 && selCount < total;
+    }
+
+    // Próximo analista en cola: debe estar SELECCIONADO y no haber sido enviado hoy
+    const proximo = lista.find((a) => {
+      return estado.masivoAnalistasSel.has(a.nombre) && !a.enviadoHoy;
+    });
+
+    const btnSiguiente = $("btn-enviar-siguiente-analista");
+    if (proximo) {
+      $("masivo-proximo-analista-nombre").textContent = proximo.nombre;
+      $("masivo-proximo-analista-detalles").textContent = `${proximo.zonas.length} zonas asignadas · ${ent(proximo.facturasSinRet)} facturas pendientes · $${usd(proximo.estimadoSinRet)} USD ${proximo.telefono ? `· ${proximo.telefono}` : "· ℹ️ Se abrirá WhatsApp para seleccionar contacto"}`;
+      if (btnSiguiente) {
+        btnSiguiente.disabled = false;
+        btnSiguiente.dataset.analistaProximo = proximo.nombre;
+        btnSiguiente.innerHTML = proximo.telefono
+          ? `<span>▶ Enviar reporte por WhatsApp a ${esc(proximo.nombre)}</span>`
+          : `<span>▶ Abrir WhatsApp con reporte de ${esc(proximo.nombre)}</span>`;
+      }
+    } else {
+      if (selCount === 0) {
+        $("masivo-proximo-analista-nombre").textContent = "No hay analistas seleccionados";
+        $("masivo-proximo-analista-detalles").textContent = "Marca las casillas de los analistas que deseas notificar.";
+      } else {
+        $("masivo-proximo-analista-nombre").textContent = "¡Todos los analistas seleccionados han sido notificados hoy!";
+        $("masivo-proximo-analista-detalles").textContent = "Puedes enviar de nuevo o copiar los reportes individuales en cualquier momento.";
+      }
+      if (btnSiguiente) {
+        btnSiguiente.disabled = true;
+        btnSiguiente.innerHTML = "<span>Todo enviado por hoy</span>";
+        delete btnSiguiente.dataset.analistaProximo;
+      }
+    }
+  }
+
+  // Delegación de eventos para la tabla de analistas en el modal masivo
+  $("tbody-masivo-analistas")?.addEventListener("change", (e) => {
+    const chk = e.target.closest(".chk-masivo-analista-item");
+    if (!chk) return;
+    const nom = chk.dataset.nom;
+    if (chk.checked) {
+      estado.masivoAnalistasSel.add(nom);
+    } else {
+      estado.masivoAnalistasSel.delete(nom);
+      estado._masivoAnalistasDesmarcadoManual = true;
+    }
+    actualizarModalAnalistas();
+  });
+
+  $("tbody-masivo-analistas")?.addEventListener("click", async (e) => {
+    const btnWs = e.target.closest("[data-masivo-enviar-analista]");
+    if (btnWs) {
+      const nom = btnWs.dataset.masivoEnviarAnalista;
+      await enviarWhatsAppAnalista(nom);
+      return;
+    }
+    const btnCopy = e.target.closest("[data-masivo-copiar-analista]");
+    if (btnCopy) {
+      const nom = btnCopy.dataset.masivoCopiarAnalista;
+      const texto = generarReporteAnalista(nom);
+      await navigator.clipboard.writeText(texto);
+      aviso(`Reporte de ${nom} copiado al portapapeles`);
+      return;
+    }
+    const btnTel = e.target.closest("[data-editar-tel-modal]");
+    if (btnTel) {
+      const nom = btnTel.dataset.editarTelModal;
+      const tels = cargarTelefonosAnalistas();
+      const actual = tels[nom.toUpperCase()] || "";
+      const nuevo = prompt(`Ingresa o edita el número de WhatsApp para el analista:\n\n${nom}\n\nEjemplo: 04141234567 o 584141234567\n(Deja en blanco para borrar):`, actual);
+      if (nuevo === null) return;
+      const limpio = nuevo.trim();
+      guardarTelefonoAnalista(nom, limpio);
+      actualizarModalAnalistas();
+      renderizarVistaAnalistas();
+      aviso(limpio ? `Teléfono guardado para ${nom}: ${limpio}` : `Teléfono eliminado para ${nom}`);
+      return;
+    }
+  });
+
+  // Botón Siguiente Asesor
   $("btn-enviar-siguiente")?.addEventListener("click", async () => {
     const cod = $("btn-enviar-siguiente")?.dataset.codProximo;
     if (!cod) return;
@@ -3074,14 +3697,59 @@
     actualizarModalMasivo();
   });
 
+  // Botón Siguiente Analista
+  $("btn-enviar-siguiente-analista")?.addEventListener("click", async () => {
+    const nom = $("btn-enviar-siguiente-analista")?.dataset.analistaProximo;
+    if (!nom) return;
+    await enviarWhatsAppAnalista(nom);
+  });
+
+  // Botón: Copiar todos los mensajes de asesores seleccionados
   $("btn-copiar-todos-ws")?.addEventListener("click", async () => {
     const sinRet = estado.facturas.filter((f) => f.estado === "SIN RETENCION");
     const esModoVencidas = estado.modoMasivo !== "todas";
-    const listaGrupos = grupos(sinRet);
+    const listaGrupos = grupos(sinRet).filter((g) => estado.masivoVendedoresSel.has(g.cod));
+
+    if (listaGrupos.length === 0) {
+      aviso("No hay asesores comerciales seleccionados");
+      return;
+    }
+
     const separador = "\n" + "=".repeat(45) + "\n\n";
     const textoCompleto = listaGrupos.map(({ cod, fs }) => mensaje(cod, fs, esModoVencidas)).join(separador);
     await navigator.clipboard.writeText(textoCompleto);
-    aviso(`Se han copiado todos los mensajes (${esModoVencidas ? "Solo Vencidas" : "Cartera Completa"}) al portapapeles`);
+    aviso(`Se han copiado ${listaGrupos.length} mensajes de asesores seleccionados (${esModoVencidas ? "Solo Vencidas" : "Cartera Completa"}) al portapapeles`);
+  });
+
+  // Botón: Copiar reportes de analistas seleccionados
+  $("btn-copiar-reportes-analistas-sel")?.addEventListener("click", async () => {
+    const lista = obtenerResumenAnalistas().filter((a) => estado.masivoAnalistasSel.has(a.nombre));
+    if (lista.length === 0) {
+      aviso("No hay analistas de cobranza seleccionados");
+      return;
+    }
+    const separador = "\n" + "=".repeat(45) + "\n\n";
+    const textoCompleto = lista.map((a) => generarReporteAnalista(a.nombre)).join(separador);
+    await navigator.clipboard.writeText(textoCompleto);
+    aviso(`Se han copiado los reportes de los ${lista.length} analistas seleccionados al portapapeles`);
+  });
+
+  // Botón: Copiar Macro-Reporte General de Analistas desde el Modal
+  $("btn-copiar-macro-analistas-modal")?.addEventListener("click", async () => {
+    const texto = generarMacroReporteAnalistas();
+    await navigator.clipboard.writeText(texto);
+    aviso("Macro-Reporte Gerencial copiado al portapapeles");
+  });
+
+  // Reiniciar estados de WhatsApp hoy desde el modal
+  $("btn-reset-ws-modal")?.addEventListener("click", () => {
+    estado.wsEnviados.clear();
+    estado.wsAnalistasEnviados.clear();
+    guardarWsEnviados(estado.wsEnviados);
+    pintarVendedores();
+    actualizarModalMasivo();
+    actualizarModalAnalistas();
+    aviso("Estados de WhatsApp reiniciados para hoy");
   });
 
   $("btn-copiar-clientes-sel")?.addEventListener("click", async () => {

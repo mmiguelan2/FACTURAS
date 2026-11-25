@@ -1230,11 +1230,51 @@ html, body { overflow-x: clip !important; }
   border-radius: 99px !important; font-weight: 700 !important;
 }
 .modal-backdrop .btn-cerrar-modal {
-  width: 36px !important; height: 36px !important; border-radius: 10px !important;
-  background: var(--sup-hundida) !important; border: 0 !important;
-  transition: transform .3s var(--resorte), background .2s;
+  width: 40px !important;
+  height: 40px !important;
+  border-radius: 50% !important;
+  background: linear-gradient(145deg, #ffffff, #e2e8f0) !important;
+  border: 1.5px solid #cbd5e1 !important;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08), inset 0 1px 1px #ffffff, inset 0 -1px 2px rgba(0,0,0,0.05) !important;
+  color: #475569 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  padding: 0 !important;
+  transition: transform .35s var(--resorte), background .25s ease, border-color .25s ease, color .25s ease, box-shadow .25s ease !important;
+  position: relative;
 }
-.modal-backdrop .btn-cerrar-modal:hover { transform: rotate(90deg); background: var(--peligro-suave) !important; }
+.modal-backdrop .btn-cerrar-modal svg.ico-cerrar-auto {
+  width: 20px !important;
+  height: 20px !important;
+  stroke: currentColor !important;
+  transition: stroke .2s ease;
+  pointer-events: none;
+}
+.modal-backdrop .btn-cerrar-modal:hover {
+  transform: rotate(90deg) scale(1.08) !important;
+  background: linear-gradient(145deg, #fee2e2, #fecaca) !important;
+  border-color: #ef4444 !important;
+  color: #dc2626 !important;
+  box-shadow: 0 0 14px rgba(239, 68, 68, 0.42), inset 0 1px 2px #ffffff !important;
+}
+.modal-backdrop .btn-cerrar-modal:active {
+  transform: rotate(90deg) scale(0.94) !important;
+}
+
+:root[data-theme="dark"] .modal-backdrop .btn-cerrar-modal {
+  background: linear-gradient(145deg, #1e293b, #0f172a) !important;
+  border: 1.5px solid #334155 !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.45), inset 0 1px 1px rgba(255,255,255,0.08) !important;
+  color: #94a3b8 !important;
+}
+:root[data-theme="dark"] .modal-backdrop .btn-cerrar-modal:hover {
+  background: linear-gradient(145deg, #450a0a, #7f1d1d) !important;
+  border-color: #f87171 !important;
+  color: #fca5a5 !important;
+  box-shadow: 0 0 16px rgba(239, 68, 68, 0.5) !important;
+}
 .modal-backdrop .modal-tabs { background: var(--sup-hundida) !important; border-radius: 12px; padding: 4px; border: 0 !important; }
 .modal-backdrop .modal-tab-btn { border-radius: 9px !important; border: 0 !important; font-weight: 700; color: var(--tx-2) !important; background: transparent !important; transition: all .25s; }
 .modal-backdrop .modal-tab-btn.activa, .modal-backdrop .btn-modo-pill.activa { background: var(--lima) !important; color: var(--tinta) !important; box-shadow: var(--sombra-1); border-color: var(--lima) !important; }
@@ -1485,4 +1525,265 @@ body:not(.es-admin) .solo-admin,
 body.es-vendedor .solo-admin {
   display: none !important;
 }
+
+/* ========================================================
+   ESTILOS AVANZADOS: MENSAJERÍA MASIVA Y SUBVISTAS EQUIPO
+   ======================================================== */
+.modal-caja-masivo {
+  max-width: 900px !important;
+  max-height: 92vh !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.modal-caja-masivo .modal-cuerpo {
+  overflow-y: auto !important;
+  padding: 16px 24px 22px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 14px !important;
+}
+
+/* Barra de control para selección de vendedores / analistas */
+.masivo-control-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--sup-hundida);
+  border: 1px solid var(--linea);
+  border-radius: 12px;
+  padding: 10px 14px;
+  flex-wrap: wrap;
+}
+
+.masivo-master-check {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.custom-checkbox-lbl {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.custom-checkbox-lbl input[type="checkbox"] {
+  accent-color: var(--lima-honda);
+  width: 17px;
+  height: 17px;
+  cursor: pointer;
+}
+
+.badge-sel-conteo {
+  background: var(--lima);
+  color: var(--tinta);
+  font-size: 11.5px;
+  font-weight: 800;
+  padding: 3px 10px;
+  border-radius: 99px;
+  box-shadow: var(--sombra-1);
+}
+
+.masivo-busqueda-rapida {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  justify-content: flex-end;
+  min-width: 260px;
+}
+
+.masivo-busqueda-rapida input.input-moderno {
+  max-width: 220px;
+  padding: 6px 12px;
+  font-size: 12.5px;
+}
+
+.btn-chip-filtro {
+  background: var(--sup);
+  border: 1px solid var(--linea);
+  color: var(--tx-2);
+  border-radius: 99px;
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 5px 10px;
+  cursor: pointer;
+  transition: all .2s;
+  white-space: nowrap;
+}
+
+.btn-chip-filtro:hover, .btn-chip-filtro.activa {
+  background: var(--lima);
+  color: var(--tinta);
+  border-color: var(--lima);
+}
+
+/* Envoltura scrollable para tablas de masivo */
+.masivo-tabla-scroll-wrap {
+  max-height: 240px;
+  overflow-y: auto;
+  border: 1px solid var(--linea);
+  border-radius: 12px;
+  background: var(--sup);
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.03);
+}
+
+.tabla-masivo-vendedores,
+.tabla-masivo-analistas {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 12px;
+}
+
+.tabla-masivo-vendedores th,
+.tabla-masivo-analistas th {
+  position: sticky;
+  top: 0;
+  background: var(--sup-2);
+  color: var(--tx-3);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  padding: 9px 10px;
+  border-bottom: 1px solid var(--linea);
+  z-index: 2;
+}
+
+.tabla-masivo-vendedores td,
+.tabla-masivo-analistas td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--linea);
+  vertical-align: middle;
+  color: var(--tx);
+}
+
+.tabla-masivo-vendedores tbody tr:hover td,
+.tabla-masivo-analistas tbody tr:hover td {
+  background: var(--lima-50);
+}
+
+.tabla-masivo-vendedores tbody tr.fila-desmarcada td,
+.tabla-masivo-analistas tbody tr.fila-desmarcada td {
+  opacity: 0.55;
+  background: transparent;
+}
+
+/* Acciones en fila de tabla masivo */
+.btn-mini-ws {
+  background: #25d366;
+  color: #fff;
+  border: 0;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: transform .15s, background .15s;
+  text-decoration: none;
+}
+.btn-mini-ws:hover {
+  background: #1eb954;
+  transform: scale(1.04);
+}
+
+.btn-mini-copy {
+  background: var(--sup-hundida);
+  border: 1px solid var(--linea);
+  color: var(--tx-2);
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 7px;
+  cursor: pointer;
+  transition: all .2s;
+}
+.btn-mini-copy:hover {
+  background: var(--lima);
+  color: var(--tinta);
+  border-color: var(--lima);
+}
+
+/* Chips de Zonas asignadas a Analistas */
+.chips-zonas-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  max-width: 380px;
+}
+
+.chip-zona-analista {
+  background: var(--sup-hundida);
+  border: 1px solid var(--linea);
+  color: var(--tx);
+  font-family: monospace;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 5px;
+  letter-spacing: .02em;
+}
+
+/* Subvistas de la Pestaña Vendedores/Analistas */
+.subvistas-barra {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 14px;
+  background: var(--sup);
+  border: 1px solid var(--linea);
+  padding: 6px;
+  border-radius: 99px;
+  width: fit-content;
+}
+
+.btn-subvista {
+  border: 0;
+  background: transparent;
+  color: var(--tx-2);
+  padding: 8px 18px;
+  border-radius: 99px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  transition: all .2s;
+}
+
+.btn-subvista:hover {
+  color: var(--tx);
+}
+
+.btn-subvista.activa {
+  background: var(--lima) !important;
+  color: var(--tinta) !important;
+  box-shadow: var(--sombra-1);
+}
+
+.btn-tel-editable {
+  background: transparent;
+  border: 1px dashed var(--linea-fuerte);
+  color: var(--tx-2);
+  font-size: 11px;
+  padding: 3px 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all .2s;
+}
+.btn-tel-editable:hover {
+  border-color: var(--lima-honda);
+  color: var(--tx);
+  background: var(--lima-50);
+}
+
 
