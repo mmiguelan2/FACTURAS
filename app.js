@@ -249,6 +249,33 @@
   };
   const esAdmin = () => !estado.perfil || estado.perfil?.rol === "admin";
 
+  function esFacturaDeAsesor(f, perfil) {
+    if (!f || !perfil) return false;
+    if (perfil.rol === "admin") return true;
+
+    const vNom = (f.vendedor || "").trim();
+    const objVend = buscarVendedor(vNom);
+    const codF = String(objVend?.codigo || "").trim();
+    const codZona = (f.zona || "").trim().toUpperCase().replace(/^Z0*/, "");
+
+    const codPerfil = String(perfil.codigo_num || perfil.codigo_vendedor || "").trim().replace(/^Z0*/, "");
+    const nomPerfil = normalizarTexto(perfil.nombre || "");
+    const nomF = normalizarTexto(vNom);
+    const zonaPerfil = (perfil.zona || "").trim().toUpperCase();
+    const zonaF = (f.zona || "").trim().toUpperCase();
+
+    // Coincidencia por código de asesor o código de zona
+    if (codPerfil && (codF === codPerfil || codZona === codPerfil)) return true;
+    // Coincidencia por nombre completo o primer nombre normalizado
+    if (nomPerfil && (nomF === nomPerfil || nomF.includes(nomPerfil) || nomPerfil.includes(nomF))) return true;
+    // Coincidencia por zona asignada del asesor
+    if (zonaPerfil && zonaF === zonaPerfil) return true;
+    // Coincidencia exacta de string
+    if (perfil.codigo_vendedor && vNom.toUpperCase() === String(perfil.codigo_vendedor).toUpperCase()) return true;
+
+    return false;
+  }
+
   function aviso(txt) {
     const a = $("aviso");
     if (!a) return;
@@ -421,6 +448,8 @@
     guardarSesionLocal(perfil);
     $("usuario-nombre").textContent = perfil.nombre || "Usuario";
     $("usuario-rol").textContent = perfil.rol === "admin" ? "Administrador" : `Asesor (${perfil.codigo_vendedor || ""})`;
+    document.body.classList.toggle("es-admin", esAdmin());
+    document.body.classList.toggle("es-vendedor", !esAdmin());
     document.querySelectorAll(".solo-admin").forEach((el) => (el.hidden = !esAdmin()));
     await cargarDatos();
     $("vista-login").hidden = true;
@@ -620,6 +649,8 @@
     estado.perfil = perfil;
     $("usuario-nombre").textContent = perfil.nombre || u.user.email;
     $("usuario-rol").textContent = perfil.rol;
+    document.body.classList.toggle("es-admin", esAdmin());
+    document.body.classList.toggle("es-vendedor", !esAdmin());
     document.querySelectorAll(".solo-admin").forEach((el) => (el.hidden = !esAdmin()));
     await cargarDatos();
     $("vista-login").hidden = true;
@@ -939,9 +970,18 @@
     construirCatalogoFiltros();
 
     const listaAnalistas = [...(estado.catalogoAnalistas?.keys() || [])].sort((a, b) => a.localeCompare(b, "es"));
-    llenarSelect("f-analista", listaAnalistas);
+    const labelAnalistaDefault = esAdmin()
+      ? "Todos los analistas"
+      : (listaAnalistas.length > 1 ? "Todos mis analistas" : "Mi analista");
+    llenarSelect("f-analista", listaAnalistas, (a) => a, labelAnalistaDefault);
 
-    actualizarOpcionesVendedores("");
+    if (esAdmin()) {
+      actualizarOpcionesVendedores("");
+    } else {
+      const vNombre = estado.perfil?.nombre || estado.perfil?.codigo_vendedor || "";
+      if ($("f-vendedor")) $("f-vendedor").value = vNombre;
+      if ($("f-vendedor-input")) $("f-vendedor-input").value = vNombre;
+    }
     actualizarOpcionesZonas("");
     inicializarComboboxVendedor();
     inicializarComboboxBuscar();
@@ -955,7 +995,11 @@
     const analistasMap = new Map();
     const zonasMap = new Map();
 
-    estado.facturas.forEach((f) => {
+    const facturasParaCatalogo = esAdmin()
+      ? estado.facturas
+      : estado.facturas.filter((f) => esFacturaDeAsesor(f, estado.perfil));
+
+    facturasParaCatalogo.forEach((f) => {
       const v = (f.vendedor || "").trim();
       const a = (f.analista || "").trim();
       const z = (f.zona || "").trim();
@@ -1180,10 +1224,14 @@
       const q = normalizarTexto(query);
       activeIndex = -1;
 
+      const poolFacturas = esAdmin()
+        ? (estado.facturas || [])
+        : (estado.facturas || []).filter((f) => esFacturaDeAsesor(f, estado.perfil));
+
       // Si query está vacío, mostrar clientes con mayor saldo pendiente como sugerencia rápida
       if (!q) {
         const clientesMap = new Map();
-        (estado.facturas || []).forEach((f) => {
+        poolFacturas.forEach((f) => {
           if (!f.razon_social) return;
           const cNom = f.razon_social.trim();
           if (!clientesMap.has(cNom)) {
@@ -1206,14 +1254,14 @@
           .slice(0, 5);
 
         if (topClientes.length === 0) {
-          listDiv.innerHTML = `<div class="combo-desglose-empty">Escribe N° de factura, cliente, RIF o asesor para buscar</div>`;
+          listDiv.innerHTML = `<div class="combo-desglose-empty">Escribe N° de factura, cliente o RIF para buscar</div>`;
           listDiv.hidden = false;
           return;
         }
 
         let html = `<div class="combo-desglose-section">
           <div class="combo-desglose-header">
-            Clientes con mayor saldo sin retención
+            ${esAdmin() ? "Clientes con mayor saldo sin retención" : "Mis clientes con mayor saldo"}
           </div>`;
 
         html += topClientes.map((c) => `
@@ -1238,7 +1286,7 @@
 
         html += `<div class="combo-desglose-section">
           <div class="combo-desglose-tip">
-            Escribe un <strong>N° de factura</strong>, <strong>cliente</strong>, <strong>RIF</strong> o <strong>asesor</strong> para desglosar resultados al instante.
+            Escribe un <strong>N° de factura</strong>, <strong>cliente</strong> o <strong>RIF</strong> para desglosar resultados al instante.
           </div>
         </div>`;
 
@@ -1248,14 +1296,14 @@
       }
 
       // 1. Facturas coincidentes
-      const facturasCoinciden = (estado.facturas || []).filter((f) => {
+      const facturasCoinciden = poolFacturas.filter((f) => {
         const numF = String(f.factura || "").toLowerCase();
         return numF.includes(q);
       }).slice(0, 6);
 
       // 2. Clientes coincidentes (agrupados por razón social / código)
       const clientesCoincidenMap = new Map();
-      (estado.facturas || []).forEach((f) => {
+      poolFacturas.forEach((f) => {
         const rSocial = (f.razon_social || "").trim();
         const codCli = (f.codigo_cliente || "").trim();
         const rif = (f.rif || "").trim();
@@ -1280,9 +1328,9 @@
       });
       const clientesCoinciden = [...clientesCoincidenMap.values()].slice(0, 5);
 
-      // 3. Vendedores / Asesores coincidentes
+      // 3. Vendedores / Asesores coincidentes: SOLO ADMIN
       const vendedoresCoinciden = [];
-      if (estado.catalogoVendedores) {
+      if (esAdmin() && estado.catalogoVendedores) {
         for (const [vNom, vObj] of estado.catalogoVendedores.entries()) {
           const s1 = normalizarTexto(vNom);
           const s2 = normalizarTexto(vObj.codigo || "");
@@ -1314,7 +1362,7 @@
       }
 
       // 5. Total de facturas que coinciden con la búsqueda
-      const totalCoincidencias = (estado.facturas || []).filter((f) => {
+      const totalCoincidencias = poolFacturas.filter((f) => {
         const campos = [f.razon_social, f.codigo_cliente, f.rif, f.factura, f.retencion, f.analista, f.vendedor, f.zona];
         return campos.some((x) => (x || "").toLowerCase().includes(q));
       }).length;
@@ -1590,7 +1638,9 @@
 
   function onAnalistaChange() {
     const aSel = $("f-analista")?.value || "";
-    actualizarOpcionesVendedores(aSel);
+    if (esAdmin()) {
+      actualizarOpcionesVendedores(aSel);
+    }
     actualizarOpcionesZonas(aSel);
     aplicarFiltros();
   }
@@ -1605,10 +1655,12 @@
         if (analistasZona.length === 1) {
           if ($("f-analista")) $("f-analista").value = analistasZona[0];
         }
-        // Si la zona tiene un solo vendedor, auto-seleccionar
-        const vendsZona = [...zObj.vendedores];
-        if (vendsZona.length === 1) {
-          seleccionarVendedorDirecto(vendsZona[0], false);
+        // Si la zona tiene un solo vendedor, auto-seleccionar (solo para administrador)
+        if (esAdmin()) {
+          const vendsZona = [...zObj.vendedores];
+          if (vendsZona.length === 1) {
+            seleccionarVendedorDirecto(vendsZona[0], false);
+          }
         }
       }
     }
@@ -1643,7 +1695,8 @@
       lista = [...(estado.catalogoZonas?.keys() || [])];
     }
     lista = lista.filter(Boolean).sort((a, b) => a.localeCompare(b, "es", { numeric: true }));
-    llenarSelect("f-zona", lista);
+    const textoPrimero = esAdmin() ? "Todas" : (lista.length > 1 ? "Todas mis zonas" : "Mi zona");
+    llenarSelect("f-zona", lista, (z) => z, textoPrimero);
 
     const zActual = $("f-zona")?.value;
     if (zActual && !lista.includes(zActual)) {
@@ -1651,13 +1704,14 @@
     }
   }
 
-  function llenarSelect(id, valores, etiqueta = (v) => v) {
+  function llenarSelect(id, valores, etiqueta = (v) => v, textoPrimero = null) {
     const sel = $(id);
     if (!sel) return;
     const valorActual = sel.value;
-    const primero = sel.options[0]?.outerHTML || '<option value="">Todos</option>';
+    const primeroTexto = textoPrimero || (id === "f-analista" ? (esAdmin() ? "Todos los analistas" : "Mi analista") : (id === "f-zona" ? (esAdmin() ? "Todas" : "Mi zona") : "Todos"));
+    const primeroHtml = `<option value="">${esc(primeroTexto)}</option>`;
     valores = valores.filter(Boolean).sort((a, b) => a.localeCompare(b, "es", { numeric: true }));
-    sel.innerHTML = primero + valores.map((v) => `<option value="${esc(v)}">${esc(etiqueta(v))}</option>`).join("");
+    sel.innerHTML = primeroHtml + valores.map((v) => `<option value="${esc(v)}">${esc(etiqueta(v))}</option>`).join("");
     if (valorActual && valores.includes(valorActual)) {
       sel.value = valorActual;
     }
@@ -1674,9 +1728,14 @@
     const hasta = parseFloat($("f-hasta")?.value);
 
     // Si el usuario logueado es asesor (no admin), solo ve sus facturas
-    const vendedorFijo = estado.perfil && !esAdmin() ? estado.perfil.codigo_vendedor : null;
+    const vendedorFijo = estado.perfil && !esAdmin() ? (estado.perfil.codigo_vendedor || estado.perfil.nombre) : null;
 
     return lista.filter((f) => {
+      // Bloqueo estricto: si es asesor, jamás puede ver facturas de otros
+      if (!esAdmin() && estado.perfil && !esFacturaDeAsesor(f, estado.perfil)) {
+        return false;
+      }
+
       // Filtro especial activo por comprobante digital cargado
       if (estado.filtroComprobante && estado.filtroComprobante.facturas?.length > 0) {
         const setComp = new Set(estado.filtroComprobante.facturas.map((x) => String(x).trim()));
@@ -1784,7 +1843,12 @@
   }));
 
   $("btn-limpiar")?.addEventListener("click", () => {
-    seleccionarVendedorDirecto("", false);
+    if (esAdmin()) {
+      seleccionarVendedorDirecto("", false);
+    } else {
+      const vNombre = estado.perfil?.nombre || estado.perfil?.codigo_vendedor || "";
+      seleccionarVendedorDirecto(vNombre, false);
+    }
     if ($("f-analista")) $("f-analista").value = "";
     if ($("f-zona")) $("f-zona").value = "";
     if ($("f-estado")) $("f-estado").value = "";
@@ -1829,9 +1893,9 @@
     let nombreVendedor = "";
     let esGlobal = false;
 
-    if (!esAdmin()) {
-      codVendedor = estado.perfil?.codigo_vendedor;
-      nombreVendedor = estado.perfil?.nombre || `Asesor ${codVendedor}`;
+    if (!esAdmin() && estado.perfil) {
+      codVendedor = estado.perfil.codigo_vendedor || estado.perfil.nombre;
+      nombreVendedor = estado.perfil.nombre || `Asesor ${codVendedor}`;
     } else {
       const selVend = $("f-vendedor")?.value;
       if (selVend) {
@@ -1847,35 +1911,72 @@
     hero.hidden = false;
 
     // Facturas del universo del asesor o global (solo Sin Retención)
-    const facturasHeroTotal = codVendedor
-      ? estado.facturas.filter((f) => {
-          const nomVend = (f.vendedor || "").trim().toUpperCase();
-          const obj = buscarVendedor(nomVend);
-          return f.vendedor === codVendedor || obj?.codigo === codVendedor || nomVend === codVendedor.toUpperCase();
-        })
-      : estado.filtradas;
+    const facturasHeroTotal = (!esAdmin() && estado.perfil)
+      ? estado.facturas.filter((f) => esFacturaDeAsesor(f, estado.perfil))
+      : (codVendedor
+          ? estado.facturas.filter((f) => {
+              const nomVend = (f.vendedor || "").trim().toUpperCase();
+              const obj = buscarVendedor(nomVend);
+              return f.vendedor === codVendedor || obj?.codigo === codVendedor || nomVend === codVendedor.toUpperCase();
+            })
+          : estado.filtradas);
 
     const totalFacturadoGlobal = facturasHeroTotal.reduce((s, f) => s + (Number(f.monto_dolar) || 0), 0);
     const saldoTotalGlobal = facturasHeroTotal.reduce((s, f) => s + (Number(f.saldo_usd) || 0), 0);
     const cobradoGlobal = Math.max(0, totalFacturadoGlobal - saldoTotalGlobal);
 
-    const facturasVencidas = facturasHeroTotal.filter((f) => f.dias_vencida > 0);
-    const facturasAlDia = facturasHeroTotal.filter((f) => f.dias_vencida <= 0);
+    const facturasVencidas = facturasHeroTotal.filter((f) => Number(f.dias_vencida) > 0);
+    const facturasAlDia = facturasHeroTotal.filter((f) => Number(f.dias_vencida) <= 0);
 
-    const saldoVencidoGlobal = facturasVencidas.reduce((s, f) => s + (Number(f.saldo_usd) || 0), 0);
-    const saldoAlDiaGlobal = facturasAlDia.reduce((s, f) => s + (Number(f.saldo_usd) || 0), 0);
+    // =========================================================================
+    // MEDICIÓN DE PROYECCIÓN Y AVANCE BASADA PRINCIPALMENTE EN EL 75% RETENCIÓN
+    // =========================================================================
+    // Se toma como base principal la Retención Estimada (75% del IVA).
+    // De esa base se evalúa con precisión qué porción se cobró/recuperó,
+    // qué porción está al día y qué porción está vencida (mora).
+    let retTotalGlobal = 0;
+    let retCobradaGlobal = 0;
+    let retVencidaGlobal = 0;
+    let retAlDiaGlobal = 0;
 
-    const sem = calcularSemaforo(totalFacturadoGlobal, cobradoGlobal, saldoVencidoGlobal, saldoTotalGlobal);
+    facturasHeroTotal.forEach((f) => {
+      const retFac = Number(f.monto_estimado) || 0;
+      const mDolar = Number(f.monto_dolar) || 0;
+      const sUsd = Number(f.saldo_usd) || 0;
+      retTotalGlobal += retFac;
+
+      // Verificamos si tiene comprobante montado o en proceso ERP
+      const tieneComp = (f.estado === "RETENCION CARGADA NO APLICADA") ||
+        Boolean(f.retencion && f.retencion !== "S/C") ||
+        (estado.comprobantesAsociados && Object.values(estado.comprobantesAsociados).some((c) => c.facturas && c.facturas.includes(String(f.factura).trim())));
+
+      const cobFac = Math.max(0, mDolar - sUsd);
+      const propCob = tieneComp ? 1 : (mDolar > 0 ? Math.min(1, Math.max(0, cobFac / mDolar)) : 0);
+
+      const rCob = retFac * propCob;
+      const rPend = Math.max(0, retFac - rCob);
+      retCobradaGlobal += rCob;
+
+      if (Number(f.dias_vencida) > 0) {
+        retVencidaGlobal += rPend;
+      } else {
+        retAlDiaGlobal += rPend;
+      }
+    });
+
+    // Semáforo evaluado sobre la gestión de retenciones (riesgo si la mora en retención es alta)
+    const sem = calcularSemaforo(retTotalGlobal, retCobradaGlobal, retVencidaGlobal, (retAlDiaGlobal + retVencidaGlobal));
     const semEl = $("vh-semaforo");
     if (semEl) {
       semEl.className = `badge-semaforo ${sem.clase}`;
       semEl.textContent = esGlobal ? `Cartera ${sem.label}` : `Asesor ${sem.label}`;
     }
 
-    let pctCobrado = totalFacturadoGlobal > 0 ? Math.round((cobradoGlobal / totalFacturadoGlobal) * 100) : 0;
-    let pctAlDia = totalFacturadoGlobal > 0 ? Math.round((saldoAlDiaGlobal / totalFacturadoGlobal) * 100) : 0;
+    // Porcentajes de distribución de la retención del 75%
+    let pctCobrado = retTotalGlobal > 0 ? Math.round((retCobradaGlobal / retTotalGlobal) * 100) : 0;
+    let pctAlDia = retTotalGlobal > 0 ? Math.round((retAlDiaGlobal / retTotalGlobal) * 100) : 0;
     let pctVencido = Math.max(0, 100 - pctCobrado - pctAlDia);
-    if (totalFacturadoGlobal === 0) {
+    if (retTotalGlobal === 0) {
       pctCobrado = 0; pctAlDia = 0; pctVencido = 0;
     }
 
@@ -1890,43 +1991,64 @@
     if (txtVen) txtVen.textContent = `${pctVencido}%`;
 
     const vista = estado.vistaCartera || "completa";
-    let facturasVista = facturasHeroTotal;
+    let avancePct = 0;
+    let proyPct = 0;
     let tituloAvance = "Avance & Proyección Cierre";
 
-    if (vista === "vencida") {
-      facturasVista = facturasVencidas;
-      tituloAvance = "Recuperación de Cartera Vencida (Mora)";
+    if (vista === "completa") {
+      tituloAvance = "Avance & Proyección Cierre (Retención 75%)";
+      avancePct = retTotalGlobal > 0 ? Math.min(100, Math.round((retCobradaGlobal / retTotalGlobal) * 100)) : 0;
+      // Proyección basada en retención: lo cobrado (100%) + recuperación esperada de lo que está al día (85%) + recuperabilidad de mora (25%)
+      const retProyectada = retCobradaGlobal + (retAlDiaGlobal * 0.85) + (retVencidaGlobal * 0.25);
+      proyPct = retTotalGlobal > 0 ? Math.min(100, Math.round((retProyectada / retTotalGlobal) * 100)) : 0;
+      $("vh-avance-txt").textContent = `${avancePct}% (Proy. Cierre ${proyPct}%)`;
+    } else if (vista === "vencida") {
+      tituloAvance = "Recuperación de Retención Vencida (Mora)";
+      let retVencTotal = 0;
+      let retVencCob = 0;
+      facturasVencidas.forEach((f) => {
+        const retFac = Number(f.monto_estimado) || 0;
+        const mDolar = Number(f.monto_dolar) || 0;
+        const sUsd = Number(f.saldo_usd) || 0;
+        retVencTotal += retFac;
+        const propCob = mDolar > 0 ? Math.min(1, Math.max(0, (mDolar - sUsd) / mDolar)) : 0;
+        retVencCob += retFac * propCob;
+      });
+      avancePct = retVencTotal > 0 ? Math.min(100, Math.round((retVencCob / retVencTotal) * 100)) : 0;
+      proyPct = retVencTotal > 0 ? Math.min(100, Math.round(((retVencCob + (retVencTotal - retVencCob) * 0.30) / retVencTotal) * 100)) : 0;
+      $("vh-avance-txt").textContent = `${avancePct}% recuperado (Proy. ${proyPct}%)`;
     } else if (vista === "aldia") {
-      facturasVista = facturasAlDia;
-      tituloAvance = "Avance de Cartera al Día (Por Vencer)";
+      tituloAvance = "Avance de Retención al Día (Por Vencer)";
+      let retDiaTotal = 0;
+      let retDiaCob = 0;
+      facturasAlDia.forEach((f) => {
+        const retFac = Number(f.monto_estimado) || 0;
+        const mDolar = Number(f.monto_dolar) || 0;
+        const sUsd = Number(f.saldo_usd) || 0;
+        retDiaTotal += retFac;
+        const propCob = mDolar > 0 ? Math.min(1, Math.max(0, (mDolar - sUsd) / mDolar)) : 0;
+        retDiaCob += retFac * propCob;
+      });
+      avancePct = retDiaTotal > 0 ? Math.min(100, Math.round((retDiaCob / retDiaTotal) * 100)) : 0;
+      proyPct = retDiaTotal > 0 ? Math.min(100, Math.round(((retDiaCob + (retDiaTotal - retDiaCob) * 0.90) / retDiaTotal) * 100)) : 0;
+      $("vh-avance-txt").textContent = `${avancePct}% (Proy. Cierre ${proyPct}%)`;
     }
 
-    const totalFacturado = facturasVista.reduce((s, f) => s + (Number(f.monto_dolar) || 0), 0);
-    const saldoPendiente = facturasVista.reduce((s, f) => s + (Number(f.saldo_usd) || 0), 0);
-    const cobrado = Math.max(0, totalFacturado - saldoPendiente);
-    const retencionEstimada = facturasVista.reduce((s, f) => s + (Number(f.monto_estimado) || 0), 0);
-    const sinVencer = facturasVista.filter((f) => f.dias_vencida <= 0).reduce((s, f) => s + (Number(f.saldo_usd) || 0), 0);
-
-    const avancePct = totalFacturado > 0 ? Math.min(100, Math.round((cobrado / totalFacturado) * 100)) : 0;
-    const proyPct = totalFacturado > 0 ? Math.min(130, Math.round(((cobrado + (sinVencer * 0.75)) / totalFacturado) * 100)) : 0;
-
-    $("vh-tag").textContent = esGlobal ? "Consolidado Ejecutivo Beval" : `Asesor Comercial Softland · ${codVendedor}`;
+    const codObj = buscarVendedor(codVendedor);
+    const codDisplay = codObj?.codigo || (facturasHeroTotal[0]?.zona ? facturasHeroTotal[0].zona.replace(/^Z0*/, "") : (codVendedor || ""));
+    $("vh-tag").textContent = esGlobal ? "Consolidado Ejecutivo Beval" : `Asesor Comercial Softland · ${codDisplay}`;
     $("vh-nombre").textContent = nombreVendedor;
     $("vh-sub").textContent = esGlobal
       ? `${ent(facturasHeroTotal.length)} facturas totales en seguimiento activo`
       : `Zona ${facturasHeroTotal[0]?.zona || "N/A"} · ${ent(facturasHeroTotal.length)} facturas asignadas`;
 
-    $("vh-facturado").textContent = `$${usd(totalFacturado)}`;
-    $("vh-cobrado").textContent = `$${usd(cobrado)}`;
-    $("vh-saldo").textContent = `$${usd(saldoPendiente)}`;
-    $("vh-retencion").textContent = `$${usd(retencionEstimada)}`;
+    $("vh-facturado").textContent = `$${usd(totalFacturadoGlobal)}`;
+    $("vh-cobrado").textContent = `$${usd(cobradoGlobal)}`;
+    $("vh-saldo").textContent = `$${usd(saldoTotalGlobal)}`;
+    $("vh-retencion").textContent = `$${usd(retTotalGlobal)}`;
 
     const titAvEl = $("vh-avance-titulo");
     if (titAvEl) titAvEl.textContent = tituloAvance;
-
-    $("vh-avance-txt").textContent = vista === "vencida"
-      ? `${avancePct}% recuperado`
-      : `${avancePct}% (Proy. Cierre ${proyPct}%)`;
 
     const fillBar = $("vh-gauge-fill");
     if (fillBar) {
@@ -2775,6 +2897,10 @@
   const modalMasivo = $("modal-masivo");
 
   function abrirModalMasivo(tabInicial = "vendedores") {
+    if (!esAdmin()) {
+      aviso("Función exclusiva de administradores");
+      return;
+    }
     if (!modalMasivo) return;
     modalMasivo.hidden = false;
     activarTabModal(tabInicial);
@@ -2924,6 +3050,7 @@
     const b = e.target.closest("button[data-tab]");
     if (!b) return;
     const tab = b.dataset.tab;
+    if (tab === "vendedores" && !esAdmin()) return;
     estado.tabActiva = tab;
     document.querySelectorAll("#pestanas button").forEach((x) => x.classList.toggle("activa", x === b));
     document.querySelectorAll(".tab").forEach((t) => (t.hidden = t.id !== "tab-" + tab));
@@ -3379,6 +3506,7 @@
 
     const otras = estado.facturas.filter((f) => {
       if (estado.comprobanteActivo.facturas.has(String(f.factura).trim())) return false;
+      if (!esAdmin() && !esFacturaDeAsesor(f, estado.perfil)) return false;
       const matchCod = f.codigo_cliente && clienteRef.includes(f.codigo_cliente);
       const matchNom = f.razon_social && clienteRef.toUpperCase().includes(normalizarTexto(f.razon_social));
       const matchInv = f.razon_social && normalizarTexto(f.razon_social).includes(normalizarTexto(clienteRef));
@@ -3496,6 +3624,10 @@
       const valLimpio = val.replace(/\D/g, "");
       const f = estado.facturas.find((x) => String(x.factura).trim() === val || (valLimpio && String(x.factura).trim() === valLimpio));
       if (f) {
+        if (!esAdmin() && !esFacturaDeAsesor(f, estado.perfil)) {
+          aviso("Esta factura no pertenece a tu cartera");
+          return;
+        }
         estado.comprobanteActivo.facturas.set(String(f.factura).trim(), f);
         if (!$("comp-input-cliente")?.value) {
           $("comp-input-cliente").value = f.razon_social || f.codigo_cliente;
@@ -3564,8 +3696,22 @@
   // ==============================================
   // GESTIÓN Y FILTRADO DE COMPROBANTES MONTADOS
   // ==============================================
+  function obtenerComprobantesVisibles() {
+    const todos = Object.values(estado.comprobantesAsociados || {});
+    if (esAdmin()) return todos;
+    return todos.filter((c) => {
+      if (!c) return false;
+      if (c.creadoPor && String(c.creadoPor).toLowerCase() === String(estado.perfil?.nombre || "").toLowerCase()) return true;
+      const facs = Array.isArray(c.facturas) ? c.facturas : [];
+      return facs.some((numFac) => {
+        const facObj = estado.facturas.find((item) => String(item.factura).trim() === String(numFac).trim());
+        return facObj && esFacturaDeAsesor(facObj, estado.perfil);
+      });
+    });
+  }
+
   function actualizarBadgesComprobantes() {
-    const total = Object.keys(estado.comprobantesAsociados || {}).length;
+    const total = obtenerComprobantesVisibles().length;
     const elBadge = $("badge-comprobantes-montados");
     if (elBadge) elBadge.textContent = total;
     const elKpi = $("k-comprobantes-montados");
@@ -3580,7 +3726,7 @@
     if (!tbody) return;
 
     const filtro = ($("filtro-comprobantes")?.value || "").trim().toLowerCase();
-    const comps = Object.values(estado.comprobantesAsociados || {});
+    const comps = obtenerComprobantesVisibles();
 
     // Filtrado ágil por correlativo, por número de factura asociada, por cliente o por fecha
     const filtrados = comps.filter((c) => {
@@ -3767,6 +3913,7 @@
   let asesorEditandoCred = null;
 
   function abrirModalCredencial(cod) {
+    if (!esAdmin()) return;
     if (!cod) return;
     const v = buscarVendedor(cod);
     const zonaV = v.zona || (estado.facturas.find((f) => f.vendedor === cod || f.vendedor_original === cod)?.zona) || "";
@@ -3904,6 +4051,7 @@ _Al ingresar podrás consultar tus clientes asignados y gestionar las facturas p
   // MODAL DE TODOS LOS ACCESOS Y CREDENCIALES
   // ------------------------------------------
   function abrirModalTodosAccesos() {
+    if (!esAdmin()) return;
     pintarTablaTodosAccesos();
     $("modal-todos-accesos").hidden = false;
   }

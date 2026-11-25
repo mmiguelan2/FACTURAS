@@ -1476,3 +1476,12 @@ html, body { overflow-x: clip !important; }
   .lg-pie { flex-direction: column; }
   .aviso { right: 16px; left: 16px !important; max-width: none; }
 }
+
+/* ========================================================
+   RESTRICCIÓN ESTRICTA DE PERMISOS: ASESOR VS ADMINISTRADOR
+   ======================================================== */
+body:not(.es-admin) .solo-admin,
+body.es-vendedor .solo-admin {
+  display: none !important;
+}
+
