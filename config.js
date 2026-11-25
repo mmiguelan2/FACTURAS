@@ -125,6 +125,23 @@ window.APP_CONFIG = {
     { "codigo": "bonny", "nombre": "BONNY DE JESUS ESPINA VALBUENA", "telefono": "0412-5050484", "zona": "Z038" },
     { "codigo": "transporte", "nombre": "TRANSPORTE", "telefono": "0414-7886475", "zona": "Z997" },
     { "codigo": "edgar", "nombre": "RONNY DANIEL CORDERO", "telefono": "0414-6357315" },
-    { "codigo": "nelson", "nombre": "MIGUEL ANGEL BARRERA BELLO", "telefono": "0416-6329817" }
+    { "codigo": "nelson", "nombre": "MIGUEL ANGEL BARRERA BELLO", "telefono": "0416-6329817" },
+    // Mapeos adicionales para cobertura 100% de vendedores y zonas
+    { "codigo": "nomar", "nombre": "NOMAR JOSÉ GUTIERREZ CASTILLO", "telefono": "0414-6357315", "zona": "Z024" },
+    { "codigo": "jjimenez", "nombre": "JUAN JOSE JIMENEZ RODRIGUEZ", "telefono": "0424 8102649", "zona": "Z116" },
+    { "codigo": "jcardenas", "nombre": "JUAN CARDENAS", "telefono": "0414-5234590", "zona": "Z091" },
+    { "codigo": "nchirinos", "nombre": "NEHOMAR CHIRINOS", "telefono": "0424-5482369", "zona": "Z059" },
+    { "codigo": "valeria", "nombre": "VALERIA FERNANDA FUMERO GUEVARA", "telefono": "0414-7886475", "zona": "Z888" },
+    { "codigo": "eleana", "nombre": "ELEANA JOSEFINA GOMEZ MENDOZA", "telefono": "0424-4402920", "zona": "Z074" },
+    { "codigo": "frankemil", "nombre": "FRANK EMIL PEREZ GARCIA", "telefono": "0412-4114731", "zona": "Z553" },
+    { "codigo": "emonagas", "nombre": "EDGAR MONAGAS", "telefono": "0424-2014093", "zona": "Z040" },
+    { "codigo": "yoselin", "nombre": "YOSELIN ORIANA SAYAGO SAYAGO", "telefono": "0424-4500828", "zona": "Z008" },
+    { "codigo": "saul", "nombre": "SAÚL JOSÉ GUERRA PARRA", "telefono": "0412-4462172", "zona": "Z088" },
+    { "codigo": "ernesto", "nombre": "ERNESTO PAREDES ROMAN", "telefono": "0412-4462172", "zona": "Z088" },
+    { "codigo": "argenis", "nombre": "ARGENIS ALEJANDRO MONTERO", "telefono": "0414-9686877", "zona": "Z005" },
+    { "codigo": "ache", "nombre": "CAROLINA ACHE", "telefono": "0424-3420875", "zona": "Z004" },
+    { "codigo": "fgamardo", "nombre": "FRANCISCO GAMARDO CASTILLO", "telefono": "0422-6624765", "zona": "Z187" },
+    { "codigo": "uztariz", "nombre": "JOSE AUGUSTO UZTARIZ ZALAZAR", "telefono": "0412-5050484", "zona": "Z038" },
+    { "codigo": "fsanchez", "nombre": "FRANKLIN SANCHEZ", "telefono": "0414-4717230", "zona": "Z077" }
   ]
 };

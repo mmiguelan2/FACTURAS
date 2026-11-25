@@ -458,10 +458,38 @@
     // 8. Fallback si estaba en Map (aunque no tuviera teléfono)
     if (estado.vendedores && estado.vendedores.has(k)) {
       const v = estado.vendedores.get(k);
-      return { ...v, telefono: telCustom || v.telefono || "" };
+      let telFinal = telCustom || v.telefono || "";
+      if (!telFinal && Array.isArray(C.VENDEDORES_DEFAULT)) {
+        const zNorm = String(zonaOpcional || v.zona || "").replace(/^Z0*/, "").toUpperCase();
+        for (const defV of C.VENDEDORES_DEFAULT) {
+          if (!defV.telefono) continue;
+          const defNom = normalizarTexto(defV.nombre).toUpperCase();
+          const defZona = String(defV.zona || "").replace(/^Z0*/, "").toUpperCase();
+          if (defNom === sClean || (zNorm && defZona === zNorm) || defNom.includes(sClean) || sClean.includes(defNom)) {
+            telFinal = defV.telefono;
+            break;
+          }
+        }
+      }
+      return { ...v, telefono: telFinal };
     }
 
-    return { codigo: numZona || k, nombre: nomOcodigo, telefono: telCustom || "" };
+    // 9. Respaldo directo en C.VENDEDORES_DEFAULT
+    let telDirecto = telCustom || "";
+    if (!telDirecto && Array.isArray(C.VENDEDORES_DEFAULT)) {
+      const zNorm = String(zonaOpcional || "").replace(/^Z0*/, "").toUpperCase();
+      for (const defV of C.VENDEDORES_DEFAULT) {
+        if (!defV.telefono) continue;
+        const defNom = normalizarTexto(defV.nombre).toUpperCase();
+        const defZona = String(defV.zona || "").replace(/^Z0*/, "").toUpperCase();
+        if (defNom === sClean || (zNorm && defZona === zNorm) || defNom.includes(sClean) || sClean.includes(defNom)) {
+          telDirecto = defV.telefono;
+          return { codigo: defV.codigo || numZona || k, nombre: nomOcodigo, telefono: telDirecto, zona: defV.zona || zonaOpcional || "" };
+        }
+      }
+    }
+
+    return { codigo: numZona || k, nombre: nomOcodigo, telefono: telDirecto || "" };
   }
 
   // ---------- TEMA OSCURO / CLARO ----------
@@ -1000,12 +1028,41 @@
     estado.facturas = facturasCargadas;
     $("ultima-carga").textContent = textoCarga;
 
-    // 2. Cargar tabla de vendedores (teléfonos y códigos) para WhatsApp
+    // 2. Cargar tabla de vendedores (teléfonos y códigos) para WhatsApp con blindaje total
     let vendedoresSb = [...(C.VENDEDORES_DEFAULT || [])];
     try {
       const dbVends = await todo("vendedores");
       if (dbVends && dbVends.length > 0) {
-        vendedoresSb = dbVends;
+        // Mapa de teléfonos válidos por defecto desde config.js
+        const mapaTelDefecto = new Map();
+        (C.VENDEDORES_DEFAULT || []).forEach((v) => {
+          if (v.telefono) {
+            if (v.nombre) mapaTelDefecto.set(normalizarTexto(v.nombre).toUpperCase(), v.telefono);
+            if (v.codigo) mapaTelDefecto.set(String(v.codigo).toUpperCase(), v.telefono);
+            if (v.zona) mapaTelDefecto.set(String(v.zona).toUpperCase(), v.telefono);
+          }
+        });
+
+        // Combinar datos: Si Supabase trae un teléfono vacío o nulo, conservar el de config.js
+        vendedoresSb = dbVends.map((dbV) => {
+          let t = dbV.telefono;
+          if (!t || String(t).trim() === "" || String(t).toLowerCase() === "null") {
+            const nomK = normalizarTexto(dbV.nombre).toUpperCase();
+            const codK = String(dbV.codigo || "").toUpperCase();
+            const zonK = String(dbV.zona || "").toUpperCase();
+            t = mapaTelDefecto.get(nomK) || mapaTelDefecto.get(codK) || mapaTelDefecto.get(zonK) || "";
+          }
+          return { ...dbV, telefono: t };
+        });
+
+        // Asegurar que los vendedores de config.js que no estén en Supabase se mantengan intactos
+        (C.VENDEDORES_DEFAULT || []).forEach((defV) => {
+          const yaEsta = vendedoresSb.some((x) =>
+            normalizarTexto(x.nombre).toUpperCase() === normalizarTexto(defV.nombre).toUpperCase() ||
+            (x.codigo && defV.codigo && String(x.codigo) === String(defV.codigo))
+          );
+          if (!yaEsta) vendedoresSb.push(defV);
+        });
       }
     } catch (e) {
       console.warn("No se pudo cargar tabla vendedores de Supabase (usando directorio base):", e);
@@ -1024,10 +1081,11 @@
       if (nom) {
         const match = buscarVendedor(nom, vendedoresSb, f.zona);
         const yaExistente = estado.vendedores.get(nomKey);
+        const telFinal = match.telefono || yaExistente?.telefono || "";
         const objVend = {
           codigo: match.codigo || yaExistente?.codigo || (f.zona ? f.zona.replace(/^Z0*/, "") : nomKey),
           nombre: nom,
-          telefono: yaExistente?.telefono || match.telefono || "",
+          telefono: telFinal,
           zona: f.zona || match.zona || yaExistente?.zona || "",
           correo: f.correo_vendedor || match.correo || yaExistente?.correo || ""
         };
