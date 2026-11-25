@@ -1843,8 +1843,11 @@
   }));
 
   $("btn-limpiar")?.addEventListener("click", () => {
+    estado.seleccionadas.clear();
+    actualizarContadorSeleccionados();
     if (esAdmin()) {
       seleccionarVendedorDirecto("", false);
+      actualizarOpcionesVendedores("");
     } else {
       const vNombre = estado.perfil?.nombre || estado.perfil?.codigo_vendedor || "";
       seleccionarVendedorDirecto(vNombre, false);
@@ -1858,7 +1861,6 @@
     if ($("f-desde")) $("f-desde").value = "";
     if ($("f-hasta")) $("f-hasta").value = "";
 
-    actualizarOpcionesVendedores("");
     actualizarOpcionesZonas("");
     aplicarFiltros();
   });
@@ -1910,16 +1912,13 @@
 
     hero.hidden = false;
 
-    // Facturas del universo del asesor o global (solo Sin Retención)
-    const facturasHeroTotal = (!esAdmin() && estado.perfil)
-      ? estado.facturas.filter((f) => esFacturaDeAsesor(f, estado.perfil))
-      : (codVendedor
-          ? estado.facturas.filter((f) => {
-              const nomVend = (f.vendedor || "").trim().toUpperCase();
-              const obj = buscarVendedor(nomVend);
-              return f.vendedor === codVendedor || obj?.codigo === codVendedor || nomVend === codVendedor.toUpperCase();
-            })
-          : estado.filtradas);
+    // ALCANCE Y REACTIVIDAD:
+    // 1. Si hay facturas seleccionadas manualmente con checkboxes, el alcance se ciñe a ellas.
+    // 2. Si no, evalúa el universo filtrado activo (respetando asesor, analista, zona, vencimiento, montos y búsqueda).
+    const haySeleccionManual = estado.seleccionadas && estado.seleccionadas.size > 0;
+    const facturasHeroTotal = haySeleccionManual
+      ? estado.filtradas.filter((f) => estado.seleccionadas.has(f.factura))
+      : estado.filtradas;
 
     const totalFacturadoGlobal = facturasHeroTotal.reduce((s, f) => s + (Number(f.monto_dolar) || 0), 0);
     const saldoTotalGlobal = facturasHeroTotal.reduce((s, f) => s + (Number(f.saldo_usd) || 0), 0);
@@ -1929,11 +1928,12 @@
     const facturasAlDia = facturasHeroTotal.filter((f) => Number(f.dias_vencida) <= 0);
 
     // =========================================================================
-    // MEDICIÓN DE PROYECCIÓN Y AVANCE BASADA PRINCIPALMENTE EN EL 75% RETENCIÓN
+    // BASE DE CÁLCULO PRINCIPAL: RETENCIÓN ESTIMADA 75%
     // =========================================================================
-    // Se toma como base principal la Retención Estimada (75% del IVA).
-    // De esa base se evalúa con precisión qué porción se cobró/recuperó,
-    // qué porción está al día y qué porción está vencida (mora).
+    // Objetivo / Base: Suma de retenciones estimadas del alcance (100% meta).
+    // Cobrado en retención: Suma de retención recuperada/procesada según abonos y comprobantes.
+    // Falta / Saldo: Retención Estimada - Cobrado en retención (mínimo 0).
+    // Avance: (Cobrado en retención / Retención Estimada) * 100
     let retTotalGlobal = 0;
     let retCobradaGlobal = 0;
     let retVencidaGlobal = 0;
@@ -1950,6 +1950,8 @@
         Boolean(f.retencion && f.retencion !== "S/C") ||
         (estado.comprobantesAsociados && Object.values(estado.comprobantesAsociados).some((c) => c.facturas && c.facturas.includes(String(f.factura).trim())));
 
+      // Si tiene comprobante = 100% de la retención cobrada.
+      // Si tuvo abono parcial en la factura = proporción exacta del abono aplicada a su retención individual.
       const cobFac = Math.max(0, mDolar - sUsd);
       const propCob = tieneComp ? 1 : (mDolar > 0 ? Math.min(1, Math.max(0, cobFac / mDolar)) : 0);
 
@@ -1964,8 +1966,11 @@
       }
     });
 
+    // Saldo de retención pendiente por gestionar (mínimo 0)
+    const retSaldoGlobal = Math.max(0, retTotalGlobal - retCobradaGlobal);
+
     // Semáforo evaluado sobre la gestión de retenciones (riesgo si la mora en retención es alta)
-    const sem = calcularSemaforo(retTotalGlobal, retCobradaGlobal, retVencidaGlobal, (retAlDiaGlobal + retVencidaGlobal));
+    const sem = calcularSemaforo(retTotalGlobal, retCobradaGlobal, retVencidaGlobal, retSaldoGlobal);
     const semEl = $("vh-semaforo");
     if (semEl) {
       semEl.className = `badge-semaforo ${sem.clase}`;
@@ -2038,14 +2043,31 @@
     const codDisplay = codObj?.codigo || (facturasHeroTotal[0]?.zona ? facturasHeroTotal[0].zona.replace(/^Z0*/, "") : (codVendedor || ""));
     $("vh-tag").textContent = esGlobal ? "Consolidado Ejecutivo Beval" : `Asesor Comercial Softland · ${codDisplay}`;
     $("vh-nombre").textContent = nombreVendedor;
-    $("vh-sub").textContent = esGlobal
-      ? `${ent(facturasHeroTotal.length)} facturas totales en seguimiento activo`
-      : `Zona ${facturasHeroTotal[0]?.zona || "N/A"} · ${ent(facturasHeroTotal.length)} facturas asignadas`;
+    $("vh-sub").textContent = haySeleccionManual
+      ? `${ent(facturasHeroTotal.length)} facturas seleccionadas manualmente`
+      : (esGlobal
+          ? `${ent(facturasHeroTotal.length)} facturas en el alcance actual`
+          : `Zona ${facturasHeroTotal[0]?.zona || "N/A"} · ${ent(facturasHeroTotal.length)} facturas asignadas`);
 
+    // Tarjeta 1: Total Facturado (Dato informativo bruto)
     $("vh-facturado").textContent = `$${usd(totalFacturadoGlobal)}`;
-    $("vh-cobrado").textContent = `$${usd(cobradoGlobal)}`;
-    $("vh-saldo").textContent = `$${usd(saldoTotalGlobal)}`;
+    const subFacturado = $("vh-facturado-sub");
+    if (subFacturado) subFacturado.textContent = `Saldo facturas: $${usd(saldoTotalGlobal)}`;
+
+    // Tarjeta 2: Cobrado (derivado de la retención estimada)
+    $("vh-cobrado").textContent = `$${usd(retCobradaGlobal)}`;
+    const subCobrado = $("vh-cobrado-sub");
+    if (subCobrado) subCobrado.textContent = `${pctCobrado}% del objetivo`;
+
+    // Tarjeta 3: Falta / Saldo (derivado de la retención estimada: Retención Estimada - Cobrado)
+    $("vh-saldo").textContent = `$${usd(retSaldoGlobal)}`;
+    const subSaldo = $("vh-saldo-sub");
+    if (subSaldo) subSaldo.textContent = `Pendiente por gestionar`;
+
+    // Tarjeta 4: Retención Estimada 75% (Objetivo / Base del 100%)
     $("vh-retencion").textContent = `$${usd(retTotalGlobal)}`;
+    const subRet = $("vh-retencion-sub");
+    if (subRet) subRet.textContent = `Meta objetivo 100%`;
 
     const titAvEl = $("vh-avance-titulo");
     if (titAvEl) titAvEl.textContent = tituloAvance;
@@ -2177,6 +2199,11 @@
         });
         pintarFacturas();
         actualizarContadorSeleccionados();
+        const listaKpi = estado.seleccionadas.size > 0
+          ? estado.filtradas.filter((f) => estado.seleccionadas.has(f.factura))
+          : estado.filtradas;
+        pintarKpis(listaKpi, estado.filtradasProc);
+        pintarHeroCard();
       };
     }
 
@@ -2204,6 +2231,11 @@
       if (e.target.checked) estado.seleccionadas.add(fac);
       else estado.seleccionadas.delete(fac);
       actualizarContadorSeleccionados();
+      const listaKpi = estado.seleccionadas.size > 0
+        ? estado.filtradas.filter((f) => estado.seleccionadas.has(f.factura))
+        : estado.filtradas;
+      pintarKpis(listaKpi, estado.filtradasProc);
+      pintarHeroCard();
     }
   });
 

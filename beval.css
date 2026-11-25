@@ -1106,6 +1106,7 @@ html, body { overflow-x: clip !important; }
 #vista-app .vh-metric-val.vh-verde { color: var(--ok) !important; }
 #vista-app .vh-metric-val.vh-ambar { color: var(--aviso-c) !important; }
 #vista-app .vh-metric-val.vh-lima { color: var(--lima-texto) !important; }
+#vista-app .vh-metric-sub { color: var(--tx-3) !important; font-size: 11px !important; font-weight: 500 !important; margin-top: 1px !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
 
 /* --- Módulo de avance --- */
 #vista-app .av {
