@@ -1865,24 +1865,44 @@
     aplicarFiltros();
   });
 
-  // ---------- SEMÁFORO DE COBRANZA ----------
-  function calcularSemaforo(facturado, cobrado, saldoVencido, saldoTotal) {
-    const avance = facturado > 0 ? (cobrado / facturado) * 100 : 0;
-    const ratioMora = saldoTotal > 0 ? (saldoVencido / saldoTotal) * 100 : 0;
+  // ---------- SEMÁFORO DE COBRANZA INTELIGENTE Y EQUITATIVO ----------
+  function calcularSemaforo(total, cobrado, saldoVencido, saldoPendiente) {
+    const totalVal = Math.max(0, Number(total) || 0);
+    const cobradoVal = Math.max(0, Number(cobrado) || 0);
+    const vencidoVal = Math.max(0, Number(saldoVencido) || 0);
 
-    if (saldoVencido <= 0 || ratioMora === 0) {
-      if (avance >= 40) return { nivel: "estable", label: "Estable", clase: "estable" };
+    const avance = totalVal > 0 ? (cobradoVal / totalVal) * 100 : 0;
+    // Ratio de mora medido contra la cartera objetivo total (no contra el saldo residual)
+    const ratioMoraTotal = totalVal > 0 ? (vencidoVal / totalVal) * 100 : 0;
+
+    // 1. Asesor en Meta / Cumplimiento Excelente:
+    // Si ya cobró el 65% o más de su meta corporativa
+    if (avance >= 65) {
+      if (ratioMoraTotal <= 30) {
+        return { nivel: "estable", label: "Estable", clase: "estable" };
+      }
       return { nivel: "precaucion", label: "En precaución", clase: "precaucion" };
     }
 
-    if (ratioMora > 45 || (avance < 25 && ratioMora > 20)) {
-      return { nivel: "riesgo", label: "En riesgo", clase: "riesgo" };
+    // 2. Cartera sana sin mora vencida significativa (<= 5% en mora sobre el total):
+    if (vencidoVal <= 0 || ratioMoraTotal <= 5) {
+      if (avance >= 35) return { nivel: "estable", label: "Estable", clase: "estable" };
+      return { nivel: "precaucion", label: "En precaución", clase: "precaucion" };
     }
 
-    if (avance >= 50 && ratioMora <= 25) {
+    // 3. Avance sólido (50% a 64%) con mora controlada (<= 25% del total):
+    if (avance >= 50 && ratioMoraTotal <= 25) {
       return { nivel: "estable", label: "Estable", clase: "estable" };
     }
 
+    // 4. Situación real de RIESGO:
+    // Solo cuando el cobro está rezagado (< 35%) y la mora representa una porción importante de su cartera (> 25% del total)
+    // o cuando el cobro es crítico (< 15%) con mora presente activa.
+    if ((avance < 35 && ratioMoraTotal > 25) || (avance < 15 && vencidoVal > 0)) {
+      return { nivel: "riesgo", label: "En riesgo", clase: "riesgo" };
+    }
+
+    // 5. Todos los demás casos intermedios (precaución):
     return { nivel: "precaucion", label: "En precaución", clase: "precaucion" };
   }
 
@@ -2530,11 +2550,27 @@
     let cntRiesgo = 0, cntPrecaucion = 0, cntEstable = 0;
 
     const listaConSemaforo = listaGrupos.map((g) => {
-      const saldoVencido = g.fs.filter((f) => f.dias_vencida > 0).reduce((s, f) => s + (Number(f.saldo_usd) || 0), 0);
-      const saldoTotal = g.fs.reduce((s, f) => s + (Number(f.saldo_usd) || 0), 0);
-      const totalFact = g.fs.reduce((s, f) => s + (Number(f.monto_dolar) || 0), 0);
-      const cobrado = Math.max(0, totalFact - saldoTotal);
-      const sem = calcularSemaforo(totalFact, cobrado, saldoVencido, saldoTotal);
+      let retTotalG = 0, retCobG = 0, retVenG = 0;
+      g.fs.forEach((f) => {
+        const retFac = Number(f.monto_estimado) || 0;
+        const mDolar = Number(f.monto_dolar) || 0;
+        const sUsd = Number(f.saldo_usd) || 0;
+        retTotalG += retFac;
+
+        const tieneComp = (f.estado === "RETENCION CARGADA NO APLICADA") ||
+          Boolean(f.retencion && f.retencion !== "S/C") ||
+          (estado.comprobantesAsociados && Object.values(estado.comprobantesAsociados).some((c) => c.facturas && c.facturas.includes(String(f.factura).trim())));
+
+        const cobFac = Math.max(0, mDolar - sUsd);
+        const propCob = tieneComp ? 1 : (mDolar > 0 ? Math.min(1, Math.max(0, cobFac / mDolar)) : 0);
+        const rCob = retFac * propCob;
+        retCobG += rCob;
+        if (Number(f.dias_vencida) > 0) {
+          retVenG += (retFac - rCob);
+        }
+      });
+      const retPendG = Math.max(0, retTotalG - retCobG);
+      const sem = calcularSemaforo(retTotalG, retCobG, retVenG, retPendG);
 
       if (sem.nivel === "riesgo") cntRiesgo++;
       else if (sem.nivel === "precaucion") cntPrecaucion++;
