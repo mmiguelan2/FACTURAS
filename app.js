@@ -94,6 +94,17 @@
 
   // ---------- TELÉFONOS DE ANALISTAS DE COBRANZA ----------
   const STORAGE_KEY_TELS_ANALISTAS = "beval_telefonos_analistas";
+
+  const ANALISTAS_TELS_DEFECTO = {
+    "MYRLANYELIS PALENCIA": "584122490933",
+    "WILSON PEREZ": "584144293262",
+    "LOLIMAR OROPEZA": "584244167050",
+    "CAROLINA ACHE": "584122365039",
+    "AMBAR GARCIA": "584122464290",
+    "YURISNELITH PEREZ": "",
+    "LUIS CARDOZO": "584121301507"
+  };
+
   const cargarTelefonosAnalistas = () => {
     try {
       const g = localStorage.getItem(STORAGE_KEY_TELS_ANALISTAS);
@@ -106,12 +117,43 @@
   const guardarTelefonoAnalista = (nom, tel) => {
     try {
       const g = cargarTelefonosAnalistas();
-      if (tel) g[nom.toUpperCase()] = tel;
-      else delete g[nom.toUpperCase()];
+      const k = String(nom || "").trim().toUpperCase();
+      if (tel) g[k] = String(tel).trim();
+      else delete g[k];
       localStorage.setItem(STORAGE_KEY_TELS_ANALISTAS, JSON.stringify(g));
     } catch (e) {
       console.warn("No se pudo guardar teléfono de analista en localStorage", e);
     }
+  };
+
+  const obtenerTelefonoAnalista = (nombreAnalista) => {
+    if (!nombreAnalista) return "";
+    const k = normalizarTexto(nombreAnalista).toUpperCase();
+    const telsGuardados = cargarTelefonosAnalistas();
+
+    // 1. Revisar si hay teléfono editado en localStorage
+    if (telsGuardados[k]) return telsGuardados[k];
+    for (const [nom, tel] of Object.entries(telsGuardados)) {
+      const nomN = normalizarTexto(nom).toUpperCase();
+      if (nomN === k || k.includes(nomN) || nomN.includes(k)) return tel;
+    }
+
+    // 2. Revisar en config.js (C.ANALISTAS_DEFAULT)
+    if (Array.isArray(C.ANALISTAS_DEFAULT)) {
+      const match = C.ANALISTAS_DEFAULT.find((item) => {
+        const nomN = normalizarTexto(item.nombre || "").toUpperCase();
+        return nomN === k || k.includes(nomN) || nomN.includes(k);
+      });
+      if (match && match.telefono) return match.telefono;
+    }
+
+    // 3. Revisar en diccionario defecto
+    for (const [nom, tel] of Object.entries(ANALISTAS_TELS_DEFECTO)) {
+      const nomN = normalizarTexto(nom).toUpperCase();
+      if (nomN === k || k.includes(nomN) || nomN.includes(k)) return tel;
+    }
+
+    return "";
   };
 
   // ---------- GESTIÓN DE CREDENCIALES (USUARIOS Y CONTRASEÑAS) ----------
@@ -2766,8 +2808,7 @@
     });
 
     const lista = Array.from(analistasMap.values()).map((a) => {
-      const k = a.nombre.toUpperCase();
-      const tel = telsGuardados[k] || estado.telefonosAnalistas?.get(k) || "";
+      const tel = obtenerTelefonoAnalista(a.nombre);
       const totalRetObjetivo = a.estimadoSinRet + a.cobradoRet;
       const pctCobrado = totalRetObjetivo > 0 ? Math.round((a.cobradoRet / totalRetObjetivo) * 100) : 0;
       return {
@@ -2879,9 +2920,7 @@
 
   async function enviarWhatsAppAnalista(analistaNombre) {
     const texto = generarReporteAnalista(analistaNombre);
-    const aList = obtenerResumenAnalistas();
-    const aObj = aList.find((x) => x.nombre === analistaNombre);
-    const tel = aObj?.telefono;
+    const tel = obtenerTelefonoAnalista(analistaNombre);
 
     let url;
     if (tel) {

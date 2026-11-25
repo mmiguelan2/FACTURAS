@@ -21,6 +21,16 @@ window.APP_CONFIG = {
   },
   // Los vendedores entran con su primer nombre, código o correo
   DOMINIO_VENDEDORES: "vendedores.beval.biz",
+  // Directorio predeterminado de Teléfonos para Analistas de Cobranzas
+  ANALISTAS_DEFAULT: [
+    { "nombre": "MYRLANYELIS PALENCIA", "telefono": "0412-2490933" },
+    { "nombre": "WILSON PEREZ", "telefono": "0414-4293262" },
+    { "nombre": "LOLIMAR OROPEZA", "telefono": "0424-4167050" },
+    { "nombre": "CAROLINA ACHE", "telefono": "0412-2365039" },
+    { "nombre": "AMBAR GARCIA", "telefono": "0412-2464290" },
+    { "nombre": "YURISNELITH PEREZ", "telefono": "" },
+    { "nombre": "LUIS CARDOZO", "telefono": "0412-1301507" }
+  ],
   MENSAJE: [
     "Buen día, {VENDEDOR}.",
     "",
