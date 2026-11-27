@@ -1899,8 +1899,9 @@
       if (z && f.zona !== z) return false;
       if (e === "vencidas" && !(f.dias_vencida > 0)) return false;
       if (e === "sinvencer" && !(f.dias_vencida <= 0)) return false;
-      if (!isNaN(desde) && f.monto_dolar < desde) return false;
-      if (!isNaN(hasta) && f.monto_dolar > hasta) return false;
+      const estFac = Number(f.monto_estimado) || Number(f.monto_retencion) || 0;
+      if (!isNaN(desde) && estFac < desde) return false;
+      if (!isNaN(hasta) && estFac > hasta) return false;
       if (q) {
         const buscarCampos = [
           f.razon_social,
