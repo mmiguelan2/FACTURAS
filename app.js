@@ -958,71 +958,112 @@
       const resp = await fetch(urlCsv, { cache: "no-store" });
       if (!resp.ok) throw new Error("HTTP " + resp.status);
       const csvTexto = await resp.text();
-      facturasCargadas = procesarCsvGoogleSheet(csvTexto);
+      const filasParsed = procesarCsvGoogleSheet(csvTexto);
+      if (!filasParsed || filasParsed.length === 0) {
+        throw new Error("Google Sheets respondió sin registros de facturas activos");
+      }
+      facturasCargadas = filasParsed;
+      try {
+        localStorage.setItem("beval_facturas_cache_csv", csvTexto);
+      } catch (e) {}
       const horaStr = new Date().toLocaleTimeString("es-VE", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
       textoCarga = `Google Sheets en vivo · Sincronizado a las ${horaStr}`;
     } catch (errSheets) {
-      console.warn("No se pudo conectar directamente a Google Sheets, usando base de datos Supabase:", errSheets);
-      // Respaldo secundario en Supabase
-      const [facturasSb, cargaSb] = await Promise.all([
-        todo("facturas"),
-        sb.from("cargas").select("fecha,facturas").order("fecha", { ascending: false }).limit(1),
-      ]);
+      console.warn("No se pudo conectar directamente a Google Sheets o venía vacío, buscando respaldo:", errSheets);
 
-      // Determinar mapa de vendedor activo por zona también en el respaldo de Supabase
-      const zonaStatsSb = new Map();
-      facturasSb.forEach((f) => {
-        const zona = (f.zona || "").trim();
-        const vend = (f.vendedor || "").trim();
-        const fEmision = f.fecha_emision || "";
-        if (!zona || !vend) return;
-        if (!zonaStatsSb.has(zona)) zonaStatsSb.set(zona, new Map());
-        const zMap = zonaStatsSb.get(zona);
-        const stat = zMap.get(vend) || { maxFecha: "", count: 0 };
-        stat.count++;
-        if (fEmision > stat.maxFecha) stat.maxFecha = fEmision;
-        zMap.set(vend, stat);
-      });
-
-      const mapaZonaActivoSb = new Map();
-      for (const [z, zMap] of zonaStatsSb.entries()) {
-        const cand = [...zMap.entries()].filter(([v]) => v !== "TRANSPORTE" && v !== "PROVEEDORES");
-        const listaCand = cand.length > 0 ? cand : [...zMap.entries()];
-        listaCand.sort((a, b) => {
-          const dComp = (b[1].maxFecha || "").localeCompare(a[1].maxFecha || "");
-          if (dComp !== 0) return dComp;
-          return b[1].count - a[1].count;
-        });
-        if (listaCand.length > 0) {
-          mapaZonaActivoSb.set(z, listaCand[0][0]);
+      // Respaldo A: Caché local persistente en localStorage
+      try {
+        const cacheLocal = localStorage.getItem("beval_facturas_cache_csv");
+        if (cacheLocal) {
+          const fsCache = procesarCsvGoogleSheet(cacheLocal);
+          if (fsCache && fsCache.length > 0) {
+            facturasCargadas = fsCache;
+            textoCarga = "Caché local activa · Google Sheets en actualización";
+          }
         }
+      } catch (e) {}
+
+      // Respaldo B: Archivo de datos local test_sheet.csv
+      if (!facturasCargadas || facturasCargadas.length === 0) {
+        try {
+          const respLocal = await fetch("test_sheet.csv", { cache: "no-store" });
+          if (respLocal.ok) {
+            const txtLocal = await respLocal.text();
+            const fsLocal = procesarCsvGoogleSheet(txtLocal);
+            if (fsLocal && fsLocal.length > 0) {
+              facturasCargadas = fsLocal;
+              textoCarga = "Respaldo local sincronizado · Google Sheets en actualización";
+            }
+          }
+        } catch (e) {}
       }
 
-      facturasCargadas = facturasSb.map((f) => {
-        const montoDolar = Number(f.monto_dolar) || 0;
-        const montoEst = Number(f.monto_estimado);
-        const montoRet = Number(f.monto_retencion) || 0;
-        const estimado = montoRet > 0 ? montoRet : (montoEst && !isNaN(montoEst) && montoEst > 0 ? montoEst : (montoDolar > 0 ? Math.round(montoDolar * (12.0 / 116.0) * 100) / 100 : 0));
-        const vendedorOrig = (f.vendedor || "").trim();
-        const activoZona = mapaZonaActivoSb.get(f.zona) || vendedorOrig;
-        const esInterno = (vendedorOrig === "TRANSPORTE" || vendedorOrig === "PROVEEDORES");
-        const vendedorFinal = esInterno ? vendedorOrig : activoZona;
+      // Respaldo C: Base de datos Supabase
+      if (!facturasCargadas || facturasCargadas.length === 0) {
+        try {
+          const [facturasSb, cargaSb] = await Promise.all([
+            todo("facturas"),
+            sb.from("cargas").select("fecha,facturas").order("fecha", { ascending: false }).limit(1),
+          ]);
+          if (facturasSb && facturasSb.length > 0) {
+            const zonaStatsSb = new Map();
+            facturasSb.forEach((f) => {
+              const zona = (f.zona || "").trim();
+              const vend = (f.vendedor || "").trim();
+              const fEmision = f.fecha_emision || "";
+              if (!zona || !vend) return;
+              if (!zonaStatsSb.has(zona)) zonaStatsSb.set(zona, new Map());
+              const zMap = zonaStatsSb.get(zona);
+              const stat = zMap.get(vend) || { maxFecha: "", count: 0 };
+              stat.count++;
+              if (fEmision > stat.maxFecha) stat.maxFecha = fEmision;
+              zMap.set(vend, stat);
+            });
 
-        return {
-          ...f,
-          vendedor: vendedorFinal,
-          vendedor_original: vendedorOrig,
-          es_reasignado: vendedorFinal !== vendedorOrig,
-          es_interno: esInterno,
-          analista: f.analista || "Lolimar Oropeza",
-          estado: f.estado || (f.retencion ? "RETENCION CARGADA NO APLICADA" : "SIN RETENCION"),
-          monto_estimado: estimado,
-          dias_vencida: calcularDiasVencida(f.fecha_vence)
-        };
-      });
-      const c = cargaSb.data?.[0];
-      const fechaUltima = c ? new Date(c.fecha).toLocaleString("es-VE") : new Date().toLocaleString("es-VE");
-      textoCarga = `Caché BD · Actualizado ${fechaUltima}`;
+            const mapaZonaActivoSb = new Map();
+            for (const [z, zMap] of zonaStatsSb.entries()) {
+              const cand = [...zMap.entries()].filter(([v]) => v !== "TRANSPORTE" && v !== "PROVEEDORES");
+              const listaCand = cand.length > 0 ? cand : [...zMap.entries()];
+              listaCand.sort((a, b) => {
+                const dComp = (b[1].maxFecha || "").localeCompare(a[1].maxFecha || "");
+                if (dComp !== 0) return dComp;
+                return b[1].count - a[1].count;
+              });
+              if (listaCand.length > 0) {
+                mapaZonaActivoSb.set(z, listaCand[0][0]);
+              }
+            }
+
+            facturasCargadas = facturasSb.map((f) => {
+              const montoDolar = Number(f.monto_dolar) || 0;
+              const montoEst = Number(f.monto_estimado);
+              const montoRet = Number(f.monto_retencion) || 0;
+              const estimado = montoRet > 0 ? montoRet : (montoEst && !isNaN(montoEst) && montoEst > 0 ? montoEst : (montoDolar > 0 ? Math.round(montoDolar * (12.0 / 116.0) * 100) / 100 : 0));
+              const vendedorOrig = (f.vendedor || "").trim();
+              const activoZona = mapaZonaActivoSb.get(f.zona) || vendedorOrig;
+              const esInterno = (vendedorOrig === "TRANSPORTE" || vendedorOrig === "PROVEEDORES");
+              const vendedorFinal = esInterno ? vendedorOrig : activoZona;
+
+              return {
+                ...f,
+                vendedor: vendedorFinal,
+                vendedor_original: vendedorOrig,
+                es_reasignado: vendedorFinal !== vendedorOrig,
+                es_interno: esInterno,
+                analista: f.analista || "Lolimar Oropeza",
+                estado: f.estado || (f.retencion ? "RETENCION CARGADA NO APLICADA" : "SIN RETENCION"),
+                monto_estimado: estimado,
+                dias_vencida: calcularDiasVencida(f.fecha_vence)
+              };
+            });
+            const c = cargaSb.data?.[0];
+            const fechaUltima = c ? new Date(c.fecha).toLocaleString("es-VE") : new Date().toLocaleString("es-VE");
+            textoCarga = `Caché BD · Actualizado ${fechaUltima}`;
+          }
+        } catch (e) {
+          console.warn("Fallo carga de respaldo Supabase:", e);
+        }
+      }
     }
 
     estado.facturas = facturasCargadas;
